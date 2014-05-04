@@ -1,0 +1,1 @@
+Placeholder for new repository for GIT GO SPDX libraries.
