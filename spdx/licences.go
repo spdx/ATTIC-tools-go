@@ -1,42 +1,64 @@
 package spdx
 
-type AnyLicenceInfo struct {
-	Value           interface{}
-	Licence         *Licence
-	Extracted       *ExtractedLicensingInfo
-	ConjunctiveList *ConjunctiveLicenceList
-	DisjunctiveList *DisjunctiveLicenceList
+type AnyLicenceInfo interface {
+	LicenceId() string
 }
+
+type LicenceReference struct {
+	Id      string
+	Licence *Licence
+}
+
+func (l LicenceReference) LicenceId() string { return l.Id }
 
 type Licence struct {
 	Id               string
-	Name             string
+	Name             string // optional
 	Text             string
 	isOsiApproved    bool
-	StandardHeader   string
-	StandardTemplate string
-
-	// SeeAlso  rdfs.SeeAlso
-	// Comment rdfs.Comment
+	StandardHeader   []string // optional
+	StandardTemplate string   // optional
+	CrossReference   []string // optional
+	Comment          string   // optional
 }
+
+func (l *Licence) LicenceId() string { return l.Id }
 
 type ExtractedLicensingInfo struct {
-	Id   string
-	Name []string
-	Text string
-	// SeeAlso rdfs.SeeAlso
-	// Comment rdfs.Comment
+	Id             string
+	Name           []string // optional
+	Text           string
+	CrossReference []string //optional
+	Comment        string   //optional
 }
 
-type ConjunctiveLicenceList struct {
-	Members []*AnyLicenceInfo
+func (l *ExtractedLicensingInfo) LicenceId() string { return l.Id }
+
+func join(list []AnyLicenceInfo, separator string) string {
+	if len(list) == 0 {
+		return "()"
+	}
+	res := "(" + list[0].LicenceId()
+	for i := 1; i < len(list); i++ {
+		res += separator + list[i].LicenceId()
+	}
+	res += ")"
+	return res
 }
 
-type DisjunctiveLicenceList struct {
-	Members []*AnyLicenceInfo
+// DisjunctiveLicenceList is a AnyLicenceInfo
+type ConjunctiveLicenceList []AnyLicenceInfo
+
+func (c ConjunctiveLicenceList) LicenceId() string { return join(c, " and ") }
+
+// DisjunctiveLicenceList is a AnyLicenceInfo
+type DisjunctiveLicenceList []AnyLicenceInfo
+
+func (d DisjunctiveLicenceList) LicenceId() string { return join(d, " or ") }
+
+// Used to specify values such as NONE and NOASSERTION
+type LicenceStatus struct {
+	Status string
 }
 
-type SimpleLicenceInfo struct {
-	Licence   *Licence
-	Extracted *ExtractedLicensingInfo
-}
+func (l LicenceStatus) LicenceId() string { return l.Status }

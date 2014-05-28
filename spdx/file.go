@@ -1,17 +1,17 @@
 package spdx
 
 type File struct {
-	Name              string
-	Type              int
-	Checksum          *Checksum
-	LicenceConcluded  *AnyLicenceInfo
-	LicenceInfoInFile *SimpleLicenceInfo
-	LicenceComments   string
-	CopyrightText     string
-	NoticeText        string
-	ArtifactOf        []*ArtifactOf
-	Dependency        *File
-	Contributor       string
+	Name              string           // mandatory
+	Type              string           // optional
+	Checksum          *Checksum        // mandatory
+	LicenceConcluded  AnyLicenceInfo   // mandatory, NOASSERTION and NONE allowed
+	LicenceInfoInFile []AnyLicenceInfo // no sets; NOASSERTION and NONE allowed
+	LicenceComments   string           // optional
+	CopyrightText     string           // mandatory
+	NoticeText        string           // optional
+	ArtifactOf        []*ArtifactOf    // optinal
+	Dependency        []*File          // optional
+	Contributor       []string         // optional
 }
 
 type ArtifactOf struct {

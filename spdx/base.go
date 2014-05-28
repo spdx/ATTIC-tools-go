@@ -8,10 +8,7 @@ const (
 	FT_OTHER   = iota
 )
 
-// Statuses (special values such as NOASSERTION or NONE)
 const (
-	STATUS_NOASSERT = iota
-	STATUS_NONE     = iota
-	STATUS_OK       = iota
-	STATUS_NOVAL    = iota
+	NOASSERTION = "NOASSERTION"
+	NONE        = "NONE"
 )
