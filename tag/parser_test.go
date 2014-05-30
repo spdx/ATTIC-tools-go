@@ -77,8 +77,18 @@ func TestOneCommentNewLine(t *testing.T) {
 
 }
 
+func TestDoubleEndlineAfterComment(t *testing.T) {
+	r := strings.NewReader("#property:value\n\n")
+
+	doc, err := Parse(r)
+
+	if len(doc) != 0 || err != nil {
+		t.Errorf("Document: %s. Error: %s", doc, err)
+	}
+}
+
 func TestCommentsAndEmptyLines(t *testing.T) {
-	r := strings.NewReader("#this is a comment\n\n#this is another comment :)\n#whatever\n\n\n#anoterOne\n\n")
+	r := strings.NewReader("#this is a comment\n\n#this is another comment :)\n#whatever\n\n\n#anoterOne")
 
 	doc, err := Parse(r)
 
@@ -327,7 +337,7 @@ func TestMoreTextPropertiesCommentsAndNewlines(t *testing.T) {
 }
 
 func TestMixedProperties(t *testing.T) {
-	r := strings.NewReader("Property1:<text>value1</text>\nProperty2:value2\nProperty3:<text>value3</text>\n")
+	r := strings.NewReader("Property1:  <text>value1</text>\nProperty2:value2\nProperty3:<text>value3</text>\n")
 
 	doc, err := Parse(r)
 
@@ -354,6 +364,9 @@ func TestInvalidTextValuePrefix(t *testing.T) {
 	if err == nil {
 		t.Fail()
 	}
+	if err != ErrInvalidPrefix {
+		t.Errorf("Another error: %s", err)
+	}
 }
 
 func TestInvalidTextValueSuffix(t *testing.T) {
@@ -363,6 +376,9 @@ func TestInvalidTextValueSuffix(t *testing.T) {
 
 	if err == nil {
 		t.Fail()
+	}
+	if err != ErrInvalidSuffix {
+		t.Errorf("Another error: %s", err)
 	}
 }
 
@@ -374,15 +390,22 @@ func TestInvalidTextValueSuffixComment(t *testing.T) {
 	if err == nil {
 		t.Fail()
 	}
+	if err != ErrInvalidSuffix {
+		t.Errorf("Another error: %s", err)
+	}
 }
 
 func TestInvalidTextValueSuffixProperty(t *testing.T) {
 	r := strings.NewReader("Property1: <text>value1</text>a:b\n")
 
 	_, err := Parse(r)
+	t.Logf("Error: %s\n", err)
 
 	if err == nil {
 		t.Fail()
+	}
+	if err != ErrInvalidSuffix {
+		t.Errorf("Another error: %s", err)
 	}
 }
 
@@ -390,9 +413,13 @@ func TestInvalidUnclosedText(t *testing.T) {
 	r := strings.NewReader("Property1: <text>value1\n\n invalid \n")
 
 	_, err := Parse(r)
+	t.Logf("Error: %s\n", err)
 
 	if err == nil {
 		t.Fail()
+	}
+	if err != ErrNoCloseTag {
+		t.Errorf("Another error: %s", err)
 	}
 }
 
@@ -444,5 +471,36 @@ func TestCommentAsMultilineTextValue(t *testing.T) {
 
 	if len(doc) == 1 && doc[0] != pair {
 		t.Errorf("Expected %s. Got %s", pair, doc[0])
+	}
+}
+
+func TestSomeInvalidText(t *testing.T) {
+	r := strings.NewReader("garbage")
+
+	_, err := Parse(r)
+	if err == nil {
+		t.Fail()
+	}
+	if err != ErrInvalidText {
+		t.Errorf("Another error: %s", err)
+	}
+
+}
+
+func TestAllDataWhitespaceAtEOF(t *testing.T) {
+	f := tokenize()
+	data := []byte("  \n")
+	advance, token, err := f(data, true)
+	if advance != 0 || token != nil || err != nil {
+		t.Errorf("Fail with: advance=%d, data=%s, err=%s\n", advance, token, err)
+	}
+}
+
+func TestCommentEndingInNewlineAtEOF(t *testing.T) {
+	f := tokenize()
+	data := []byte("#comment\n")
+	advance, token, err := f(data, true)
+	if advance != 0 || token != nil || err != nil {
+		t.Errorf("Fail with: advance=%d, data=%s, err=%s\n", advance, token, err)
 	}
 }
