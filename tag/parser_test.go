@@ -487,6 +487,19 @@ func TestSomeInvalidText(t *testing.T) {
 
 }
 
+func TestPropertyWithNoValue(t *testing.T) {
+	r := strings.NewReader("garbage:")
+	doc, err := Parse(r)
+	t.Logf("Doc=%s, Err=%s", doc, err)
+	pair := Pair{"garbage", ""}
+	if err != nil || doc == nil || len(doc) != 1 {
+		t.FailNow()
+	}
+	if doc[0] != pair {
+		t.Fail()
+	}
+}
+
 func TestAllDataWhitespaceAtEOF(t *testing.T) {
 	f := tokenize()
 	data := []byte("  \n")

@@ -164,10 +164,10 @@ func Parse(f io.Reader) (doc []Pair, err error) {
 	doc = make([]Pair, 0, 15)
 	for scanner.Scan() {
 		key := strings.TrimSpace(scanner.Text())
-		if !scanner.Scan() {
-			break
+		value := ""
+		if scanner.Scan() {
+			value = strings.TrimSpace(scanner.Text())
 		}
-		value := strings.TrimSpace(scanner.Text())
 		doc = append(doc, Pair{key, value})
 	}
 
