@@ -2,7 +2,7 @@ package spdx
 
 type Package struct {
 	Name                 string            // one
-	VersionInfo          string            // zero or one
+	Version              string            // zero or one
 	DownloadLocation     string            // one; NOASSERTION or NONE valid
 	HomePage             string            // one; NOASSERTION or NONE valid
 	FileName             string            // zero or one
