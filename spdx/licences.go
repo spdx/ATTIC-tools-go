@@ -26,7 +26,7 @@ func (l *Licence) LicenceId() string { return l.Id }
 
 type ExtractedLicensingInfo struct {
 	Id             string
-	Name           []string // optional
+	Name           []string // conditional. one required if the licence is not in the SPDX Licence List
 	Text           string
 	CrossReference []string //optional
 	Comment        string   //optional
