@@ -84,35 +84,26 @@ func updFileNameList(fl *[]*spdx.File) updater {
 	}
 }
 
-// Apply the relevant updater function if the given pair matches any.
-func applyMapping(input Pair, mapping updaterMapping) (ok bool, err error) {
-	f, ok := mapping[input.Key]
-	if !ok {
-		return false, nil
+// Gets all the key/value combinations in src and puts them in dest (overwrites if values already exist)
+func mapMerge(dest *updaterMapping, src updaterMapping) {
+	mp := *dest
+	for k, v := range src {
+		mp[k] = v
 	}
-	return true, f(input.Value)
 }
 
 // Document mapping.
 func documentMap(doc *spdx.Document) updaterMapping {
-	if doc.CreationInfo == nil {
-		doc.CreationInfo = new(spdx.CreationInfo)
-		doc.CreationInfo.Creator = make([]string, 0)
-	}
+	doc.CreationInfo = new(spdx.CreationInfo)
+	doc.CreationInfo.Creator = make([]string, 0)
+	doc.Packages = make([]*spdx.Package, 0)
+	doc.Files = make([]*spdx.File, 0)
+	doc.ExtractedLicenceInfo = make([]*spdx.ExtractedLicensingInfo, 0)
 
-	if doc.Packages == nil {
-		doc.Packages = make([]*spdx.Package, 0)
-	}
+	var mapping updaterMapping
 
-	if doc.Files == nil {
-		doc.Files = make([]*spdx.File, 0)
-	}
-
-	if doc.ExtractedLicenceInfo == nil {
-		doc.extractedLicenceInfo = make([]*ExtractedLicensingInfo, 0)
-	}
-
-	return map[string]updater{
+	mapping = map[string]updater{
+		// SpdxDocument
 		"SpecVersion":        upd(&doc.SpecVersion),
 		"DataLicense":        upd(&doc.DataLicence),
 		"DocumentComment":    upd(&doc.Comment),
@@ -120,92 +111,103 @@ func documentMap(doc *spdx.Document) updaterMapping {
 		"Created":            upd(&doc.CreationInfo.Created),
 		"CreatorComment":     upd(&doc.CreationInfo.Comment),
 		"LicenseListVersion": upd(&doc.CreationInfo.LicenceListVersion),
+
+		// Package
+		"PackageName": func(val string) error {
+			pkg := &spdx.Package{
+				Name:             val,
+				Checksum:         new(spdx.Checksum),
+				VerificationCode: new(spdx.VerificationCode),
+			}
+			doc.Packages = append(doc.Packages, pkg)
+
+			// Add package values that are now available
+			mapMerge(&mapping, updaterMapping{
+				"PackageVersion":              upd(&pkg.Version),
+				"PackageFileName":             upd(&pkg.FileName),
+				"PackageSupplier":             upd(&pkg.Supplier),
+				"PackageOriginator":           upd(&pkg.Originator),
+				"PackageDownloadLocation":     upd(&pkg.DownloadLocation),
+				"PackageVerificationCode":     verifCode(pkg.VerificationCode),
+				"PackageChecksum":             checksum(pkg.Checksum),
+				"PackageHomePage":             upd(&pkg.HomePage),
+				"PackageSourceInfo":           upd(&pkg.SourceInfo),
+				"PackageLicenseConcluded":     anyLicence(&pkg.LicenceConcluded),
+				"PackageLicenseInfoFromFiles": anyLicenceList(&pkg.LicenceInfoFromFiles),
+				"PackageLicenseDeclared":      anyLicence(&pkg.LicenceDeclared),
+				"PackageLicenseComments":      upd(&pkg.LicenceComments),
+				"PackageCopyrightText":        upd(&pkg.CopyrightText),
+				"PackageSummary":              upd(&pkg.Summary),
+				"PackageDescription":          upd(&pkg.Description),
+			})
+
+			return nil
+		},
+		// File
+		"FileName": func(val string) error {
+			file := &spdx.File{
+				Checksum:   new(spdx.Checksum),
+				Dependency: make([]*spdx.File, 0),
+				ArtifactOf: make([]*spdx.ArtifactOf, 0),
+			}
+
+			mapMerge(&mapping, updaterMapping{
+				"FileType":          upd(&file.Type),
+				"FileChecksum":      checksum(file.Checksum),
+				"LicenseConcluded":  anyLicence(&file.LicenceConcluded),
+				"LicenseInfoInFile": anyLicenceList(&file.LicenceInfoInFile),
+				"LicenseComments":   upd(&file.LicenceComments),
+				"FileCopyrightText": upd(&file.CopyrightText),
+				"FileComment":       upd(&file.Comment),
+				"FileNotice":        upd(&file.Notice),
+				"FileContributor":   updList(&file.Contributor),
+				"FileDependency":    updFileNameList(&file.Dependency),
+				"ArtifactOfProjectName": func(val string) error {
+					artif := new(spdx.ArtifactOf)
+					mapMerge(&mapping, updaterMapping{
+						"ArtifactOfProjectHomepage": upd(&artif.HomePage),
+						"ArtifactOfProjectUri":      upd(&artif.ProjectUri),
+					})
+					file.ArtifactOf = append(file.ArtifactOf, artif)
+					return nil
+				},
+			})
+
+			return nil
+		},
+
+		// ExtractedLicensingInfo
+		"LicenseID": func(val string) error {
+			lic := &spdx.ExtractedLicensingInfo{
+				Name:           make([]string, 0),
+				CrossReference: make([]string, 0),
+			}
+			mapMerge(&mapping, updaterMapping{
+				"ExtractedText":         upd(&lic.Text),
+				"LicenseName":           updList(&lic.Name),
+				"LicenseCrossReference": updList(&lic.CrossReference),
+				"LicenseComment":        upd(&lic.Comment),
+			})
+			doc.ExtractedLicenceInfo = append(doc.ExtractedLicenceInfo, lic)
+			return nil
+		},
 	}
+
+	return mapping
 }
 
-// Package mapping.
-func packageMap(pkg *spdx.Package) updaterMapping {
-	if pkg.Checksum == nil {
-		pkg.Checksum = new(spdx.Checksum)
+// Apply the relevant updater function if the given pair matches any.
+//
+// ok means whether the property was in the map or not
+// err is the error returned by applying the mapping function or, if ok == false, an error with the relevant "mapping not found" message
+//
+// It returns two arguments to allow for easily creating parsing modes such as "ignore not known mapping"
+func applyMapping(input Pair, mapping updaterMapping) (ok bool, err error) {
+	f, ok := mapping[input.Key]
+	if !ok {
+		return false, errors.New("Invalid property or property needs another property to be defined before it: " + input.Key)
 	}
-
-	if pkg.VerificationCode == nil {
-		pkg.VerificationCode = new(spdx.VerificationCode)
-	}
-
-	return map[string]updater{
-		"PackageName":                 upd(&pkg.Name),
-		"PackageVersion":              upd(&pkg.Version),
-		"PackageFileName":             upd(&pkg.FileName),
-		"PackageSupplier":             upd(&pkg.Supplier),
-		"PackageOriginator":           upd(&pkg.Originator),
-		"PackageDownloadLocation":     upd(&pkg.DownloadLocation),
-		"PackageVerificationCode":     verifCode(pkg.VerificationCode),
-		"PackageChecksum":             checksum(pkg.Checksum),
-		"PackageHomePage":             upd(&pkg.HomePage),
-		"PackageSourceInfo":           upd(&pkg.SourceInfo),
-		"PackageLicenseConcluded":     anyLicence(&pkg.LicenceConcluded),
-		"PackageLicenseInfoFromFiles": anyLicenceList(&pkg.LicenceInfoFromFiles),
-		"PackageLicenseDeclared":      anyLicence(&pkg.LicenceDeclared),
-		"PackageLicenseComments":      upd(&pkg.LicenceComments),
-		"PackageCopyrightText":        upd(&pkg.CopyrightText),
-		"PackageSummary":              upd(&pkg.Summary),
-		"PackageDescription":          upd(&pkg.Description),
-	}
-}
-
-// File mapping.
-func fileMap(file *spdx.File) updaterMapping {
-	if file.Checksum == nil {
-		file.Checksum = new(spdx.Checksum)
-	}
-
-	if file.Dependency == nil {
-		file.Dependency = make([]*spdx.File, 0)
-	}
-
-	if file.ArtifactOf == nil {
-		file.ArtifactOf = new([]*spdx.ArtifactOf, 0)
-	}
-	/* else if p.Key == "ArtifactOfProjectName" {
-	if file == nil {
-		return nil, errors.New("ArtifactOfProjectName without describing a file.")
-	}
-	file.ArtifactOf = append(file.ArtifactOf, artif)
-	mapping = artifactMap(artif)
-	*/return map[string]updater{
-		"FileName":          upd(&file.Name),
-		"FileType":          upd(&file.Type),
-		"FileChecksum":      checksum(file.Checksum),
-		"LicenseConcluded":  anyLicence(&file.LicenceConcluded),
-		"LicenseInfoInFile": anyLicenceList(&file.LicenceInfoFromFiles),
-		"LicenseComments":   upd(&file.LicenseComments),
-		"FileCopyrightText": upd(&file.CopyrightText),
-		"FileComment":       upd(&file.Comment),
-		"FileNotice":        upd(&file.Notice),
-		"FileContributor":   updList(&file.Contributor),
-		"FileDependency":    updFileNameList(&file.Dependency),
-	}
-}
-
-// ArtifactOf mapping.
-func artifactMap(artif *spdx.ArtifactOf) updaterMapping {
-	return map[string]updater{
-		"ArtifactOfProjectName":     upd(&artif.Name),
-		"ArtifactOfProjectHomepage": upd(&artif.HomePage),
-		"ArtifactOfProjectUri":      upd(&artif.ProjectUri),
-	}
-}
-
-// ExtractedLicensingInfo mapping.
-func extractedLicenceMap(lic *spdx.ExtractedLicensingInfo) updaterMapping {
-	return map[string]updater{
-		"LicenseID":             upd(&lic.Id),
-		"ExtractedText":         upd(&lic.Text),
-		"LicenseName":           updList(&lic.Name),
-		"LicenseCrossReference": updList(&lic.CrossReference),
-		"LicenseComment":        upd(&lic.Comment),
-	}
+	return true, f(input.Value)
 }
 
 // Parse a []Pair list to a *spdx.Document
@@ -214,24 +216,10 @@ func parseDocument(input []Pair) (*spdx.Document, error) {
 	mapping := documentMap(doc)
 
 	for _, p := range input {
-		if p.Key == "PackageName" {
-			pkg := new(spdx.Package)
-
-			doc.Packages = append(doc.Packages, pkg)
-			mapping = packageMap(pkg)
-		} else if p.Key == "FileName" {
-			file := new(spdx.File)
-
-			doc.Files = append(doc.Files, file)
-			mapping = fileMap(file)
-		} else if p.Key == "LicenseID" {
-			file, pkg = nil, nil
-			lic := new(spdx.ExtractedLicensingInfo)
-			doc.ExtractedLicenceInfo = append(doc.ExtractedLicenceInfo, lic)
-			mapping = extractedLicenceMap(lic)
+		_, err := applyMapping(p, mapping)
+		if err != nil {
+			return nil, err
 		}
-
-		ok, err := applyMapping(p, mapping)
 	}
 
 	return doc, nil

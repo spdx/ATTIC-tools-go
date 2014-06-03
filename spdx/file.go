@@ -12,6 +12,7 @@ type File struct {
 	ArtifactOf        []*ArtifactOf    // optinal
 	Dependency        []*File          // optional
 	Contributor       []string         // optional
+	Comment           string           //optional
 }
 
 type ArtifactOf struct {
