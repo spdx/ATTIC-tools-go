@@ -11,6 +11,10 @@ type LicenceReference struct {
 
 func (l LicenceReference) LicenceId() string { return l.Id }
 
+func NewLicenceReference(id string) LicenceReference {
+	return LicenceReference{Id: id}
+}
+
 type Licence struct {
 	Id               string
 	Name             string // optional
