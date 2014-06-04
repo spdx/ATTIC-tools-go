@@ -1,6 +1,6 @@
 package tag
 
-import "../spdx"
+import "github.com/vladvelici/spdx-go/spdx"
 
 import (
 	"errors"
@@ -46,11 +46,8 @@ func verifCode(vc *spdx.VerificationCode) updater {
 		vc.Value = val
 		open := strings.Index(val, "(")
 		if open > 0 {
-			vc.Value = val[:open]
+			vc.Value = strings.TrimSpace(val[:open])
 
-			if len(val) <= open {
-				return ErrInvalidVerifCodeExcludes
-			}
 			val = val[open+1:]
 
 			// close parentheses
@@ -62,12 +59,8 @@ func verifCode(vc *spdx.VerificationCode) updater {
 			val = val[:cls]
 
 			// remove "excludes:" if exists
-			if len(val) >= len("excludes:") {
-				exclPart := strings.ToLower(val[:len("excludes:")])
-				if exclPart == "excludes:" {
-					val = val[:len("excludes:")]
-				}
-			}
+			excludeRegexp := regexp.MustCompile("(?i)excludes:\\s*")
+			val = excludeRegexp.ReplaceAllLiteralString(val, "")
 
 			vc.ExcludedFiles = strings.Split(val, ",")
 			for i, _ := range vc.ExcludedFiles {

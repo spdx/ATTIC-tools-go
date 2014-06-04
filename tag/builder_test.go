@@ -1,7 +1,7 @@
 package tag
 
 import (
-	"../spdx"
+	"github.com/vladvelici/spdx-go/spdx"
 	"testing"
 )
 
@@ -27,10 +27,10 @@ func TestUpd(t *testing.T) {
 }
 
 func TestUpdList(t *testing.T) {
-	arr := []int{1, 2, 3}
+	arr := []string{"1", "2", "3"}
 	f := updList(&arr)
-	f(4)
-	if len(arr) != 4 || arr[3] != 4 {
+	f("4")
+	if len(arr) != 4 || arr[3] != "4" {
 		t.Fail()
 	}
 }
@@ -38,7 +38,7 @@ func TestUpdList(t *testing.T) {
 func TestVerifCodeNoExcludes(t *testing.T) {
 	vc := new(spdx.VerificationCode)
 	value := "d6a770ba38583ed4bb4525bd96e50461655d2758"
-	f := verifCode(&vc)
+	f := verifCode(vc)
 	err := f(value)
 	if err != nil {
 		t.Errorf("Error should be nil but found %s.", err)
@@ -56,7 +56,7 @@ func TestVerifCodeWithExcludes(t *testing.T) {
 	vc := new(spdx.VerificationCode)
 	value := "d6a770ba38583ed4bb4525bd96e50461655d2758"
 	excludes := " (excludes: abc.txt, file.spdx)"
-	f := verifCode(&vc)
+	f := verifCode(vc)
 	err := f(value + excludes)
 
 	if err != nil {
@@ -75,7 +75,7 @@ func TestVerifCodeWithExcludes2(t *testing.T) {
 	vc := new(spdx.VerificationCode)
 	value := "d6a770ba38583ed4bb4525bd96e50461655d2758"
 	excludes := " (abc.txt, file.spdx)"
-	f := verifCode(&vc)
+	f := verifCode(vc)
 
 	err := f(value + excludes)
 
@@ -96,23 +96,11 @@ func TestVerifCodeInvalidExcludesNoClosedParentheses(t *testing.T) {
 	vc := new(spdx.VerificationCode)
 	value := "d6a770ba38583ed4bb4525bd96e50461655d2758"
 	excludes := " ("
-	f := verifCode(&vc)
+	f := verifCode(vc)
 	err := f(value + excludes)
 
 	if err != ErrNoClosedParen {
 		t.Errorf("Error should be UnclosedParentheses but found %s.", err)
-	}
-}
-
-func TestVerifCodeInvalidExcludes(t *testing.T) {
-	vc := new(spdx.VerificationCode)
-	value := "d6a770ba38583ed4bb4525bd96e50461655d2758"
-	excludes := " ("
-	f := verifCode(&vc)
-	err := f(value + excludes)
-
-	if err != ErrInvalidVerifCodeExcludes {
-		t.Errorf("Error should be ErrInvalidVerifCodeExcludes but found %s.", err)
 	}
 }
 
@@ -121,8 +109,8 @@ func TestChecksum(t *testing.T) {
 	val := "d6a770ba38583ed4bb4525bd96e50461655d2758"
 	algo := "SHA1"
 
-	f := checksum(algo + ": " + val)
-	err := f(value)
+	f := checksum(cksum)
+	err := f(algo + ": " + val)
 
 	if err != nil {
 		t.Errorf("Error should be nil but found %s.", err)
@@ -139,8 +127,8 @@ func TestChecksum(t *testing.T) {
 
 func TestChecksumInvalid(t *testing.T) {
 	cksum := new(spdx.Checksum)
-	f := checksum("d6a770ba38583ed4bb")
-	err := f(value)
+	f := checksum(cksum)
+	err := f("d6a770ba38583ed4bb")
 
 	if err != ErrInvalidChecksum {
 		t.Errorf("Invalid error found: %s.", err)
