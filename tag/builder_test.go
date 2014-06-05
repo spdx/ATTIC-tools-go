@@ -17,6 +17,40 @@ func sameStrSlice(a, b []string) bool {
 	return true
 }
 
+func sameLicence(a, b spdx.AnyLicenceInfo) bool {
+	switch ta := a.(type) {
+	default:
+		return false
+	case spdx.LicenceReference:
+		if tb, ok := b.(spdx.LicenceReference); ok && tb == ta {
+			return true
+		}
+		return false
+	case spdx.DisjunctiveLicenceList:
+		if tb, ok := b.(spdx.DisjunctiveLicenceList); ok && len(ta) == len(tb) {
+			for i, lica := range ta {
+				licb := tb[i]
+				if !sameLicence(lica, licb) {
+					return false
+				}
+			}
+			return true
+		}
+		return false
+	case spdx.ConjunctiveLicenceList:
+		if tb, ok := b.(spdx.ConjunctiveLicenceList); ok && len(ta) == len(tb) {
+			for i, lica := range ta {
+				licb := tb[i]
+				if !sameLicence(lica, licb) {
+					return false
+				}
+			}
+			return true
+		}
+		return false
+	}
+}
+
 func joinStrSlice(a []string, glue string) string {
 	if len(a) == 0 {
 		return ""
@@ -29,11 +63,21 @@ func joinStrSlice(a []string, glue string) string {
 }
 
 func TestUpd(t *testing.T) {
-	a := "hello"
+	a := ""
 	f := upd(&a)
 	f("world")
 	if a != "world" {
 		t.Fail()
+	}
+}
+
+func TestUpdFail(t *testing.T) {
+	a := ""
+	f := upd(&a)
+	f("hello")
+	err := f("world")
+	if err != ErrAlreadyDefined {
+		t.Errorf("Different error: %s", err)
 	}
 }
 
@@ -268,5 +312,103 @@ func TestLicenceSetSplitNoSeparator(t *testing.T) {
 
 	if !sameStrSlice(expected, output) {
 		t.Errorf("Expected %s but found %s", expected, output)
+	}
+}
+
+func TestParseLicenceSetOr(t *testing.T) {
+	input := "(GPLv3 or LicenseRef-1)"
+	expected := spdx.DisjunctiveLicenceList{spdx.NewLicenceReference("GPLv3"), spdx.NewLicenceReference("LicenseRef-1")}
+	output, err := parseLicenceSet(input)
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err)
+	}
+
+	if !sameLicence(output, expected) {
+		t.Errorf("\nExpected: %T : %s\nbut found %T : %s\n", expected, expected, output, output)
+	}
+}
+
+func TestParseLicenceSetAnd(t *testing.T) {
+	input := "(GPLv3 and LicenseRef-1)"
+	expected := spdx.ConjunctiveLicenceList{spdx.NewLicenceReference("GPLv3"), spdx.NewLicenceReference("LicenseRef-1")}
+	output, err := parseLicenceSet(input)
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err)
+	}
+
+	if !sameLicence(output, expected) {
+		t.Errorf("\nExpected: %T : %s\nbut found %T : %s\n", expected, expected, output, output)
+	}
+}
+
+func TestParseLicenceSetNested(t *testing.T) {
+	input := "(GPLv3 or (LicenseRef-1 and LicenseRef-3) or LicenseRef-2)"
+
+	expected := spdx.DisjunctiveLicenceList{
+		spdx.NewLicenceReference("GPLv3"),
+		spdx.ConjunctiveLicenceList{
+			spdx.NewLicenceReference("LicenseRef-1"),
+			spdx.NewLicenceReference("LicenseRef-3"),
+		},
+		spdx.NewLicenceReference("LicenseRef-2"),
+	}
+
+	output, err := parseLicenceSet(input)
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err)
+	}
+
+	if !sameLicence(output, expected) {
+		t.Errorf("\nExpected: %T : %s\nbut found %T : %s\n", expected, expected, output, output)
+	}
+}
+
+func TestParseLicenceSetSingleValue(t *testing.T) {
+	input := "one value "
+
+	expected := spdx.NewLicenceReference("one value")
+
+	output, err := parseLicenceSet(input)
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err)
+	}
+
+	if !sameLicence(output, expected) {
+		t.Errorf("\nExpected: %T : %s\nbut found %T : %s\n", expected, expected, output, output)
+	}
+}
+
+func TestParseLicenceSetEmptyLicence(t *testing.T) {
+	input := " "
+
+	_, err := parseLicenceSet(input)
+	if err != ErrEmptyLicence {
+		t.Errorf("Unexpected error: %s", err)
+	}
+}
+
+func TestParseLicenceStringEmptyLicence(t *testing.T) {
+	input := " "
+
+	_, err := parseLicenceString(input)
+	if err != ErrEmptyLicence {
+		t.Errorf("Unexpected error: %s", err)
+	}
+}
+
+func TestParseLicenceStringUnbalancedParentheses(t *testing.T) {
+	input := " (()"
+
+	_, err := parseLicenceString(input)
+	if err != ErrNoClosedParen {
+		t.Errorf("Unexpected error: %s", err)
+	}
+}
+
+func TestLicenceSetConjunctionAndDisjunction(t *testing.T) {
+	input := "a and b or c"
+	_, err := parseLicenceSet(input)
+	if err != ErrConjunctionAndDisjunction {
+		t.Errorf("Unexpected error: %s", err)
 	}
 }

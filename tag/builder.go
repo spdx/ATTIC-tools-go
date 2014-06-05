@@ -13,6 +13,8 @@ var (
 	ErrInvalidVerifCodeExcludes  = errors.New("VerificationCode: Invalid Excludes format")
 	ErrInvalidChecksum           = errors.New("Invalid Package Checksum format.")
 	ErrConjunctionAndDisjunction = errors.New("Licence sets can only have either disjunction or conjunction, not both. (AND or OR, not both)")
+	ErrEmptyLicence              = errors.New("Empty licence")
+	ErrAlreadyDefined            = errors.New("Property already defined")
 )
 
 var (
@@ -27,6 +29,9 @@ type updaterMapping map[string]updater
 // Update a string pointer
 func upd(ptr *string) updater {
 	return func(val string) error {
+		if *ptr != "" {
+			return ErrAlreadyDefined
+		}
 		*ptr = val
 		return nil
 	}
@@ -177,7 +182,7 @@ func licenceSetSplit(sep *regexp.Regexp, str string) []string {
 func parseLicenceSet(val string) (spdx.AnyLicenceInfo, error) {
 	val = strings.TrimSpace(val)
 	if len(val) == 0 {
-		return nil, nil
+		return nil, ErrEmptyLicence
 	}
 
 	// if everything is in parentheses, remove the big parentheses
@@ -197,7 +202,7 @@ func parseLicenceSet(val string) (spdx.AnyLicenceInfo, error) {
 
 	if conj {
 		tokens := licenceSetSplit(andSeprator, val)
-		res := make(spdx.ConjunctiveLicenceList, len(tokens))
+		res := make(spdx.ConjunctiveLicenceList, 0, len(tokens))
 		for _, t := range tokens {
 			lic, err := parseLicenceSet(t)
 			if err != nil {
@@ -210,7 +215,7 @@ func parseLicenceSet(val string) (spdx.AnyLicenceInfo, error) {
 
 	if disj {
 		tokens := licenceSetSplit(orSeparator, val)
-		res := make(spdx.DisjunctiveLicenceList, len(tokens))
+		res := make(spdx.DisjunctiveLicenceList, 0, len(tokens))
 		for _, t := range tokens {
 			lic, err := parseLicenceSet(t)
 			if err != nil {
@@ -227,8 +232,9 @@ func parseLicenceSet(val string) (spdx.AnyLicenceInfo, error) {
 
 // Given a value from the pair, returns the appropriate spdx.AnyLicenceInfo
 func parseLicenceString(val string) (spdx.AnyLicenceInfo, error) {
+	val = strings.TrimSpace(val)
 	if len(val) == 0 {
-		return nil, nil
+		return nil, ErrEmptyLicence
 	}
 	openParen := strings.Count(val, "(")
 	closeParen := strings.Count(val, ")")
@@ -247,6 +253,11 @@ func parseLicenceString(val string) (spdx.AnyLicenceInfo, error) {
 // Update a AnyLicenceInfo pointer
 func anyLicence(lic *spdx.AnyLicenceInfo) updater {
 	return func(val string) error {
+		l, err := parseLicenceString(val)
+		if err != nil {
+			return err
+		}
+		*lic = l
 		return nil
 	}
 }
@@ -254,6 +265,11 @@ func anyLicence(lic *spdx.AnyLicenceInfo) updater {
 // Update a []anyLicenceInfo pointer
 func anyLicenceList(licList *[]spdx.AnyLicenceInfo) updater {
 	return func(val string) error {
+		l, err := parseLicenceString(val)
+		if err != nil {
+			return err
+		}
+		*licList = append(*licList, l)
 		return nil
 	}
 }
