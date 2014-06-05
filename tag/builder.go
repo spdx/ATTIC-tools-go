@@ -101,7 +101,7 @@ func findMatchingParenSet(str string) (open, cls int) {
 		return
 	}
 	count := 0
-	for i := open + 1; i < len(str); i++ {
+	for i := open; i < len(str); i++ {
 		if str[i] == '(' {
 			count++
 		} else if str[i] == ')' {
@@ -122,12 +122,8 @@ func conjOrDisjSet(str string) (conj, disj bool) {
 		return
 	}
 
-	if str[0] == '(' && str[len(str)-1] == ')' {
-		str = str[1 : len(str)-1]
-	}
-
 	// clear parentheses
-	for open, cls := findMatchingParenSet(str); open >= 0; open, cls = findMatchingParenSet(str) {
+	for open, cls := findMatchingParenSet(str); cls > open; open, cls = findMatchingParenSet(str) {
 		if cls == len(str)-1 {
 			str = str[:open]
 		} else {
@@ -147,15 +143,19 @@ func conjOrDisjSet(str string) (conj, disj bool) {
 func licenceSetSplit(sep *regexp.Regexp, str string) []string {
 	separators := sep.FindAllStringIndex(str, -1)
 	if separators == nil {
-		return nil
+		return []string{str}
 	}
 
 	used := 0
 	result := make([]string, 0)
 	for i := 0; i < len(separators); i++ {
 		nextOpen, nextClose := findMatchingParenSet(str[used:])
-		nextSep := separators[i]
+		if nextOpen >= 0 && nextClose >= 0 {
+			nextOpen += used
+			nextClose += used
+		}
 
+		nextSep := separators[i]
 		if nextOpen < nextSep[0] && nextSep[1] < nextClose {
 			// find a new token that's after nextClose
 			continue
@@ -181,7 +181,11 @@ func parseLicenceSet(val string) (spdx.AnyLicenceInfo, error) {
 	}
 
 	// if everything is in parentheses, remove the big parentheses
-	if val[0] == '(' && val[len(val)-1] == ')' {
+	o, c := findMatchingParenSet(val)
+	if o == 0 && c == len(val)-1 {
+		if len(val) <= 2 {
+			return nil, errors.New("Empty licence identifier")
+		}
 		val = val[1 : len(val)-1]
 	}
 
