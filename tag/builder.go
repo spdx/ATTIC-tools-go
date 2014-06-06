@@ -28,11 +28,13 @@ type updaterMapping map[string]updater
 
 // Update a string pointer
 func upd(ptr *string) updater {
+	set := false
 	return func(val string) error {
-		if *ptr != "" {
+		if set {
 			return ErrAlreadyDefined
 		}
 		*ptr = val
+		set = true
 		return nil
 	}
 }
@@ -47,8 +49,11 @@ func updList(arr *[]string) updater {
 
 // Update a VerificationCode pointer
 func verifCode(vc *spdx.VerificationCode) updater {
+	set := false
 	return func(val string) error {
-		vc.Value = val
+		if set {
+			return ErrAlreadyDefined
+		}
 		open := strings.Index(val, "(")
 		if open > 0 {
 			vc.Value = strings.TrimSpace(val[:open])
@@ -71,19 +76,27 @@ func verifCode(vc *spdx.VerificationCode) updater {
 			for i, _ := range vc.ExcludedFiles {
 				vc.ExcludedFiles[i] = strings.TrimSpace(vc.ExcludedFiles[i])
 			}
+		} else {
+			vc.Value = strings.TrimSpace(val)
 		}
+		set = true
 		return nil
 	}
 }
 
 // Update a Checksum pointer
 func checksum(cksum *spdx.Checksum) updater {
+	set := false
 	return func(val string) error {
+		if set {
+			return ErrAlreadyDefined
+		}
 		split := strings.Split(val, ":")
 		if len(split) != 2 {
 			return ErrInvalidChecksum
 		}
 		cksum.Algo, cksum.Value = strings.TrimSpace(split[0]), strings.TrimSpace(split[1])
+		set = true
 		return nil
 	}
 }
@@ -252,12 +265,17 @@ func parseLicenceString(val string) (spdx.AnyLicenceInfo, error) {
 
 // Update a AnyLicenceInfo pointer
 func anyLicence(lic *spdx.AnyLicenceInfo) updater {
+	set := false
 	return func(val string) error {
+		if set {
+			return ErrAlreadyDefined
+		}
 		l, err := parseLicenceString(val)
 		if err != nil {
 			return err
 		}
 		*lic = l
+		set = true
 		return nil
 	}
 }
@@ -349,6 +367,8 @@ func documentMap(doc *spdx.Document) updaterMapping {
 				Dependency: make([]*spdx.File, 0),
 				ArtifactOf: make([]*spdx.ArtifactOf, 0),
 			}
+
+			doc.Files = append(doc.Files, file)
 
 			mapMerge(&mapping, updaterMapping{
 				"FileType":          upd(&file.Type),

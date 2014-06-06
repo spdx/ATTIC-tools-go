@@ -412,3 +412,140 @@ func TestLicenceSetConjunctionAndDisjunction(t *testing.T) {
 		t.Errorf("Unexpected error: %s", err)
 	}
 }
+
+func TestDoc(t *testing.T) {
+	m := map[string][]string{
+		"SpecVersion":        {"1.2"},
+		"DataLicense":        {"CC-1.0"},
+		"DocumentComment":    {"hahaha hahaha"},
+		"Creator":            {"Organization: F", "Person: Test Testaculous"},
+		"Created":            {"04/05/06"},
+		"CreatorComment":     {"This is some creator comment...\n blah blah"},
+		"LicenseListVersion": {"1.2.3"},
+	}
+
+	// transform data to input pair
+	input := make([]Pair, 0)
+	for k, vals := range m {
+		for _, v := range vals {
+			input = append(input, Pair{k, v})
+		}
+	}
+
+	doc, err := parseDocument(input)
+
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err)
+	}
+
+	if doc.SpecVersion != m["SpecVersion"][0] {
+		t.Errorf("h Invalid doc.SpecVersion: '%s'", doc.SpecVersion)
+	}
+	if doc.DataLicence != m["DataLicense"][0] {
+		t.Errorf("Invalid doc.DataLicence: '%s'", doc.DataLicence)
+	}
+	if doc.Comment != m["DocumentComment"][0] {
+		t.Errorf("Invalid doc.Comment: '%s'", doc.Comment)
+	}
+	if !sameStrSlice(doc.CreationInfo.Creator, m["Creator"]) {
+		t.Errorf("Invalid doc.CreationInfo.Creator: (len=%d) '%s'", len(doc.CreationInfo.Creator), doc.CreationInfo.Creator)
+	}
+	if doc.CreationInfo.Created != m["Created"][0] {
+		t.Errorf("Invalid doc.CreationInfo.Created: '%s'", doc.CreationInfo.Created)
+	}
+	if doc.CreationInfo.Comment != m["CreatorComment"][0] {
+		t.Errorf("Invalid doc.CreationInfo.Comment: '%s'", doc.CreationInfo.Comment)
+	}
+	if doc.CreationInfo.LicenceListVersion != m["LicenseListVersion"][0] {
+		t.Errorf("Invalid doc.LicenceListVersion: '%s'", doc.CreationInfo.LicenceListVersion)
+	}
+}
+
+func TestSamePropertyTwice(t *testing.T) {
+	input := []Pair{
+		{"SpecVersion", "1.2"},
+		{"SpecVersion", "1.3"},
+	}
+
+	_, err := parseDocument(input)
+
+	if err != ErrAlreadyDefined {
+		t.Errorf("Unexpected error: %s", err)
+	}
+}
+
+func TestDocNestedPackage(t *testing.T) {
+	cksum := spdx.Checksum{
+		Algo:  "SHA1",
+		Value: "2fd4e1c67a2d28fced849ee1bb76e7391b93eb12",
+	}
+	input := []Pair{
+		{"SpecVersion", "1.2"},
+		{"PackageName", "spdx-tools-go"},
+		{"PackageVersion", "1.2"},
+		{"PackageFileName", "spdx-tools-go.tar.gz"},
+		{"PackageSupplier", "Organization: Linux Foundation"},
+		{"PackageOriginator", "Organization: Linux Foundation"},
+		{"PackageDownloadLocation", "http://git.spdx.org/spdx-tools-go.git"},
+		{"PackageHomePage", "http://git.spdx.org/spdx-tools-go.git"},
+		{"PackageSourceInfo", ":)"},
+		{"PackageLicenseComments", "example comment"},
+		{"PackageCopyrightText", "sample copyright text"},
+		{"PackageSummary", "spdx library for go"},
+		{"PackageDescription", "spdx parser library for go supporting tag and rdf formats"},
+		{"PackageVerificationCode", "fdsa431fdsa43fdsa432"},
+		{"PackageLicenseDeclared", "MIT1"},
+		{"PackageLicenseConcluded", "MIT2"},
+		// non-string comparable attributes:
+		{"PackageChecksum", cksum.Algo + ": " + cksum.Value},
+		{"PackageLicenseInfoFromFiles", "Apache2"},
+		{"PackageLicenseInfoFromFiles", "MIT"},
+	}
+
+	doc, err := parseDocument(input)
+
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err)
+	}
+	if len(doc.Packages) != 1 {
+		t.Error("None or more packages than expected.")
+	}
+	pkg := doc.Packages[0]
+
+	strExpected := []string{
+		doc.SpecVersion,
+		pkg.Name,
+		pkg.Version,
+		pkg.FileName,
+		pkg.Supplier,
+		pkg.Originator,
+		pkg.DownloadLocation,
+		pkg.HomePage,
+		pkg.SourceInfo,
+		pkg.LicenceComments,
+		pkg.CopyrightText,
+		pkg.Summary,
+		pkg.Description,
+		pkg.VerificationCode.Value,
+		pkg.LicenceDeclared.LicenceId(),
+		pkg.LicenceConcluded.LicenceId(),
+	}
+
+	for i, val := range strExpected {
+		p := input[i]
+		if val != p.Value {
+			t.Errorf("Invalid %s: '%s'.", p.Key, val)
+		}
+	}
+
+	if *pkg.Checksum != cksum {
+		t.Errorf("Invalid PackageChecksum: '%s'.", *pkg.Checksum)
+	}
+
+	if len(pkg.LicenceInfoFromFiles) != 2 ||
+		pkg.LicenceInfoFromFiles[0].LicenceId() != "Apache2" ||
+		pkg.LicenceInfoFromFiles[1].LicenceId() != "MIT" {
+
+		t.Errorf("Invalid PackageLicenseInfoFromFiles: '%s'", pkg.LicenceInfoFromFiles)
+	}
+}
