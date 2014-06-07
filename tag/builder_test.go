@@ -425,14 +425,14 @@ func TestDoc(t *testing.T) {
 	}
 
 	// transform data to input pair
-	input := make([]Pair, 0)
+	input := make([]pair, 0)
 	for k, vals := range m {
 		for _, v := range vals {
-			input = append(input, Pair{k, v})
+			input = append(input, pair{k, v})
 		}
 	}
 
-	doc, err := parseDocument(input)
+	doc, err := build(input)
 
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
@@ -462,12 +462,12 @@ func TestDoc(t *testing.T) {
 }
 
 func TestSamePropertyTwice(t *testing.T) {
-	input := []Pair{
+	input := []pair{
 		{"SpecVersion", "1.2"},
 		{"SpecVersion", "1.3"},
 	}
 
-	_, err := parseDocument(input)
+	_, err := build(input)
 
 	if err != ErrAlreadyDefined {
 		t.Errorf("Unexpected error: %s", err)
@@ -479,7 +479,7 @@ func TestDocNestedPackage(t *testing.T) {
 		Algo:  "SHA1",
 		Value: "2fd4e1c67a2d28fced849ee1bb76e7391b93eb12",
 	}
-	input := []Pair{
+	input := []pair{
 		{"SpecVersion", "1.2"},
 		{"PackageName", "spdx-tools-go"},
 		{"PackageVersion", "1.2"},
@@ -502,7 +502,7 @@ func TestDocNestedPackage(t *testing.T) {
 		{"PackageLicenseInfoFromFiles", "MIT"},
 	}
 
-	doc, err := parseDocument(input)
+	doc, err := build(input)
 
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
@@ -559,7 +559,7 @@ func TestDocNestedFiles(t *testing.T) {
 	fContributor := []string{"Person: A", "Person: B", "Organization: LF"}
 	fDependency := []string{"f0.txt", "f1.txt", "f2.txt"}
 	licInfo := []string{"MIT", "Apache", "LicenseRef-0"}
-	input := []Pair{
+	input := []pair{
 		{"SpecVersion", "1.2"},
 		{"PackageName", "spdx-tools-go"},
 
@@ -588,18 +588,18 @@ func TestDocNestedFiles(t *testing.T) {
 	}
 
 	for _, v := range fContributor {
-		input = append(input, Pair{"FileContributor", v})
+		input = append(input, pair{"FileContributor", v})
 	}
 
 	for _, v := range fDependency {
-		input = append(input, Pair{"FileDependency", v})
+		input = append(input, pair{"FileDependency", v})
 	}
 
 	for _, v := range licInfo {
-		input = append(input, Pair{"LicenseInfoInFile", v})
+		input = append(input, pair{"LicenseInfoInFile", v})
 	}
 
-	doc, err := parseDocument(input)
+	doc, err := build(input)
 
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
@@ -684,19 +684,19 @@ func TestDocLicenceId(t *testing.T) {
 	xRef := [...][]string{{"A", "B", "Ca"}, {}}
 	names := [...][]string{{"MIT", "Apache", "LicenseRef-0"}, {"Lic", "Example"}}
 
-	input := make([]Pair, 0)
+	input := make([]pair, 0)
 
 	for i, id := range ids {
-		input = append(input, Pair{"LicenseID", id})
+		input = append(input, pair{"LicenseID", id})
 		for _, ref := range xRef[i] {
-			input = append(input, Pair{"LicenseCrossReference", ref})
+			input = append(input, pair{"LicenseCrossReference", ref})
 		}
 		for _, name := range names[i] {
-			input = append(input, Pair{"LicenseName", name})
+			input = append(input, pair{"LicenseName", name})
 		}
 	}
 
-	doc, err := parseDocument(input)
+	doc, err := build(input)
 
 	if err != nil {
 		t.Errorf("Unexpected error: '%s'", err)
@@ -722,66 +722,66 @@ func TestDocLicenceId(t *testing.T) {
 }
 
 func TestDocInvalidProperty(t *testing.T) {
-	input := []Pair{{"SomeInvalidProperty", "value"}}
-	_, err := parseDocument(input)
+	input := []pair{{"SomeInvalidProperty", "value"}}
+	_, err := build(input)
 	if err == nil {
 		t.Fail()
 	}
 }
 
 func TestLicenceAlreadyDefined(t *testing.T) {
-	input := []Pair{
+	input := []pair{
 		{"PackageName", "some package"},
 		{"PackageLicenseDeclared", "decl1"},
 		{"PackageLicenseDeclared", "decl2"},
 	}
-	_, err := parseDocument(input)
+	_, err := build(input)
 	if err != ErrAlreadyDefined {
 		t.Errorf("Unexpected error '%s'.", err)
 	}
 }
 
 func TestDocLicenceConjAndDisj(t *testing.T) {
-	input := []Pair{
+	input := []pair{
 		{"PackageName", "some package"},
 		{"PackageLicenseDeclared", "(decl1 and decl2 or decl3)"},
 	}
-	_, err := parseDocument(input)
+	_, err := build(input)
 	if err != ErrConjunctionAndDisjunction {
 		t.Errorf("Unexpected error '%s'.", err)
 	}
 }
 
 func TestDocLicenceInvalidSet(t *testing.T) {
-	input := []Pair{
+	input := []pair{
 		{"PackageName", "some package"},
 		{"PackageLicenseDeclared", "a and ()"},
 	}
-	_, err := parseDocument(input)
+	_, err := build(input)
 	if err != ErrEmptyLicence {
 		t.Errorf("Unexpected error '%s'.", err)
 	}
 }
 
 func TestChecksumAlreadyDefined(t *testing.T) {
-	input := []Pair{
+	input := []pair{
 		{"PackageName", "some package"},
 		{"PackageChecksum", "SHA1: d6a770ba38583ed4bb4525bd96e50471655d2758"},
 		{"PackageChecksum", "SHA1: d6a770ba38583ed4bb4525bd96e50471655d2758"},
 	}
-	_, err := parseDocument(input)
+	_, err := build(input)
 	if err != ErrAlreadyDefined {
 		t.Errorf("Unexpected error '%s'.", err)
 	}
 }
 
 func TestVerifCodeAlreadyDefined(t *testing.T) {
-	input := []Pair{
+	input := []pair{
 		{"PackageName", "some package"},
 		{"PackageVerificationCode", "6a770ba38583ed4bb4525bd96e50471655d2758"},
 		{"PackageVerificationCode", "d6a770ba38583ed4bb4525bd96e50471655d2758"},
 	}
-	_, err := parseDocument(input)
+	_, err := build(input)
 	if err != ErrAlreadyDefined {
 		t.Errorf("Unexpected error '%s'.", err)
 	}
@@ -794,14 +794,14 @@ func TestReviewer(t *testing.T) {
 		{"d", "e", "f"},
 	}
 
-	input := make([]Pair, 0, 6)
+	input := make([]pair, 0, 6)
 	for _, rev := range reviews {
-		input = append(input, Pair{"Reviewer", rev.Reviewer})
-		input = append(input, Pair{"ReviewDate", rev.Date})
-		input = append(input, Pair{"ReviewComment", rev.Comment})
+		input = append(input, pair{"Reviewer", rev.Reviewer})
+		input = append(input, pair{"ReviewDate", rev.Date})
+		input = append(input, pair{"ReviewComment", rev.Comment})
 	}
 
-	doc, err := parseDocument(input)
+	doc, err := build(input)
 
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)

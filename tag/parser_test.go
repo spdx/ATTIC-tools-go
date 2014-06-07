@@ -3,7 +3,7 @@ package tag
 import "strings"
 import "testing"
 
-func sameDoc(a, b []Pair) bool {
+func sameDoc(a, b []pair) bool {
 	if len(a) != len(b) {
 		return false
 	}
@@ -16,11 +16,11 @@ func sameDoc(a, b []Pair) bool {
 }
 
 func TestSameDocFunc(t *testing.T) {
-	a := []Pair{
+	a := []pair{
 		{"one", "onev"},
 		{"two", "twov"},
 	}
-	b := []Pair{
+	b := []pair{
 		{"one", "onev"},
 		{"two", "twov"},
 	}
@@ -29,7 +29,7 @@ func TestSameDocFunc(t *testing.T) {
 		t.Error("Slices are the same and not detected")
 	}
 
-	if sameDoc(a, []Pair{{"a", "c"}, {"two", "twov"}}) {
+	if sameDoc(a, []pair{{"a", "c"}, {"two", "twov"}}) {
 		t.Error("Slices are the same and detected as different")
 	}
 }
@@ -37,7 +37,7 @@ func TestSameDocFunc(t *testing.T) {
 func TestEmptyDoc(t *testing.T) {
 	r := strings.NewReader("")
 
-	doc, err := Parse(r)
+	doc, err := parse(r)
 
 	if len(doc) != 0 || err != nil {
 		t.Errorf("Document: %s. Error: %s", doc, err)
@@ -47,7 +47,7 @@ func TestEmptyDoc(t *testing.T) {
 func TestCommentsOnly(t *testing.T) {
 	r := strings.NewReader("#this is a comment\n#this is another comment :)\n#whatever")
 
-	doc, err := Parse(r)
+	doc, err := parse(r)
 
 	if len(doc) != 0 || err != nil {
 		t.Errorf("Document: %s. Error: %s", doc, err)
@@ -58,7 +58,7 @@ func TestCommentsOnly(t *testing.T) {
 func TestOneCommentNoNewline(t *testing.T) {
 	r := strings.NewReader("#this is a comment")
 
-	doc, err := Parse(r)
+	doc, err := parse(r)
 
 	if len(doc) != 0 || err != nil {
 		t.Errorf("Document: %s. Error: %s", doc, err)
@@ -69,7 +69,7 @@ func TestOneCommentNoNewline(t *testing.T) {
 func TestOneCommentNewLine(t *testing.T) {
 	r := strings.NewReader("#this is a comment\n")
 
-	doc, err := Parse(r)
+	doc, err := parse(r)
 
 	if len(doc) != 0 || err != nil {
 		t.Errorf("Document: %s. Error: %s", doc, err)
@@ -80,7 +80,7 @@ func TestOneCommentNewLine(t *testing.T) {
 func TestDoubleEndlineAfterComment(t *testing.T) {
 	r := strings.NewReader("#property:value\n\n")
 
-	doc, err := Parse(r)
+	doc, err := parse(r)
 
 	if len(doc) != 0 || err != nil {
 		t.Errorf("Document: %s. Error: %s", doc, err)
@@ -90,7 +90,7 @@ func TestDoubleEndlineAfterComment(t *testing.T) {
 func TestCommentsAndEmptyLines(t *testing.T) {
 	r := strings.NewReader("#this is a comment\n\n#this is another comment :)\n#whatever\n\n\n#anoterOne")
 
-	doc, err := Parse(r)
+	doc, err := parse(r)
 
 	if len(doc) != 0 || err != nil {
 		t.Errorf("Document: %s. Error: %s", doc, err)
@@ -100,132 +100,132 @@ func TestCommentsAndEmptyLines(t *testing.T) {
 func TestValidProperty(t *testing.T) {
 	r := strings.NewReader("someKey:someValue")
 
-	doc, err := Parse(r)
+	doc, err := parse(r)
 
 	if len(doc) != 1 || err != nil {
 		t.Errorf("Document: %s. Error: %s", doc, err)
 		t.FailNow()
 	}
 
-	pair := Pair{"someKey", "someValue"}
+	p := pair{"someKey", "someValue"}
 
-	if len(doc) == 1 && doc[0] != pair {
-		t.Errorf("Expected %s. Got %s", pair, doc[0])
+	if len(doc) == 1 && doc[0] != p {
+		t.Errorf("Expected %s. Got %s", p, doc[0])
 	}
 }
 
 func TestValidPropertyNewLine(t *testing.T) {
 	r := strings.NewReader("someKey:someValue\n")
 
-	doc, err := Parse(r)
+	doc, err := parse(r)
 
 	if len(doc) != 1 || err != nil {
 		t.Errorf("Document: %s. Error: %s", doc, err)
 		t.FailNow()
 	}
 
-	pair := Pair{"someKey", "someValue"}
+	p := pair{"someKey", "someValue"}
 
-	if len(doc) == 1 && doc[0] != pair {
-		t.Errorf("Expected %s. Got %s", pair, doc[0])
+	if len(doc) == 1 && doc[0] != p {
+		t.Errorf("Expected %s. Got %s", p, doc[0])
 	}
 }
 
 func TestClearWhitespaces(t *testing.T) {
 	r := strings.NewReader("someKey  : someValue\n")
 
-	doc, err := Parse(r)
+	doc, err := parse(r)
 
 	if len(doc) != 1 || err != nil {
 		t.Errorf("Document: %s. Error: %s", doc, err)
 		t.FailNow()
 	}
 
-	pair := Pair{"someKey", "someValue"}
+	p := pair{"someKey", "someValue"}
 
-	if len(doc) == 1 && doc[0] != pair {
-		t.Errorf("Expected %s. Got %s", pair, doc[0])
+	if len(doc) == 1 && doc[0] != p {
+		t.Errorf("Expected %s. Got %s", p, doc[0])
 	}
 }
 
 func TestValidPropertyNewLineCR(t *testing.T) {
 	r := strings.NewReader("someKey:someValue\r\n")
 
-	doc, err := Parse(r)
+	doc, err := parse(r)
 
 	if len(doc) != 1 || err != nil {
 		t.Errorf("Document: %s. Error: %s", doc, err)
 		t.FailNow()
 	}
 
-	pair := Pair{"someKey", "someValue"}
+	p := pair{"someKey", "someValue"}
 
-	if len(doc) == 1 && doc[0] != pair {
-		t.Errorf("Expected %s. Got %s", pair, doc[0])
+	if len(doc) == 1 && doc[0] != p {
+		t.Errorf("Expected %s. Got %s", p, doc[0])
 	}
 }
 
 func TestValidPropertyText(t *testing.T) {
 	r := strings.NewReader("someKey:<text>someValue</text>")
 
-	doc, err := Parse(r)
+	doc, err := parse(r)
 
 	if len(doc) != 1 || err != nil {
 		t.Errorf("Document: %s. Error: %s", doc, err)
 		t.FailNow()
 	}
 
-	pair := Pair{"someKey", "someValue"}
+	p := pair{"someKey", "someValue"}
 
-	if len(doc) == 1 && doc[0] != pair {
-		t.Errorf("Expected %s. Got %s", pair, doc[0])
+	if len(doc) == 1 && doc[0] != p {
+		t.Errorf("Expected %s. Got %s", p, doc[0])
 	}
 }
 
 func TestValidPropertyTextMultiline(t *testing.T) {
 	r := strings.NewReader("someKey:<text>\nsomeValue\n123\n\n4\n</text>")
 
-	doc, err := Parse(r)
+	doc, err := parse(r)
 
 	if len(doc) != 1 || err != nil {
 		t.Errorf("Document: %s. Error: %s", doc, err)
 		t.FailNow()
 	}
 
-	pair := Pair{"someKey", "someValue\n123\n\n4"}
+	p := pair{"someKey", "someValue\n123\n\n4"}
 
-	if len(doc) == 1 && doc[0] != pair {
-		t.Errorf("Expected %s. Got %s", pair, doc[0])
+	if len(doc) == 1 && doc[0] != p {
+		t.Errorf("Expected %s. Got %s", p, doc[0])
 	}
 }
 
 func TestValidPropertyTextNewLine(t *testing.T) {
 	r := strings.NewReader("someKey:<text>someValue</text>\n")
 
-	doc, err := Parse(r)
+	doc, err := parse(r)
 
 	if len(doc) != 1 || err != nil {
 		t.Errorf("Document: %s. Error: %s", doc, err)
 		t.FailNow()
 	}
 
-	pair := Pair{"someKey", "someValue"}
+	p := pair{"someKey", "someValue"}
 
-	if len(doc) == 1 && doc[0] != pair {
-		t.Errorf("Expected %s. Got %s", pair, doc[0])
+	if len(doc) == 1 && doc[0] != p {
+		t.Errorf("Expected %s. Got %s", p, doc[0])
 	}
 }
 
 func TestMoreInlineProperties(t *testing.T) {
 	r := strings.NewReader("Property1:value1\nProperty2:value2\nProperty3:value3\n")
 
-	doc, err := Parse(r)
+	doc, err := parse(r)
 
 	if len(doc) != 3 || err != nil {
 		t.Errorf("Document: %s. Error: %s", doc, err)
 	}
 
-	properties := []Pair{
+	properties := []pair{
 		{"Property1", "value1"},
 		{"Property2", "value2"},
 		{"Property3", "value3"},
@@ -239,13 +239,13 @@ func TestMoreInlineProperties(t *testing.T) {
 func TestInlinePropertiesAndComments(t *testing.T) {
 	r := strings.NewReader("# comment\nProperty1:value1\nProperty2:value2\n# comment no two\nProperty3:value3\n#comm\n")
 
-	doc, err := Parse(r)
+	doc, err := parse(r)
 
 	if len(doc) != 3 || err != nil {
 		t.Errorf("Document: %s. Error: %s", doc, err)
 	}
 
-	properties := []Pair{
+	properties := []pair{
 		{"Property1", "value1"},
 		{"Property2", "value2"},
 		{"Property3", "value3"},
@@ -259,13 +259,13 @@ func TestInlinePropertiesAndComments(t *testing.T) {
 func TestInlinePropertiesCommentsAndNewlines(t *testing.T) {
 	r := strings.NewReader("# comment\n\nProperty1:value1\n\n\nProperty2:value2\n# comment no two\nProperty3:value3\n#comm\n")
 
-	doc, err := Parse(r)
+	doc, err := parse(r)
 
 	if len(doc) != 3 || err != nil {
 		t.Errorf("Document: %s. Error: %s", doc, err)
 	}
 
-	properties := []Pair{
+	properties := []pair{
 		{"Property1", "value1"},
 		{"Property2", "value2"},
 		{"Property3", "value3"},
@@ -279,13 +279,13 @@ func TestInlinePropertiesCommentsAndNewlines(t *testing.T) {
 func TestMoreTextProperties(t *testing.T) {
 	r := strings.NewReader("Property1:<text>value1</text>\nProperty2:<text>value2</text>\nProperty3:<text>value3</text>\n")
 
-	doc, err := Parse(r)
+	doc, err := parse(r)
 
 	if len(doc) != 3 || err != nil {
 		t.Errorf("Document: %s. Error: %s", doc, err)
 	}
 
-	properties := []Pair{
+	properties := []pair{
 		{"Property1", "value1"},
 		{"Property2", "value2"},
 		{"Property3", "value3"},
@@ -299,13 +299,13 @@ func TestMoreTextProperties(t *testing.T) {
 func TestMoreTextPropertiesAndComments(t *testing.T) {
 	r := strings.NewReader("# this is a comment\nProperty1:<text>value1</text>\n#so is this\nProperty2:<text>value2</text>\nProperty3:<text>value3</text>\n#and this")
 
-	doc, err := Parse(r)
+	doc, err := parse(r)
 
 	if len(doc) != 3 || err != nil {
 		t.Errorf("Document: %s. Error: %s", doc, err)
 	}
 
-	properties := []Pair{
+	properties := []pair{
 		{"Property1", "value1"},
 		{"Property2", "value2"},
 		{"Property3", "value3"},
@@ -319,13 +319,13 @@ func TestMoreTextPropertiesAndComments(t *testing.T) {
 func TestMoreTextPropertiesCommentsAndNewlines(t *testing.T) {
 	r := strings.NewReader("\n\n# this is a comment\n\nProperty1:<text>value1</text>\n#so is this\n\nProperty2:<text>value2</text>\nProperty3:<text>value3</text>\n#and this\n\n")
 
-	doc, err := Parse(r)
+	doc, err := parse(r)
 
 	if len(doc) != 3 || err != nil {
 		t.Errorf("Document: %s. Error: %s", doc, err)
 	}
 
-	properties := []Pair{
+	properties := []pair{
 		{"Property1", "value1"},
 		{"Property2", "value2"},
 		{"Property3", "value3"},
@@ -339,13 +339,13 @@ func TestMoreTextPropertiesCommentsAndNewlines(t *testing.T) {
 func TestMixedProperties(t *testing.T) {
 	r := strings.NewReader("Property1:  <text>value1</text>\nProperty2:value2\nProperty3:<text>value3</text>\n")
 
-	doc, err := Parse(r)
+	doc, err := parse(r)
 
 	if len(doc) != 3 || err != nil {
 		t.Errorf("Document: %s. Error: %s", doc, err)
 	}
 
-	properties := []Pair{
+	properties := []pair{
 		{"Property1", "value1"},
 		{"Property2", "value2"},
 		{"Property3", "value3"},
@@ -359,7 +359,7 @@ func TestMixedProperties(t *testing.T) {
 func TestInvalidTextValuePrefix(t *testing.T) {
 	r := strings.NewReader("Property1: invalid <text>value1</text>\n")
 
-	_, err := Parse(r)
+	_, err := parse(r)
 
 	if err == nil {
 		t.Fail()
@@ -372,7 +372,7 @@ func TestInvalidTextValuePrefix(t *testing.T) {
 func TestInvalidTextValueSuffix(t *testing.T) {
 	r := strings.NewReader("Property1: <text>value1</text> invalid \n")
 
-	_, err := Parse(r)
+	_, err := parse(r)
 
 	if err == nil {
 		t.Fail()
@@ -385,7 +385,7 @@ func TestInvalidTextValueSuffix(t *testing.T) {
 func TestInvalidTextValueSuffixComment(t *testing.T) {
 	r := strings.NewReader("Property1: <text>value1</text># invalid \n")
 
-	_, err := Parse(r)
+	_, err := parse(r)
 
 	if err == nil {
 		t.Fail()
@@ -398,7 +398,7 @@ func TestInvalidTextValueSuffixComment(t *testing.T) {
 func TestInvalidTextValueSuffixProperty(t *testing.T) {
 	r := strings.NewReader("Property1: <text>value1</text>a:b\n")
 
-	_, err := Parse(r)
+	_, err := parse(r)
 	t.Logf("Error: %s\n", err)
 
 	if err == nil {
@@ -412,7 +412,7 @@ func TestInvalidTextValueSuffixProperty(t *testing.T) {
 func TestInvalidUnclosedText(t *testing.T) {
 	r := strings.NewReader("Property1: <text>value1\n\n invalid \n")
 
-	_, err := Parse(r)
+	_, err := parse(r)
 	t.Logf("Error: %s\n", err)
 
 	if err == nil {
@@ -426,58 +426,58 @@ func TestInvalidUnclosedText(t *testing.T) {
 func TestCommentAsInlineValue(t *testing.T) {
 	r := strings.NewReader("someKey:#someValue")
 
-	doc, err := Parse(r)
+	doc, err := parse(r)
 
 	if len(doc) != 1 || err != nil {
 		t.Errorf("Document: %s. Error: %s", doc, err)
 		t.FailNow()
 	}
 
-	pair := Pair{"someKey", "#someValue"}
+	p := pair{"someKey", "#someValue"}
 
-	if len(doc) == 1 && doc[0] != pair {
-		t.Errorf("Expected %s. Got %s", pair, doc[0])
+	if len(doc) == 1 && doc[0] != p {
+		t.Errorf("Expected %s. Got %s", p, doc[0])
 	}
 }
 
 func TestCommentAsTextValue(t *testing.T) {
 	r := strings.NewReader("someKey:<text>#someValue</text>")
 
-	doc, err := Parse(r)
+	doc, err := parse(r)
 
 	if len(doc) != 1 || err != nil {
 		t.Errorf("Document: %s. Error: %s", doc, err)
 		t.FailNow()
 	}
 
-	pair := Pair{"someKey", "#someValue"}
+	p := pair{"someKey", "#someValue"}
 
-	if len(doc) == 1 && doc[0] != pair {
-		t.Errorf("Expected %s. Got %s", pair, doc[0])
+	if len(doc) == 1 && doc[0] != p {
+		t.Errorf("Expected %s. Got %s", p, doc[0])
 	}
 }
 
 func TestCommentAsMultilineTextValue(t *testing.T) {
 	r := strings.NewReader("someKey:<text>#c\n#someValue\nd\n#a</text>")
 
-	doc, err := Parse(r)
+	doc, err := parse(r)
 
 	if len(doc) != 1 || err != nil {
 		t.Errorf("Document: %s. Error: %s", doc, err)
 		t.FailNow()
 	}
 
-	pair := Pair{"someKey", "#c\n#someValue\nd\n#a"}
+	p := pair{"someKey", "#c\n#someValue\nd\n#a"}
 
-	if len(doc) == 1 && doc[0] != pair {
-		t.Errorf("Expected %s. Got %s", pair, doc[0])
+	if len(doc) == 1 && doc[0] != p {
+		t.Errorf("Expected %s. Got %s", p, doc[0])
 	}
 }
 
 func TestSomeInvalidText(t *testing.T) {
 	r := strings.NewReader("garbage")
 
-	_, err := Parse(r)
+	_, err := parse(r)
 	if err == nil {
 		t.Fail()
 	}
@@ -489,13 +489,13 @@ func TestSomeInvalidText(t *testing.T) {
 
 func TestPropertyWithNoValue(t *testing.T) {
 	r := strings.NewReader("garbage:")
-	doc, err := Parse(r)
+	doc, err := parse(r)
 	t.Logf("Doc=%s, Err=%s", doc, err)
-	pair := Pair{"garbage", ""}
+	p := pair{"garbage", ""}
 	if err != nil || doc == nil || len(doc) != 1 {
 		t.FailNow()
 	}
-	if doc[0] != pair {
+	if doc[0] != p {
 		t.Fail()
 	}
 }

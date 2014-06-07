@@ -452,7 +452,7 @@ func documentMap(doc *spdx.Document) updaterMapping {
 // err is the error returned by applying the mapping function or, if ok == false, an error with the relevant "mapping not found" message
 //
 // It returns two arguments to allow for easily creating parsing modes such as "ignore not known mapping"
-func applyMapping(input Pair, mapping updaterMapping) (ok bool, err error) {
+func applyMapping(input pair, mapping updaterMapping) (ok bool, err error) {
 	f, ok := mapping[input.Key]
 	if !ok {
 		return false, errors.New("Invalid property or property needs another property to be defined before it: " + input.Key)
@@ -460,8 +460,8 @@ func applyMapping(input Pair, mapping updaterMapping) (ok bool, err error) {
 	return true, f(input.Value)
 }
 
-// Parse a []Pair list to a *spdx.Document
-func parseDocument(input []Pair) (*spdx.Document, error) {
+// Parse a []pair list to a *spdx.Document
+func build(input []pair) (*spdx.Document, error) {
 	doc := new(spdx.Document)
 	mapping := documentMap(doc)
 

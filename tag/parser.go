@@ -154,21 +154,21 @@ func tokenize() bufio.SplitFunc {
 	}
 }
 
-type Pair struct {
+type pair struct {
 	Key, Value string
 }
 
-func Parse(f io.Reader) (doc []Pair, err error) {
+func parse(f io.Reader) (doc []pair, err error) {
 	scanner := bufio.NewScanner(f)
 	scanner.Split(tokenize())
-	doc = make([]Pair, 0, 15)
+	doc = make([]pair, 0, 15)
 	for scanner.Scan() {
 		key := strings.TrimSpace(scanner.Text())
 		value := ""
 		if scanner.Scan() {
 			value = strings.TrimSpace(scanner.Text())
 		}
-		doc = append(doc, Pair{key, value})
+		doc = append(doc, pair{key, value})
 	}
 
 	err = scanner.Err()
