@@ -18,7 +18,7 @@ type Package struct {
 	CopyrightText        string            // one
 	Summary              string            // zero or one
 	Description          string            // zero or one
-	HasFile              []*File           // one or more
+	Files                []*File           // one or more
 }
 
 type VerificationCode struct {
