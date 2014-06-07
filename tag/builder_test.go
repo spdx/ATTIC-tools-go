@@ -549,3 +549,240 @@ func TestDocNestedPackage(t *testing.T) {
 		t.Errorf("Invalid PackageLicenseInfoFromFiles: '%s'", pkg.LicenceInfoFromFiles)
 	}
 }
+
+func TestDocNestedFiles(t *testing.T) {
+	cksum := spdx.Checksum{
+		Algo:  "SHA1",
+		Value: "2fd4e1c67a2d28fced849ee1bb76e7391b93eb12",
+	}
+
+	fContributor := []string{"Person: A", "Person: B", "Organization: LF"}
+	fDependency := []string{"f0.txt", "f1.txt", "f2.txt"}
+	licInfo := []string{"MIT", "Apache", "LicenseRef-0"}
+	input := []Pair{
+		{"SpecVersion", "1.2"},
+		{"PackageName", "spdx-tools-go"},
+
+		{"FileName", "a.txt"},
+		{"FileType", "BINARY"},
+		{"LicenseConcluded", "MIT"},
+		{"LicenseComments", "file licence comments"},
+		{"FileCopyrightText", "some copyright text"},
+		{"FileComment", "some file comment"},
+		{"FileNotice", "example file notice"},
+
+		// nested attributes
+		{"ArtifactOfProjectName", "spdx-tools-go"},
+		{"ArtifactOfProjectUri", "http://git.spdx.org/spdx-tools-go.git"},
+		{"ArtifactOfProjectHomepage", "http://git.spdx.org/spdx-tools-go.git"},
+
+		{"ArtifactOfProjectName", "spdx"},
+		{"ArtifactOfProjectName", "spdx-tools"},
+
+		// second file
+		{"FileName", "b.go"},
+		{"FileType", "SOURCE"},
+
+		// non-string checks
+		{"FileChecksum", cksum.Algo + ": " + cksum.Value},
+	}
+
+	for _, v := range fContributor {
+		input = append(input, Pair{"FileContributor", v})
+	}
+
+	for _, v := range fDependency {
+		input = append(input, Pair{"FileDependency", v})
+	}
+
+	for _, v := range licInfo {
+		input = append(input, Pair{"LicenseInfoInFile", v})
+	}
+
+	doc, err := parseDocument(input)
+
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err)
+	}
+
+	if len(doc.Packages) != 1 {
+		t.Error("None or more packages than expected.")
+	}
+	pkg := doc.Packages[0]
+
+	if len(doc.Files) != 2 {
+		t.Errorf("Package has %s file(s). Expected %s", len(doc.Files), 2)
+	}
+	file1 := doc.Files[0]
+	file2 := doc.Files[1]
+
+	if len(file1.ArtifactOf) != 3 {
+		t.Errorf("File 1 has %s ArtifactOf. Expected %s", len(file1.ArtifactOf), 3)
+	}
+	if len(file2.ArtifactOf) != 0 {
+		t.Errorf("File 2 has %s ArtifactOf. Expected %s", len(file2.ArtifactOf), 0)
+	}
+
+	// check all string properties
+	strExpected := []string{
+		doc.SpecVersion,
+		pkg.Name,
+
+		file1.Name,
+		file1.Type,
+		file1.LicenceConcluded.LicenceId(),
+		file1.LicenceComments,
+		file1.CopyrightText,
+		file1.Comment,
+		file1.Notice,
+		file1.ArtifactOf[0].Name,
+		file1.ArtifactOf[0].ProjectUri,
+		file1.ArtifactOf[0].HomePage,
+		file1.ArtifactOf[1].Name,
+		file1.ArtifactOf[2].Name,
+
+		file2.Name,
+		file2.Type,
+	}
+
+	for i, val := range strExpected {
+		p := input[i]
+		if val != p.Value {
+			t.Errorf("Invalid %s: '%s'.", p.Key, val)
+		}
+	}
+
+	// same LicenceInfoInFile
+	if len(file2.LicenceInfoInFile) != len(licInfo) {
+		t.Errorf("Wrong file2.LicenceInfoInFile: '%s'", file2.LicenceInfoInFile)
+	} else {
+		fail := false
+		for i, lic := range file2.LicenceInfoInFile {
+			if lic.LicenceId() != licInfo[i] {
+				fail = true
+				break
+			}
+		}
+		if fail {
+			t.Errorf("Wrong file2.LicenceInfoInFile: '%s'", file2.LicenceInfoInFile)
+		}
+	}
+
+	// sameContributors
+	if !sameStrSlice(fContributor, file2.Contributor) {
+		t.Errorf("Wrong file2.Contributor: '%s'. Expected: '%s'", file2.Contributor, fContributor)
+	}
+
+	if *file2.Checksum != cksum {
+		t.Errorf("Invalid PackageChecksum: '%s'.", *pkg.Checksum)
+	}
+
+}
+
+func TestDocLicenceId(t *testing.T) {
+	ids := [...]string{"LicenseRef-1", "LicenseRef-2"}
+	xRef := [...][]string{{"A", "B", "Ca"}, {}}
+	names := [...][]string{{"MIT", "Apache", "LicenseRef-0"}, {"Lic", "Example"}}
+
+	input := make([]Pair, 0)
+
+	for i, id := range ids {
+		input = append(input, Pair{"LicenseID", id})
+		for _, ref := range xRef[i] {
+			input = append(input, Pair{"LicenseCrossReference", ref})
+		}
+		for _, name := range names[i] {
+			input = append(input, Pair{"LicenseName", name})
+		}
+	}
+
+	doc, err := parseDocument(input)
+
+	if err != nil {
+		t.Errorf("Unexpected error: '%s'", err)
+		t.FailNow()
+	}
+
+	if len(doc.ExtractedLicenceInfo) != len(ids) {
+		t.Errorf("Wrong ExtractedLicenceInfo (len=%s): '%s'", len(doc.ExtractedLicenceInfo), doc.ExtractedLicenceInfo)
+		t.FailNow()
+	}
+
+	for i, extr := range doc.ExtractedLicenceInfo {
+		if extr.Id != ids[i] {
+			t.Errorf("(#%d) Wrong ID: '%s' (expected '%s')", i, extr.Id, ids[i])
+		}
+		if !sameStrSlice(extr.Name, names[i]) {
+			t.Errorf("(#%d) Wrong Name: '%s' (expected '%s')", i, extr.Name, names[i])
+		}
+		if !sameStrSlice(extr.CrossReference, xRef[i]) {
+			t.Errorf("(#%d) Wrong CrossReference: '%s' (expected '%s')", i, extr.CrossReference, xRef[i])
+		}
+	}
+}
+
+func TestDocInvalidProperty(t *testing.T) {
+	input := []Pair{{"SomeInvalidProperty", "value"}}
+	_, err := parseDocument(input)
+	if err == nil {
+		t.Fail()
+	}
+}
+
+func TestLicenceAlreadyDefined(t *testing.T) {
+	input := []Pair{
+		{"PackageName", "some package"},
+		{"PackageLicenseDeclared", "decl1"},
+		{"PackageLicenseDeclared", "decl2"},
+	}
+	_, err := parseDocument(input)
+	if err != ErrAlreadyDefined {
+		t.Errorf("Unexpected error '%s'.", err)
+	}
+}
+
+func TestDocLicenceConjAndDisj(t *testing.T) {
+	input := []Pair{
+		{"PackageName", "some package"},
+		{"PackageLicenseDeclared", "(decl1 and decl2 or decl3)"},
+	}
+	_, err := parseDocument(input)
+	if err != ErrConjunctionAndDisjunction {
+		t.Errorf("Unexpected error '%s'.", err)
+	}
+}
+
+func TestDocLicenceInvalidSet(t *testing.T) {
+	input := []Pair{
+		{"PackageName", "some package"},
+		{"PackageLicenseDeclared", "a and ()"},
+	}
+	_, err := parseDocument(input)
+	if err != ErrEmptyLicence {
+		t.Errorf("Unexpected error '%s'.", err)
+	}
+}
+
+func TestChecksumAlreadyDefined(t *testing.T) {
+	input := []Pair{
+		{"PackageName", "some package"},
+		{"PackageChecksum", "SHA1: d6a770ba38583ed4bb4525bd96e50471655d2758"},
+		{"PackageChecksum", "SHA1: d6a770ba38583ed4bb4525bd96e50471655d2758"},
+	}
+	_, err := parseDocument(input)
+	if err != ErrAlreadyDefined {
+		t.Errorf("Unexpected error '%s'.", err)
+	}
+}
+
+func TestVerifCodeAlreadyDefined(t *testing.T) {
+	input := []Pair{
+		{"PackageName", "some package"},
+		{"PackageVerificationCode", "6a770ba38583ed4bb4525bd96e50471655d2758"},
+		{"PackageVerificationCode", "d6a770ba38583ed4bb4525bd96e50471655d2758"},
+	}
+	_, err := parseDocument(input)
+	if err != ErrAlreadyDefined {
+		t.Errorf("Unexpected error '%s'.", err)
+	}
+}

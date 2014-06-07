@@ -136,9 +136,6 @@ func findMatchingParenSet(str string) (open, cls int) {
 // Assumes balanced parantheses in the input.
 func conjOrDisjSet(str string) (conj, disj bool) {
 	str = strings.TrimSpace(str)
-	if str == "" {
-		return
-	}
 
 	// clear parentheses
 	for open, cls := findMatchingParenSet(str); cls > open; open, cls = findMatchingParenSet(str) {
@@ -202,7 +199,7 @@ func parseLicenceSet(val string) (spdx.AnyLicenceInfo, error) {
 	o, c := findMatchingParenSet(val)
 	if o == 0 && c == len(val)-1 {
 		if len(val) <= 2 {
-			return nil, errors.New("Empty licence identifier")
+			return nil, ErrEmptyLicence
 		}
 		val = val[1 : len(val)-1]
 	}
@@ -366,6 +363,7 @@ func documentMap(doc *spdx.Document) updaterMapping {
 				Checksum:   new(spdx.Checksum),
 				Dependency: make([]*spdx.File, 0),
 				ArtifactOf: make([]*spdx.ArtifactOf, 0),
+				Name:       val,
 			}
 
 			doc.Files = append(doc.Files, file)
@@ -383,6 +381,7 @@ func documentMap(doc *spdx.Document) updaterMapping {
 				"FileDependency":    updFileNameList(&file.Dependency),
 				"ArtifactOfProjectName": func(val string) error {
 					artif := new(spdx.ArtifactOf)
+					artif.Name = val
 					mapMerge(&mapping, updaterMapping{
 						"ArtifactOfProjectHomepage": upd(&artif.HomePage),
 						"ArtifactOfProjectUri":      upd(&artif.ProjectUri),
@@ -398,6 +397,7 @@ func documentMap(doc *spdx.Document) updaterMapping {
 		// ExtractedLicensingInfo
 		"LicenseID": func(val string) error {
 			lic := &spdx.ExtractedLicensingInfo{
+				Id:             val,
 				Name:           make([]string, 0),
 				CrossReference: make([]string, 0),
 			}
