@@ -310,9 +310,6 @@ func mapMerge(dest *updaterMapping, src updaterMapping) {
 func documentMap(doc *spdx.Document) updaterMapping {
 	doc.CreationInfo = new(spdx.CreationInfo)
 	doc.CreationInfo.Creator = make([]string, 0)
-	doc.Packages = make([]*spdx.Package, 0)
-	doc.Files = make([]*spdx.File, 0)
-	doc.ExtractedLicenceInfo = make([]*spdx.ExtractedLicensingInfo, 0)
 
 	var mapping updaterMapping
 
@@ -333,7 +330,12 @@ func documentMap(doc *spdx.Document) updaterMapping {
 				Checksum:         new(spdx.Checksum),
 				VerificationCode: new(spdx.VerificationCode),
 			}
-			doc.Packages = append(doc.Packages, pkg)
+
+			if doc.Packages == nil {
+				doc.Packages = []*spdx.Package{pkg}
+			} else {
+				doc.Packages = append(doc.Packages, pkg)
+			}
 
 			// Add package values that are now available
 			mapMerge(&mapping, updaterMapping{
@@ -366,7 +368,11 @@ func documentMap(doc *spdx.Document) updaterMapping {
 				Name:       val,
 			}
 
-			doc.Files = append(doc.Files, file)
+			if doc.Files == nil {
+				doc.Files = []*spdx.File{file}
+			} else {
+				doc.Files = append(doc.Files, file)
+			}
 
 			mapMerge(&mapping, updaterMapping{
 				"FileType":          upd(&file.Type),
@@ -407,7 +413,32 @@ func documentMap(doc *spdx.Document) updaterMapping {
 				"LicenseCrossReference": updList(&lic.CrossReference),
 				"LicenseComment":        upd(&lic.Comment),
 			})
-			doc.ExtractedLicenceInfo = append(doc.ExtractedLicenceInfo, lic)
+
+			if doc.ExtractedLicenceInfo == nil {
+				doc.ExtractedLicenceInfo = []*spdx.ExtractedLicensingInfo{lic}
+			} else {
+				doc.ExtractedLicenceInfo = append(doc.ExtractedLicenceInfo, lic)
+			}
+
+			return nil
+		},
+
+		"Reviewer": func(val string) error {
+			rev := &spdx.Review{
+				Reviewer: val,
+			}
+
+			if doc.Reviews == nil {
+				doc.Reviews = []*spdx.Review{rev}
+			} else {
+				doc.Reviews = append(doc.Reviews, rev)
+			}
+
+			mapMerge(&mapping, updaterMapping{
+				"ReviewDate":    upd(&rev.Date),
+				"ReviewComment": upd(&rev.Comment),
+			})
+
 			return nil
 		},
 	}

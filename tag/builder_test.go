@@ -786,3 +786,37 @@ func TestVerifCodeAlreadyDefined(t *testing.T) {
 		t.Errorf("Unexpected error '%s'.", err)
 	}
 }
+
+func TestReviewer(t *testing.T) {
+
+	reviews := []spdx.Review{
+		{"a", "b", "c"},
+		{"d", "e", "f"},
+	}
+
+	input := make([]Pair, 0, 6)
+	for _, rev := range reviews {
+		input = append(input, Pair{"Reviewer", rev.Reviewer})
+		input = append(input, Pair{"ReviewDate", rev.Date})
+		input = append(input, Pair{"ReviewComment", rev.Comment})
+	}
+
+	doc, err := parseDocument(input)
+
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err)
+		t.FailNow()
+	}
+
+	if len(doc.Reviews) != len(reviews) {
+		t.Errorf("Invalid reviews (len=%d): '%s' (expected (len=%d): '%s')", len(doc.Reviews), doc.Reviews, len(reviews), reviews)
+		t.FailNow()
+	}
+
+	for i, rev := range doc.Reviews {
+		if *rev != reviews[i] {
+			t.Errorf("Invalid reviews (len=%d): '%s' (expected (len=%d): '%s')", len(doc.Reviews), doc.Reviews, len(reviews), reviews)
+			t.FailNow()
+		}
+	}
+}

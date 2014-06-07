@@ -11,7 +11,7 @@ type Document struct {
 	Packages             []*Package                // spdx1.2: one, spdx2: one or more
 	Files                []*File                   // mandatory
 	Comment              string                    // optional
-	Reviewed             []*Review                 // optional
+	Reviews              []*Review                 // optional
 	OtherLicences        map[string]*Licence       // licences that are not in the spec and are referenced to
 }
 
