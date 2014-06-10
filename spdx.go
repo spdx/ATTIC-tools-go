@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -57,12 +58,12 @@ func main() {
 	}
 
 	*flagConvert = strings.ToLower(*flagConvert)
-	if *flagConvert && !validFormat(*flagConvert, false) {
+	if !validFormat(*flagConvert, false) {
 		log.Fatalf("No or invalid output format (-f) specified (%s). Valid values are '%s' and '%s'.", *flagConvert, formatRdf, formatTag)
 	}
 
 	if !validFormat(*flagInputFormat, true) {
-		log.Fatalf("Invalid input format (-input). Valid values are '%s', '%s' and '%s'.", formatRdf, formatTag, formatAuto)
+		log.Fatalf("Invalid input format (-f). Valid values are '%s', '%s' and '%s'.", formatRdf, formatTag, formatAuto)
 	}
 
 	if *flagInPlace && *flagOutput != "-" {
@@ -105,7 +106,8 @@ func main() {
 
 	// auto-detect format
 	if *flagInputFormat == formatAuto {
-		flagInputFormat = detectFormat()
+		format := detectFormat()
+		flagInputFormat = &format
 	}
 
 	if *flagConvert != "-" {
@@ -121,23 +123,36 @@ func validFormat(val string, allowAuto bool) bool {
 	return val == formatRdf || val == formatTag || (val == formatAuto && allowAuto)
 }
 
-// Currently only detects .rdf and .tag extensions.
-func detectFormat() *string {
+// Tries to guess the format of the input file.
+// Current method:
+// 1. If input file extension is .tag or .rdf, the format is Tag or RDF, respectively.
+// 2. If the file starts with <?xml, <rdf, <!-- or @import, the format is RDF, otherwise Tag
+func detectFormat() string {
 	dot := strings.LastIndex(input.Name(), ".")
 	if dot < 0 || dot+1 == len(input.Name()) {
-		log.Fatal("Cannot auto-detect input format. Please specify format using the -input flag.")
+		log.Fatal("Cannot auto-detect input format. Please specify format using the -f flag.")
 	}
 
 	// check extension (if .tag or .rdf)
 	format := strings.ToLower(input.Name()[dot+1:])
 	if validFormat(format, false) {
-		return &format
+		return format
 	}
 
-	// TODO: try to detect format by scanning file header
+	// Needs improvement but not a priority.
+	// Only detects XML RDF or files starting @import (turtle format) as RDF
+	scanner := bufio.NewScanner(input)
+	scanner.Split(bufio.ScanWords)
+	if scanner.Scan() {
+		word := strings.ToLower(scanner.Text())
+		if strings.HasPrefix(word, "<?xml") || strings.HasPrefix(word, "<rdf") || strings.HasPrefix(word, "<!--") || strings.HasPrefix(word, "@import") {
+			return formatRdf
+		}
+		return formatTag
+	}
 
-	log.Fatal("Cannot auto-detect input format from file extension. Please use -input flag.")
-	return nil
+	log.Fatal("Cannot auto-detect input format from file extension. Please use -f flag.")
+	return ""
 }
 
 func convert() {
