@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -20,6 +21,9 @@ const (
 )
 
 var (
+	flagConvert      = flag.Bool("conv", false, "Set action to convert.")
+	flagValidate     = flag.Bool("valid", false, "Set action to validate.")
+	flagFmt          = flag.Bool("fmt", false, "Set action to format (pretty print).")
 	flagOutput       = flag.String("o", "-", "Sets the output file. If not set, output is written to stdout.")
 	flagInPlace      = flag.Bool("w", false, "If defined, it overwrites the input file.")
 	flagIgnoreCase   = flag.Bool("i", false, "If defined, it ignores the case for properties. (e.g. treat \"packagename\" same as \"PackageName\")")
@@ -34,6 +38,8 @@ var (
 	output = os.Stdout
 )
 
+func xor(a, b bool) bool { return a != b }
+
 func main() {
 	flag.Parse()
 
@@ -47,14 +53,12 @@ func main() {
 		return
 	}
 
-	if flag.NArg() < 1 {
-		log.Fatalf("Action not specified. For help, see '%s help' or '%s -help'", execName)
+	if !xor(*flagConvert, xor(*flagValidate, *flagFmt)) {
+		log.Fatal("No or invalid action flag specified. See -help for usage.")
 	}
 
-	action := flag.Arg(0)
-
 	*flagOutputFormat = strings.ToLower(*flagOutputFormat)
-	if action == "convert" && !validFormat(*flagOutputFormat, false) {
+	if *flagConvert && !validFormat(*flagOutputFormat, false) {
 		log.Fatalf("No or invalid output format (-f) specified (%s). Valid values are '%s' and '%s'.", *flagOutputFormat, formatRdf, formatTag)
 	}
 
@@ -62,11 +66,15 @@ func main() {
 		log.Fatalf("Invalid input format (-input). Valid values are '%s', '%s' and '%s'.", formatRdf, formatTag, formatAuto)
 	}
 
-	if flag.NArg() >= 2 {
-		input, err := os.Open(flag.Arg(1))
+	if *flagInPlace && *flagOutput != "-" {
+		log.Fatal("Cannot have both -w and -o set. See -help for usage.")
+	}
+
+	if flag.NArg() >= 1 {
+		input, err := os.Open(flag.Arg(0))
 		defer input.Close()
 		if err != nil {
-			log.Fatalf("Couldn't open input file: %s", err.Error())
+			log.Fatal(err.Error())
 		}
 	}
 
@@ -74,8 +82,39 @@ func main() {
 		output, err := os.Create(*flagOutput)
 		defer output.Close()
 		if err != nil {
-			log.Fatalf("Couldn't open output file: %s", err.Error())
+			log.Fatal(err.Error())
 		}
+	} else if *flagInPlace {
+		if input == os.Stdin {
+			log.Fatal("Cannot use -w flag when input is stdin. Please specify an input file. See -help for usage.")
+		}
+
+		output, err := ioutil.TempFile("", "spdx-go_")
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+
+		defer func() {
+			output.Close()
+			input.Close()
+			CopyFile(output.Name(), input.Name())
+			if err := os.Remove(output.Name()); err != nil {
+				log.Fatal(err.Error())
+			}
+		}()
+	}
+
+	// auto-detect format
+	if *flagInputFormat == formatAuto {
+		flagInputFormat = detectFormat()
+	}
+
+	if *flagConvert {
+		convert()
+	} else if *flagValidate {
+		validate()
+	} else if *flagFmt {
+		format()
 	}
 }
 
@@ -83,16 +122,44 @@ func validFormat(val string, allowAuto bool) bool {
 	return val == formatRdf || val == formatTag || (val == formatAuto && allowAuto)
 }
 
+// Currently only detects .rdf and .tag extensions.
+func detectFormat() *string {
+	dot := strings.LastIndex(input.Name(), ".")
+	if dot < 0 || dot+1 == len(input.Name()) {
+		log.Fatal("Cannot auto-detect input format. Please specify format using the -input flag.")
+	}
+
+	// check extension (if .tag or .rdf)
+	format := strings.ToLower(input.Name()[dot+1:])
+	if validFormat(format, false) {
+		return &format
+	}
+
+	// TODO: try to detect format by scanning file header
+
+	log.Fatal("Cannot auto-detect input format from file extension. Please use -input flag.")
+	return nil
+}
+
+func convert() {
+
+}
+
+func validate() {
+}
+
+func format() {
+}
+
 func help() {
 	printVersion()
 
-	fmt.Printf("\nUsage: spdx-go [convert | validate | format] [<flags>] [<input file>]\n")
+	fmt.Printf("\nUsage: spdx-go [<flags>] [<input file>]\n")
 	fmt.Println("Stdin is used as input if <input-file> is not specified.")
 
-	fmt.Println("\nThe following flags are available:")
-	flag.PrintDefaults()
+	fmt.Println("Exactly ONE of the -conv, -fmt or -valid flags MUST be specified.\n")
 
-	fmt.Println("\nThe flags -help and -version do not need an action to be specified.")
+	flag.PrintDefaults()
 }
 
 func printVersion() {
