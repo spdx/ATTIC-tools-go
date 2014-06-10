@@ -9,7 +9,7 @@ import (
 
 func isMultiline(property string) bool {
 	_, ok := multilineProperties[property]
-	return !ok
+	return ok
 }
 
 func isMultilineValue(val string) bool {
@@ -49,14 +49,14 @@ func multilineInit() map[string]interface{} {
 }
 
 func cksumStr(cksum *spdx.Checksum) string {
-	if cksum == nil {
+	if cksum == nil || (cksum.Algo == "" && cksum.Value == "") {
 		return ""
 	}
 	return cksum.Algo + ": " + cksum.Value
 }
 
 func verifCodeStr(verif *spdx.VerificationCode) string {
-	if verif == nil {
+	if verif == nil || (verif.Value == "" && len(verif.ExcludedFiles) == 0) {
 		return ""
 	}
 	if len(verif.ExcludedFiles) == 0 {
@@ -83,7 +83,7 @@ func writeProperty(f io.Writer, tag, value string) error {
 		value = "<text>" + value + "</text>"
 	}
 
-	_, err := io.WriteString(f, tag+", "+value+"\n")
+	_, err := io.WriteString(f, tag+": "+value+"\n")
 	if err != nil {
 		return err
 	}
@@ -202,14 +202,21 @@ func writePkg(f io.Writer, pkg *spdx.Package) error {
 		{"PackageChecksum", cksumStr(pkg.Checksum)},
 		{"PackageHomePage", pkg.HomePage},
 		{"PackageSourceInfo", pkg.SourceInfo},
-		{"PackageLicenseConcluded", pkg.LicenceConcluded.LicenceId()},
-		{"PackageLicenseDeclared", pkg.LicenceDeclared.LicenceId()},
 	})
 
 	if err != nil {
 		return err
 	}
-
+	if pkg.LicenceConcluded != nil {
+		if err = writeProperty(f, "PackageLicenseConcluded", pkg.LicenceConcluded.LicenceId()); err != nil {
+			return err
+		}
+	}
+	if pkg.LicenceDeclared != nil {
+		if err = writeProperty(f, "PackageLicenseDeclared", pkg.LicenceDeclared.LicenceId()); err != nil {
+			return err
+		}
+	}
 	if err = writePropertyLicenceSlice(f, "PackageLicenseInfoFromFiles", pkg.LicenceInfoFromFiles); err != nil {
 		return err
 	}
@@ -239,8 +246,13 @@ func writeFile(f io.Writer, file *spdx.File) error {
 		{"FileName", file.Name},
 		{"FileType", file.Type},
 		{"FileChecksum", cksumStr(file.Checksum)},
-		{"LicenseConcluded", file.LicenceConcluded.LicenceId()},
 	})
+
+	if file.LicenceConcluded != nil {
+		if err = writeProperty(f, "LicenseConcluded", file.LicenceConcluded.LicenceId()); err != nil {
+			return err
+		}
+	}
 
 	if err != nil {
 		return err
