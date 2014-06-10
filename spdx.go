@@ -1,6 +1,11 @@
 package main
 
 import (
+	"github.com/vladvelici/spdx-go/spdx"
+	"github.com/vladvelici/spdx-go/tag"
+)
+
+import (
 	"bufio"
 	"flag"
 	"fmt"
@@ -71,7 +76,8 @@ func main() {
 	}
 
 	if flag.NArg() >= 1 {
-		input, err := os.Open(flag.Arg(0))
+		var err error
+		input, err = os.Open(flag.Arg(0))
 		defer input.Close()
 		if err != nil {
 			log.Fatal(err.Error())
@@ -79,7 +85,8 @@ func main() {
 	}
 
 	if *flagOutput != "-" {
-		output, err := os.Create(*flagOutput)
+		var err error
+		output, err = os.Create(*flagOutput)
 		defer output.Close()
 		if err != nil {
 			log.Fatal(err.Error())
@@ -88,8 +95,8 @@ func main() {
 		if input == os.Stdin {
 			log.Fatal("Cannot use -w flag when input is stdin. Please specify an input file. See -help for usage.")
 		}
-
-		output, err := ioutil.TempFile("", "spdx-go_")
+		var err error
+		output, err = ioutil.TempFile("", "spdx-go_")
 		if err != nil {
 			log.Fatal(err.Error())
 		}
@@ -123,24 +130,33 @@ func validFormat(val string, allowAuto bool) bool {
 	return val == formatRdf || val == formatTag || (val == formatAuto && allowAuto)
 }
 
-// Tries to guess the format of the input file.
+// Tries to guess the format of the input file. Does not work on stdin.
 // Current method:
 // 1. If input file extension is .tag or .rdf, the format is Tag or RDF, respectively.
 // 2. If the file starts with <?xml, <rdf, <!-- or @import, the format is RDF, otherwise Tag
 func detectFormat() string {
-	dot := strings.LastIndex(input.Name(), ".")
-	if dot < 0 || dot+1 == len(input.Name()) {
-		log.Fatal("Cannot auto-detect input format. Please specify format using the -f flag.")
+	if input == os.Stdin {
+		log.Fatal("Cannot auto-detect format from stdin.")
 	}
 
-	// check extension (if .tag or .rdf)
-	format := strings.ToLower(input.Name()[dot+1:])
-	if validFormat(format, false) {
-		return format
+	if dot := strings.LastIndex(input.Name(), "."); dot+1 < len(input.Name()) {
+		// check extension (if .tag or .rdf)
+		format := strings.ToLower(input.Name()[dot+1:])
+		if validFormat(format, false) {
+			return format
+		}
 	}
 
 	// Needs improvement but not a priority.
-	// Only detects XML RDF or files starting @import (turtle format) as RDF
+	// Only detects XML RDF or files starting with @import (turtle format) as RDF
+	defer func() {
+		input.Close()
+		var err error
+		input, err = os.Open(input.Name())
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+	}()
 	scanner := bufio.NewScanner(input)
 	scanner.Split(bufio.ScanWords)
 	if scanner.Scan() {
@@ -156,7 +172,24 @@ func detectFormat() string {
 }
 
 func convert() {
+	var doc *spdx.Document
+	var err error
 
+	if *flagInputFormat == formatTag {
+		doc, err = tag.Parse(input)
+	} else {
+		// doc, err = rdf.Parse(input)
+	}
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if *flagConvert == formatTag {
+		tag.Write(output, doc)
+	} else {
+		// rdf write
+	}
 }
 
 func validate() {
