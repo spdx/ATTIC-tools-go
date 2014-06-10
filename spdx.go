@@ -21,16 +21,15 @@ const (
 )
 
 var (
-	flagConvert      = flag.Bool("conv", false, "Set action to convert.")
-	flagValidate     = flag.Bool("valid", false, "Set action to validate.")
-	flagFmt          = flag.Bool("fmt", false, "Set action to format (pretty print).")
-	flagOutput       = flag.String("o", "-", "Sets the output file. If not set, output is written to stdout.")
-	flagInPlace      = flag.Bool("w", false, "If defined, it overwrites the input file.")
-	flagIgnoreCase   = flag.Bool("i", false, "If defined, it ignores the case for properties. (e.g. treat \"packagename\" same as \"PackageName\")")
-	flagInputFormat  = flag.String("input", "auto", "Defines the format of the input. Valid values: rdf, tag or auto. Default is auto.")
-	flagOutputFormat = flag.String("f", "", "Mandatory on convert action, it specifies the output format (rdf or tag).")
-	flagHelp         = flag.Bool("help", false, "Show help message.")
-	flagVersion      = flag.Bool("version", false, "Show tool version and supported SPDX spec versions.")
+	flagConvert     = flag.String("c", "-", "Convert input file to the specified format.")
+	flagValidate    = flag.Bool("v", false, "Set action to validate.")
+	flagFmt         = flag.Bool("p", false, "Set action to format (pretty print).")
+	flagOutput      = flag.String("o", "-", "Sets the output file. If not set, output is written to stdout.")
+	flagInPlace     = flag.Bool("w", false, "If defined, it overwrites the input file.")
+	flagIgnoreCase  = flag.Bool("i", false, "If defined, it ignores the case for properties. (e.g. treat \"packagename\" same as \"PackageName\")")
+	flagInputFormat = flag.String("f", "auto", "Defines the format of the input. Valid values: rdf, tag or auto. Default is auto.")
+	flagHelp        = flag.Bool("help", false, "Show help message.")
+	flagVersion     = flag.Bool("version", false, "Show tool version and supported SPDX spec versions.")
 )
 
 var (
@@ -53,13 +52,13 @@ func main() {
 		return
 	}
 
-	if !xor(*flagConvert, xor(*flagValidate, *flagFmt)) {
+	if !xor(*flagConvert != "-", xor(*flagValidate, *flagFmt)) {
 		log.Fatal("No or invalid action flag specified. See -help for usage.")
 	}
 
-	*flagOutputFormat = strings.ToLower(*flagOutputFormat)
-	if *flagConvert && !validFormat(*flagOutputFormat, false) {
-		log.Fatalf("No or invalid output format (-f) specified (%s). Valid values are '%s' and '%s'.", *flagOutputFormat, formatRdf, formatTag)
+	*flagConvert = strings.ToLower(*flagConvert)
+	if *flagConvert && !validFormat(*flagConvert, false) {
+		log.Fatalf("No or invalid output format (-f) specified (%s). Valid values are '%s' and '%s'.", *flagConvert, formatRdf, formatTag)
 	}
 
 	if !validFormat(*flagInputFormat, true) {
@@ -109,7 +108,7 @@ func main() {
 		flagInputFormat = detectFormat()
 	}
 
-	if *flagConvert {
+	if *flagConvert != "-" {
 		convert()
 	} else if *flagValidate {
 		validate()
