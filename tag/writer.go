@@ -141,7 +141,7 @@ func (f *Formatter) Token(tok *Token) error {
 		}
 
 		f.lastWritten = "__comment"
-		_, err := io.WriteString(f.out, tok.Pair.Value+"\n")
+		_, err := io.WriteString(f.out, "#"+tok.Pair.Value+"\n")
 		return err
 	}
 

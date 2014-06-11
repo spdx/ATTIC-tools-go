@@ -63,7 +63,7 @@ func main() {
 	}
 
 	*flagConvert = strings.ToLower(*flagConvert)
-	if !validFormat(*flagConvert, false) {
+	if *flagConvert != "-" && !validFormat(*flagConvert, false) {
 		log.Fatalf("No or invalid output format (-f) specified (%s). Valid values are '%s' and '%s'.", *flagConvert, formatRdf, formatTag)
 	}
 
@@ -196,6 +196,14 @@ func validate() {
 }
 
 func format() {
+	if *flagInputFormat == formatTag {
+		f := tag.NewFormatter(output)
+		lex := tag.NewLexer(input)
+		err := f.Lexer(lex)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 }
 
 func help() {
