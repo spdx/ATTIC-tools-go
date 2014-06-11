@@ -15,5 +15,6 @@ func Build(f io.Reader) (*spdx.Document, error) {
 
 // Write a *spdx.Document to the given io.Writer
 func Write(f io.Writer, doc *spdx.Document) error {
-	return writeDocument(f, doc)
+	p := NewFormatter(f)
+	return p.Document(doc)
 }
