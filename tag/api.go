@@ -6,14 +6,14 @@ import (
 	"io"
 )
 
-func Parse(f io.Reader) (*spdx.Document, error) {
-	pairs, err := parse(f)
-	if err != nil {
-		return nil, err
-	}
-	return build(pairs)
+// Lex a io.Reader and Parse it to a *spdx.Document
+func Build(f io.Reader) (*spdx.Document, error) {
+	lexer := NewLexer(f)
+	lexer.IgnoreComments = true
+	return Parse(lexer)
 }
 
+// Write a *spdx.Document to the given io.Writer
 func Write(f io.Writer, doc *spdx.Document) error {
 	return writeDocument(f, doc)
 }

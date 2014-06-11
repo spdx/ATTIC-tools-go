@@ -65,7 +65,7 @@ func verifCodeStr(verif *spdx.VerificationCode) string {
 	return verif.Value + " (Excludes: " + strings.Join(verif.ExcludedFiles, ", ") + ")"
 }
 
-func writeProperties(f io.Writer, props []pair) error {
+func writeProperties(f io.Writer, props []Pair) error {
 	for _, p := range props {
 		if err := writeProperty(f, p.Key, p.Value); err != nil {
 			return err
@@ -122,7 +122,7 @@ func writeDocument(f io.Writer, doc *spdx.Document) error {
 		return nil
 	}
 
-	err := writeProperties(f, []pair{
+	err := writeProperties(f, []Pair{
 		{"SpecVersion", doc.SpecVersion},
 		{"DataLicense", doc.DataLicence},
 		{"DocumentComment", doc.Comment},
@@ -170,7 +170,7 @@ func writeCreationInfo(f io.Writer, ci *spdx.CreationInfo) error {
 		return err
 	}
 
-	return writeProperties(f, []pair{
+	return writeProperties(f, []Pair{
 		{"Created", ci.Created},
 		{"CreatorComment", ci.Comment},
 		{"LicenseListVersion", ci.LicenceListVersion},
@@ -191,7 +191,7 @@ func writePkg(f io.Writer, pkg *spdx.Package) error {
 		return nil
 	}
 
-	err := writeProperties(f, []pair{
+	err := writeProperties(f, []Pair{
 		{"PackageName", pkg.Name},
 		{"PackageVersion", pkg.Version},
 		{"PackageFileName", pkg.FileName},
@@ -221,7 +221,7 @@ func writePkg(f io.Writer, pkg *spdx.Package) error {
 		return err
 	}
 
-	return writeProperties(f, []pair{
+	return writeProperties(f, []Pair{
 		{"PackageLicenseComments", pkg.LicenceComments},
 		{"PackageCopyrightText", pkg.CopyrightText},
 		{"PackageSummary", pkg.Summary},
@@ -242,7 +242,7 @@ func writeFile(f io.Writer, file *spdx.File) error {
 	if file == nil {
 		return nil
 	}
-	err := writeProperties(f, []pair{
+	err := writeProperties(f, []Pair{
 		{"FileName", file.Name},
 		{"FileType", file.Type},
 		{"FileChecksum", cksumStr(file.Checksum)},
@@ -262,7 +262,7 @@ func writeFile(f io.Writer, file *spdx.File) error {
 		return err
 	}
 
-	err = writeProperties(f, []pair{
+	err = writeProperties(f, []Pair{
 		{"LicenseComments", file.LicenceComments},
 		{"FileCopyrightText", file.CopyrightText},
 		{"FileComment", file.Comment},
@@ -299,7 +299,7 @@ func writeReview(f io.Writer, review *spdx.Review) error {
 		return nil
 	}
 
-	return writeProperties(f, []pair{
+	return writeProperties(f, []Pair{
 		{"Reviewer", review.Reviewer},
 		{"ReviewDate", review.Date},
 		{"ReviewComment", review.Comment},
@@ -319,7 +319,7 @@ func writeExtrLicInfo(f io.Writer, lic *spdx.ExtractedLicensingInfo) error {
 	if lic == nil {
 		return nil
 	}
-	err := writeProperties(f, []pair{
+	err := writeProperties(f, []Pair{
 		{"LicenseID", lic.Id},
 		{"ExtractedText", lic.Text},
 	})
