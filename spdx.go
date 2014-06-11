@@ -176,7 +176,7 @@ func convert() {
 	var err error
 
 	if *flagInputFormat == formatTag {
-		doc, err = tag.Parse(input)
+		doc, err = tag.Build(input)
 	} else {
 		// doc, err = rdf.Parse(input)
 	}
