@@ -366,20 +366,22 @@ func TestInvalidTextValuePrefix(t *testing.T) {
 	if err == nil {
 		t.Fail()
 	}
-	if err != ErrInvalidPrefix {
-		t.Errorf("Another error: %s", err)
+	e := err.(*ParseError)
+	if e.Error() != MsgInvalidPrefix || (*e.Meta != spdx.Meta{1, 1}) {
+		t.Errorf("Another error: %+v", err)
 	}
 }
 
 func TestInvalidTextValueSuffix(t *testing.T) {
-	r := strings.NewReader("Property1: <text>value1</text> invalid \n")
+	r := strings.NewReader("Property1: <text>\n\nvalue1\n</text> invalid \n")
 
 	_, err := lexPair(r)
 
 	if err == nil {
 		t.Fail()
 	}
-	if err != ErrInvalidSuffix {
+	e := err.(*ParseError)
+	if e.Error() != MsgInvalidSuffix || (*e.Meta != spdx.Meta{4, 4}) {
 		t.Errorf("Another error: %s", err)
 	}
 }
@@ -392,7 +394,8 @@ func TestInvalidTextValueSuffixComment(t *testing.T) {
 	if err == nil {
 		t.Fail()
 	}
-	if err != ErrInvalidSuffix {
+	e := err.(*ParseError)
+	if e.Error() != MsgInvalidSuffix || (*e.Meta != spdx.Meta{1, 1}) {
 		t.Errorf("Another error: %s", err)
 	}
 }
@@ -406,7 +409,8 @@ func TestInvalidTextValueSuffixProperty(t *testing.T) {
 	if err == nil {
 		t.Fail()
 	}
-	if err != ErrInvalidSuffix {
+	e := err.(*ParseError)
+	if e.Error() != MsgInvalidSuffix || (*e.Meta != spdx.Meta{1, 1}) {
 		t.Errorf("Another error: %s", err)
 	}
 }
@@ -415,13 +419,13 @@ func TestInvalidUnclosedText(t *testing.T) {
 	r := strings.NewReader("Property1: <text>value1\n\n invalid \n")
 
 	_, err := lexPair(r)
-	t.Logf("Error: %s\n", err)
 
 	if err == nil {
 		t.Fail()
 	}
-	if err != ErrNoCloseTag {
-		t.Errorf("Another error: %s", err)
+	e := err.(*ParseError)
+	if err.Error() != MsgNoCloseTag || (*e.Meta != spdx.Meta{4, 4}) {
+		t.Errorf("Another error: (%+v) %s", e.Meta, e)
 	}
 }
 
@@ -431,8 +435,10 @@ func TestInvalidProperty(t *testing.T) {
 	doc, err := lexPair(r)
 
 	t.Logf("doc len: %d", len(doc))
-	if err != ErrInvalidText {
-		t.Errorf("Unexpected error: %s", err)
+
+	e := err.(*ParseError)
+	if e.msg != MsgInvalidText || e.Meta.LineStart != 1 {
+		t.Errorf("Unexpected error: %+v", err)
 	}
 
 }
@@ -495,8 +501,9 @@ func TestSomeInvalidText(t *testing.T) {
 	if err == nil {
 		t.Fail()
 	}
-	if err != ErrInvalidText {
-		t.Errorf("Another error: %s", err)
+	e := err.(*ParseError)
+	if e.msg != MsgInvalidText || e.Meta.LineStart != 1 {
+		t.Errorf("Unexpected error: %+v", err)
 	}
 
 }

@@ -115,7 +115,7 @@ func TestUpdFail(t *testing.T) {
 	f := upd(&a)
 	f(tk("hello"))
 	err := f(tk("world"))
-	if err != ErrAlreadyDefined {
+	if err.Error() != MsgAlreadyDefined {
 		t.Errorf("Different error: %s", err)
 	}
 }
@@ -193,7 +193,7 @@ func TestVerifCodeInvalidExcludesNoClosedParentheses(t *testing.T) {
 	f := verifCode(vc)
 	err := f(tk(value + excludes))
 
-	if err != ErrNoClosedParen {
+	if err.Error() != MsgNoClosedParen {
 		t.Errorf("Error should be UnclosedParentheses but found %s.", err)
 	}
 }
@@ -224,7 +224,7 @@ func TestChecksumInvalid(t *testing.T) {
 	f := checksum(cksum)
 	err := f(tk("d6a770ba38583ed4bb"))
 
-	if err != ErrInvalidChecksum {
+	if err.Error() != MsgInvalidChecksum {
 		t.Errorf("Invalid error found: %s.", err)
 	}
 }
@@ -421,7 +421,7 @@ func TestParseLicenceSetEmptyLicence(t *testing.T) {
 	input := " "
 
 	_, err := parseLicenceSet(tk(input))
-	if err != ErrEmptyLicence {
+	if err.Error() != MsgEmptyLicence {
 		t.Errorf("Unexpected error: %s", err)
 	}
 }
@@ -430,7 +430,7 @@ func TestParseLicenceStringEmptyLicence(t *testing.T) {
 	input := " "
 
 	_, err := parseLicenceString(tk(input))
-	if err != ErrEmptyLicence {
+	if err.Error() != MsgEmptyLicence {
 		t.Errorf("Unexpected error: %s", err)
 	}
 }
@@ -439,7 +439,7 @@ func TestParseLicenceStringUnbalancedParentheses(t *testing.T) {
 	input := " (()"
 
 	_, err := parseLicenceString(tk(input))
-	if err != ErrNoClosedParen {
+	if err.Error() != MsgNoClosedParen {
 		t.Errorf("Unexpected error: %s", err)
 	}
 }
@@ -447,7 +447,7 @@ func TestParseLicenceStringUnbalancedParentheses(t *testing.T) {
 func TestLicenceSetConjunctionAndDisjunction(t *testing.T) {
 	input := "a and b or c"
 	_, err := parseLicenceSet(tk(input))
-	if err != ErrConjunctionAndDisjunction {
+	if err.Error() != MsgConjunctionAndDisjunction {
 		t.Errorf("Unexpected error: %s", err)
 	}
 }
@@ -508,7 +508,7 @@ func TestSamePropertyTwice(t *testing.T) {
 
 	_, err := Parse(l(input))
 
-	if err != ErrAlreadyDefined {
+	if err.Error() != MsgAlreadyDefined {
 		t.Errorf("Unexpected error: %s", err)
 	}
 }
@@ -775,7 +775,7 @@ func TestLicenceAlreadyDefined(t *testing.T) {
 		{"PackageLicenseDeclared", "decl2"},
 	}
 	_, err := Parse(l(input))
-	if err != ErrAlreadyDefined {
+	if err.Error() != MsgAlreadyDefined {
 		t.Errorf("Unexpected error '%s'.", err)
 	}
 }
@@ -786,7 +786,7 @@ func TestDocLicenceConjAndDisj(t *testing.T) {
 		{"PackageLicenseDeclared", "(decl1 and decl2 or decl3)"},
 	}
 	_, err := Parse(l(input))
-	if err != ErrConjunctionAndDisjunction {
+	if err.Error() != MsgConjunctionAndDisjunction {
 		t.Errorf("Unexpected error '%s'.", err)
 	}
 }
@@ -797,7 +797,7 @@ func TestDocLicenceInvalidSet(t *testing.T) {
 		{"PackageLicenseDeclared", "a and ()"},
 	}
 	_, err := Parse(l(input))
-	if err != ErrEmptyLicence {
+	if err.Error() != MsgEmptyLicence {
 		t.Errorf("Unexpected error '%s'.", err)
 	}
 }
@@ -809,7 +809,7 @@ func TestChecksumAlreadyDefined(t *testing.T) {
 		{"PackageChecksum", "SHA1: d6a770ba38583ed4bb4525bd96e50471655d2758"},
 	}
 	_, err := Parse(l(input))
-	if err != ErrAlreadyDefined {
+	if err.Error() != MsgAlreadyDefined {
 		t.Errorf("Unexpected error '%s'.", err)
 	}
 }
@@ -821,7 +821,7 @@ func TestVerifCodeAlreadyDefined(t *testing.T) {
 		{"PackageVerificationCode", "d6a770ba38583ed4bb4525bd96e50471655d2758"},
 	}
 	_, err := Parse(l(input))
-	if err != ErrAlreadyDefined {
+	if err.Error() != MsgAlreadyDefined {
 		t.Errorf("Unexpected error '%s'.", err)
 	}
 }

@@ -9,12 +9,12 @@ import (
 )
 
 var (
-	ErrNoClosedParen             = errors.New("No closed parentheses at the end.")
-	ErrInvalidVerifCodeExcludes  = errors.New("VerificationCode: Invalid Excludes format")
-	ErrInvalidChecksum           = errors.New("Invalid Package Checksum format.")
-	ErrConjunctionAndDisjunction = errors.New("Licence sets can only have either disjunction or conjunction, not both. (AND or OR, not both)")
-	ErrEmptyLicence              = errors.New("Empty licence")
-	ErrAlreadyDefined            = errors.New("Property already defined")
+	MsgNoClosedParen             = "No closed parentheses at the end."
+	MsgInvalidVerifCodeExcludes  = "VerificationCode: Invalid Excludes format"
+	MsgInvalidChecksum           = "Invalid Package Checksum format."
+	MsgConjunctionAndDisjunction = "Licence sets can only have either disjunction or conjunction, not both. (AND or OR, not both)"
+	MsgEmptyLicence              = "Empty licence"
+	MsgAlreadyDefined            = "Property already defined"
 )
 
 var (
@@ -31,7 +31,7 @@ func upd(ptr *spdx.ValueStr) updater {
 	set := false
 	return func(tok *Token) error {
 		if set {
-			return ErrAlreadyDefined
+			return parseError(MsgAlreadyDefined, tok.Meta)
 		}
 		ptr.Val = tok.Pair.Value
 		ptr.Meta = tok.Meta
@@ -53,7 +53,7 @@ func verifCode(vc *spdx.VerificationCode) updater {
 	set := false
 	return func(tok *Token) error {
 		if set {
-			return ErrAlreadyDefined
+			return parseError(MsgAlreadyDefined, tok.Meta)
 		}
 		val := tok.Pair.Value
 		open := strings.Index(val, "(")
@@ -65,7 +65,7 @@ func verifCode(vc *spdx.VerificationCode) updater {
 			// close parentheses
 			cls := strings.LastIndex(val, ")")
 			if cls < 0 {
-				return ErrNoClosedParen
+				return parseError(MsgNoClosedParen, tok.Meta)
 			}
 
 			val = val[:cls]
@@ -92,11 +92,11 @@ func checksum(cksum *spdx.Checksum) updater {
 	set := false
 	return func(tok *Token) error {
 		if set {
-			return ErrAlreadyDefined
+			return parseError(MsgAlreadyDefined, tok.Meta)
 		}
 		split := strings.Split(tok.Pair.Value, ":")
 		if len(split) != 2 {
-			return ErrInvalidChecksum
+			return parseError(MsgInvalidChecksum, tok.Meta)
 		}
 		cksum.Algo, cksum.Value = spdx.Str(strings.TrimSpace(split[0]), tok.Meta), spdx.Str(strings.TrimSpace(split[1]), tok.Meta)
 		set = true
@@ -195,14 +195,14 @@ func licenceSetSplit(sep *regexp.Regexp, str string) []string {
 func parseLicenceSet(tok *Token) (spdx.AnyLicenceInfo, error) {
 	val := strings.TrimSpace(tok.Pair.Value)
 	if len(val) == 0 {
-		return nil, ErrEmptyLicence
+		return nil, parseError(MsgEmptyLicence, tok.Meta)
 	}
 
 	// if everything is in parentheses, remove the big parentheses
 	o, c := findMatchingParenSet(val)
 	if o == 0 && c == len(val)-1 {
 		if len(val) <= 2 {
-			return nil, ErrEmptyLicence
+			return nil, parseError(MsgEmptyLicence, tok.Meta)
 		}
 		val = val[1 : len(val)-1]
 	}
@@ -210,7 +210,7 @@ func parseLicenceSet(tok *Token) (spdx.AnyLicenceInfo, error) {
 	conj, disj := conjOrDisjSet(val)
 
 	if disj && conj {
-		return nil, ErrConjunctionAndDisjunction
+		return nil, parseError(MsgConjunctionAndDisjunction, tok.Meta)
 	}
 
 	if conj {
@@ -247,13 +247,13 @@ func parseLicenceSet(tok *Token) (spdx.AnyLicenceInfo, error) {
 func parseLicenceString(tok *Token) (spdx.AnyLicenceInfo, error) {
 	val := strings.TrimSpace(tok.Pair.Value)
 	if len(val) == 0 {
-		return nil, ErrEmptyLicence
+		return nil, parseError(MsgEmptyLicence, tok.Meta)
 	}
 	openParen := strings.Count(val, "(")
 	closeParen := strings.Count(val, ")")
 
 	if openParen != closeParen {
-		return nil, ErrNoClosedParen
+		return nil, parseError(MsgNoClosedParen, tok.Meta)
 	}
 
 	if openParen > 0 {
@@ -268,7 +268,7 @@ func anyLicence(lic *spdx.AnyLicenceInfo) updater {
 	set := false
 	return func(tok *Token) error {
 		if set {
-			return ErrAlreadyDefined
+			return parseError(MsgAlreadyDefined, tok.Meta)
 		}
 		l, err := parseLicenceString(tok)
 		if err != nil {

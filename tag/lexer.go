@@ -5,7 +5,6 @@ import "github.com/vladvelici/spdx-go/spdx"
 import (
 	"bufio"
 	"bytes"
-	"errors"
 	"io"
 	"strings"
 	"unicode"
@@ -19,10 +18,10 @@ const (
 )
 
 var (
-	ErrNoCloseTag    = errors.New("Text tag opened but not closed. Missing a </text>?")
-	ErrInvalidText   = errors.New("Some invalid formatted string found.")
-	ErrInvalidPrefix = errors.New("No text is allowed between : and <text>.")
-	ErrInvalidSuffix = errors.New("No text is allowed after close text tag (</text>).")
+	MsgNoCloseTag    = "Text tag opened but not closed. Missing a </text>?"
+	MsgInvalidText   = "Some invalid formatted string found."
+	MsgInvalidPrefix = "No text is allowed between : and <text>."
+	MsgInvalidSuffix = "No text is allowed after close text tag (</text>)."
 )
 
 type Token struct {
@@ -203,12 +202,12 @@ func (l *Lexer) tokenizer() bufio.SplitFunc {
 			endl := bytes.IndexByte(data, '\n')
 
 			if endl >= 0 && endl < column {
-				return 0, nil, ErrInvalidText
+				return 0, nil, parseError(MsgInvalidText, &spdx.Meta{l.line, l.line})
 			}
 
 			if column < 0 {
 				if atEOF {
-					return 0, nil, ErrInvalidText
+					return 0, nil, parseError(MsgInvalidText, &spdx.Meta{l.line, l.line})
 				}
 				return shifted, nil, nil
 			}
@@ -226,13 +225,14 @@ func (l *Lexer) tokenizer() bufio.SplitFunc {
 
 			l.lineStart = l.line // lineStart is at the start of property
 			if countSpaces(data[:startText]) != startText {
-				return 0, nil, ErrInvalidPrefix
+				return 0, nil, parseError(MsgInvalidPrefix, &spdx.Meta{l.line, l.line})
 			}
 
 			endText := bytes.Index(data, []byte(closeTag))
 			if endText < 0 {
 				if atEOF {
-					return 0, nil, ErrNoCloseTag
+					l.line += bytes.Count(data, []byte{'\n'})
+					return 0, nil, parseError(MsgNoCloseTag, &spdx.Meta{l.line, l.line})
 				}
 				return shifted, nil, nil
 			}
@@ -255,7 +255,7 @@ func (l *Lexer) tokenizer() bufio.SplitFunc {
 			}
 
 			if closeToEndl != nil && countSpaces(closeToEndl) != len(closeToEndl) {
-				return 0, nil, ErrInvalidSuffix
+				return 0, nil, parseError(MsgInvalidSuffix, &spdx.Meta{l.line, l.line})
 			}
 
 			hasKey = false
