@@ -23,26 +23,27 @@ var (
 )
 
 // Updater
-type updater (func(string) error)
+type updater (func(*Token) error)
 type updaterMapping map[string]updater
 
 // Update a string pointer
-func upd(ptr *string) updater {
+func upd(ptr *spdx.ValueStr) updater {
 	set := false
-	return func(val string) error {
+	return func(tok *Token) error {
 		if set {
 			return ErrAlreadyDefined
 		}
-		*ptr = val
+		ptr.Val = tok.Pair.Value
+		ptr.Meta = &tok.Meta
 		set = true
 		return nil
 	}
 }
 
 // Update a string slice pointer
-func updList(arr *[]string) updater {
-	return func(val string) error {
-		*arr = append(*arr, val)
+func updList(arr *[]spdx.ValueStr) updater {
+	return func(tok *Token) error {
+		*arr = append(*arr, spdx.Str(tok.Pair.Value, &tok.Meta))
 		return nil
 	}
 }
@@ -50,13 +51,14 @@ func updList(arr *[]string) updater {
 // Update a VerificationCode pointer
 func verifCode(vc *spdx.VerificationCode) updater {
 	set := false
-	return func(val string) error {
+	return func(tok *Token) error {
 		if set {
 			return ErrAlreadyDefined
 		}
+		val := tok.Pair.Value
 		open := strings.Index(val, "(")
 		if open > 0 {
-			vc.Value = strings.TrimSpace(val[:open])
+			vc.Value = spdx.Str(strings.TrimSpace(val[:open]), &tok.Meta)
 
 			val = val[open+1:]
 
@@ -72,12 +74,13 @@ func verifCode(vc *spdx.VerificationCode) updater {
 			excludeRegexp := regexp.MustCompile("(?i)excludes:\\s*")
 			val = excludeRegexp.ReplaceAllLiteralString(val, "")
 
-			vc.ExcludedFiles = strings.Split(val, ",")
-			for i, _ := range vc.ExcludedFiles {
-				vc.ExcludedFiles[i] = strings.TrimSpace(vc.ExcludedFiles[i])
+			exclFiles := strings.Split(val, ",")
+			vc.ExcludedFiles = make([]spdx.ValueStr, len(exclFiles))
+			for i, v := range exclFiles {
+				vc.ExcludedFiles[i] = spdx.Str(strings.TrimSpace(v), &tok.Meta)
 			}
 		} else {
-			vc.Value = strings.TrimSpace(val)
+			vc.Value = spdx.Str(strings.TrimSpace(val), &tok.Meta)
 		}
 		set = true
 		return nil
@@ -87,15 +90,15 @@ func verifCode(vc *spdx.VerificationCode) updater {
 // Update a Checksum pointer
 func checksum(cksum *spdx.Checksum) updater {
 	set := false
-	return func(val string) error {
+	return func(tok *Token) error {
 		if set {
 			return ErrAlreadyDefined
 		}
-		split := strings.Split(val, ":")
+		split := strings.Split(tok.Pair.Value, ":")
 		if len(split) != 2 {
 			return ErrInvalidChecksum
 		}
-		cksum.Algo, cksum.Value = strings.TrimSpace(split[0]), strings.TrimSpace(split[1])
+		cksum.Algo, cksum.Value = spdx.Str(strings.TrimSpace(split[0]), &tok.Meta), spdx.Str(strings.TrimSpace(split[1]), &tok.Meta)
 		set = true
 		return nil
 	}
@@ -189,8 +192,8 @@ func licenceSetSplit(sep *regexp.Regexp, str string) []string {
 }
 
 // Parses sets of licences
-func parseLicenceSet(val string) (spdx.AnyLicenceInfo, error) {
-	val = strings.TrimSpace(val)
+func parseLicenceSet(tok *Token) (spdx.AnyLicenceInfo, error) {
+	val := strings.TrimSpace(tok.Pair.Value)
 	if len(val) == 0 {
 		return nil, ErrEmptyLicence
 	}
@@ -214,7 +217,7 @@ func parseLicenceSet(val string) (spdx.AnyLicenceInfo, error) {
 		tokens := licenceSetSplit(andSeprator, val)
 		res := make(spdx.ConjunctiveLicenceList, 0, len(tokens))
 		for _, t := range tokens {
-			lic, err := parseLicenceSet(t)
+			lic, err := parseLicenceSet(&Token{Type: tok.Type, Meta: tok.Meta, Pair: Pair{Value: t}})
 			if err != nil {
 				return nil, err
 			}
@@ -227,7 +230,7 @@ func parseLicenceSet(val string) (spdx.AnyLicenceInfo, error) {
 		tokens := licenceSetSplit(orSeparator, val)
 		res := make(spdx.DisjunctiveLicenceList, 0, len(tokens))
 		for _, t := range tokens {
-			lic, err := parseLicenceSet(t)
+			lic, err := parseLicenceSet(&Token{Type: tok.Type, Meta: tok.Meta, Pair: Pair{Value: t}})
 			if err != nil {
 				return nil, err
 			}
@@ -236,13 +239,13 @@ func parseLicenceSet(val string) (spdx.AnyLicenceInfo, error) {
 		return res, nil
 	}
 
-	return spdx.NewLicenceReference(strings.TrimSpace(val)), nil
+	return spdx.NewLicenceReference(strings.TrimSpace(val), &tok.Meta), nil
 
 }
 
 // Given a value from the pair, returns the appropriate spdx.AnyLicenceInfo
-func parseLicenceString(val string) (spdx.AnyLicenceInfo, error) {
-	val = strings.TrimSpace(val)
+func parseLicenceString(tok *Token) (spdx.AnyLicenceInfo, error) {
+	val := strings.TrimSpace(tok.Pair.Value)
 	if len(val) == 0 {
 		return nil, ErrEmptyLicence
 	}
@@ -254,20 +257,20 @@ func parseLicenceString(val string) (spdx.AnyLicenceInfo, error) {
 	}
 
 	if openParen > 0 {
-		return parseLicenceSet(val)
+		return parseLicenceSet(tok)
 	}
 
-	return spdx.NewLicenceReference(strings.TrimSpace(val)), nil
+	return spdx.NewLicenceReference(strings.TrimSpace(val), &tok.Meta), nil
 }
 
 // Update a AnyLicenceInfo pointer
 func anyLicence(lic *spdx.AnyLicenceInfo) updater {
 	set := false
-	return func(val string) error {
+	return func(tok *Token) error {
 		if set {
 			return ErrAlreadyDefined
 		}
-		l, err := parseLicenceString(val)
+		l, err := parseLicenceString(tok)
 		if err != nil {
 			return err
 		}
@@ -279,8 +282,8 @@ func anyLicence(lic *spdx.AnyLicenceInfo) updater {
 
 // Update a []anyLicenceInfo pointer
 func anyLicenceList(licList *[]spdx.AnyLicenceInfo) updater {
-	return func(val string) error {
-		l, err := parseLicenceString(val)
+	return func(tok *Token) error {
+		l, err := parseLicenceString(tok)
 		if err != nil {
 			return err
 		}
@@ -291,8 +294,8 @@ func anyLicenceList(licList *[]spdx.AnyLicenceInfo) updater {
 
 // Creates a file that only has the FileName and appends it to the initially given pointer
 func updFileNameList(fl *[]*spdx.File) updater {
-	return func(val string) error {
-		file := &spdx.File{Name: val}
+	return func(tok *Token) error {
+		file := &spdx.File{Name: spdx.Str(tok.Value, &tok.Meta)}
 		*fl = append(*fl, file)
 		return nil
 	}
@@ -309,7 +312,7 @@ func mapMerge(dest *updaterMapping, src updaterMapping) {
 // Document mapping.
 func documentMap(doc *spdx.Document) updaterMapping {
 	doc.CreationInfo = new(spdx.CreationInfo)
-	doc.CreationInfo.Creator = make([]string, 0)
+	doc.CreationInfo.Creator = make([]spdx.ValueStr, 0)
 
 	var mapping updaterMapping
 
@@ -324,9 +327,9 @@ func documentMap(doc *spdx.Document) updaterMapping {
 		"LicenseListVersion": upd(&doc.CreationInfo.LicenceListVersion),
 
 		// Package
-		"PackageName": func(val string) error {
+		"PackageName": func(tok *Token) error {
 			pkg := &spdx.Package{
-				Name:             val,
+				Name:             spdx.Str(tok.Value, &tok.Meta),
 				Checksum:         new(spdx.Checksum),
 				VerificationCode: new(spdx.VerificationCode),
 			}
@@ -360,12 +363,12 @@ func documentMap(doc *spdx.Document) updaterMapping {
 			return nil
 		},
 		// File
-		"FileName": func(val string) error {
+		"FileName": func(tok *Token) error {
 			file := &spdx.File{
 				Checksum:   new(spdx.Checksum),
 				Dependency: make([]*spdx.File, 0),
 				ArtifactOf: make([]*spdx.ArtifactOf, 0),
-				Name:       val,
+				Name:       spdx.Str(tok.Value, &tok.Meta),
 			}
 
 			if doc.Files == nil {
@@ -385,9 +388,9 @@ func documentMap(doc *spdx.Document) updaterMapping {
 				"FileNotice":        upd(&file.Notice),
 				"FileContributor":   updList(&file.Contributor),
 				"FileDependency":    updFileNameList(&file.Dependency),
-				"ArtifactOfProjectName": func(val string) error {
+				"ArtifactOfProjectName": func(tok *Token) error {
 					artif := new(spdx.ArtifactOf)
-					artif.Name = val
+					artif.Name = spdx.Str(tok.Value, &tok.Meta)
 					mapMerge(&mapping, updaterMapping{
 						"ArtifactOfProjectHomepage": upd(&artif.HomePage),
 						"ArtifactOfProjectUri":      upd(&artif.ProjectUri),
@@ -401,11 +404,11 @@ func documentMap(doc *spdx.Document) updaterMapping {
 		},
 
 		// ExtractedLicensingInfo
-		"LicenseID": func(val string) error {
+		"LicenseID": func(tok *Token) error {
 			lic := &spdx.ExtractedLicensingInfo{
-				Id:             val,
-				Name:           make([]string, 0),
-				CrossReference: make([]string, 0),
+				Id:             spdx.Str(tok.Value, &tok.Meta),
+				Name:           make([]spdx.ValueStr, 0),
+				CrossReference: make([]spdx.ValueStr, 0),
 			}
 			mapMerge(&mapping, updaterMapping{
 				"ExtractedText":         upd(&lic.Text),
@@ -423,9 +426,9 @@ func documentMap(doc *spdx.Document) updaterMapping {
 			return nil
 		},
 
-		"Reviewer": func(val string) error {
+		"Reviewer": func(tok *Token) error {
 			rev := &spdx.Review{
-				Reviewer: val,
+				Reviewer: spdx.Str(tok.Value, &tok.Meta),
 			}
 
 			if doc.Reviews == nil {
@@ -452,12 +455,12 @@ func documentMap(doc *spdx.Document) updaterMapping {
 // err is the error returned by applying the mapping function or, if ok == false, an error with the relevant "mapping not found" message
 //
 // It returns two arguments to allow for easily creating parsing modes such as "ignore not known mapping"
-func applyMapping(input Pair, mapping updaterMapping) (ok bool, err error) {
-	f, ok := mapping[input.Key]
+func applyMapping(tok *Token, mapping updaterMapping) (ok bool, err error) {
+	f, ok := mapping[tok.Key]
 	if !ok {
-		return false, errors.New("Invalid property or property needs another property to be defined before it: " + input.Key)
+		return false, errors.New("Invalid property or property needs another property to be defined before it: " + tok.Key)
 	}
-	return true, f(input.Value)
+	return true, f(tok)
 }
 
 // Parse Tokens given by a lexer to a *spdx.Document
@@ -472,7 +475,7 @@ func Parse(lex lexer) (*spdx.Document, error) {
 			continue
 		}
 
-		_, err := applyMapping(token.Pair, mapping)
+		_, err := applyMapping(token, mapping)
 		if err != nil {
 			return nil, err
 		}

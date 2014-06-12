@@ -1,31 +1,35 @@
 package spdx
 
 type Package struct {
-	Name                 string            // one
-	Version              string            // zero or one
-	DownloadLocation     string            // one; NOASSERTION or NONE valid
-	HomePage             string            // one; NOASSERTION or NONE valid
-	FileName             string            // zero or one
-	Supplier             string            // zero or one, NOASSERTION valid
-	Originator           string            // zero or one, NOASSERTION valid
+	Name                 ValueStr          // one
+	Version              ValueStr          // zero or one
+	DownloadLocation     ValueStr          // one; NOASSERTION or NONE valid
+	HomePage             ValueStr          // one; NOASSERTION or NONE valid
+	FileName             ValueStr          // zero or one
+	Supplier             ValueStr          // zero or one, NOASSERTION valid
+	Originator           ValueStr          // zero or one, NOASSERTION valid
 	VerificationCode     *VerificationCode // mandatory, one
 	Checksum             *Checksum         // zero or one
-	SourceInfo           string            // zero or one
+	SourceInfo           ValueStr          // zero or one
 	LicenceConcluded     AnyLicenceInfo    // one; NOASSERTION or NONE valid
 	LicenceInfoFromFiles []AnyLicenceInfo  // one or more; NOASSERTION or NONE valid; no sets allowed
 	LicenceDeclared      AnyLicenceInfo    // one
-	LicenceComments      string            // zero or one
-	CopyrightText        string            // one
-	Summary              string            // zero or one
-	Description          string            // zero or one
+	LicenceComments      ValueStr          // zero or one
+	CopyrightText        ValueStr          // one
+	Summary              ValueStr          // zero or one
+	Description          ValueStr          // zero or one
 	Files                []*File           // one or more
 }
 
 type VerificationCode struct {
-	Value         string
-	ExcludedFiles []string
+	Value         ValueStr
+	ExcludedFiles []ValueStr
 }
 
 type Checksum struct {
-	Algo, Value string
+	Algo, Value ValueStr
+}
+
+func (c *Checksum) Equal(d *Checksum) bool {
+	return c.Algo.Val == d.Algo.Val && c.Value.Val == d.Value.Val
 }

@@ -3,6 +3,8 @@ package tag
 import "strings"
 import "testing"
 
+import "github.com/vladvelici/spdx-go/spdx"
+
 func sameDoc(a, b []Pair) bool {
 	if len(a) != len(b) {
 		return false
@@ -521,8 +523,8 @@ func TestCommentToken(t *testing.T) {
 	}
 
 	expected := []Token{
-		{TokenComment, 1, 1, Pair{"", "comment1"}},
-		{TokenComment, 3, 3, Pair{"", "comment2"}},
+		{TokenComment, spdx.Meta{1, 1}, Pair{"", "comment1"}},
+		{TokenComment, spdx.Meta{3, 3}, Pair{"", "comment2"}},
 	}
 
 	if !sameTokens(tok, expected) {
@@ -539,8 +541,8 @@ func TestCommentAndProperty(t *testing.T) {
 	}
 
 	expected := []Token{
-		{TokenComment, 1, 1, Pair{"", "comment1"}},
-		{TokenPair, 2, 2, Pair{"prop", "val"}},
+		{TokenComment, spdx.Meta{1, 1}, Pair{"", "comment1"}},
+		{TokenPair, spdx.Meta{2, 2}, Pair{"prop", "val"}},
 	}
 
 	if !sameTokens(tok, expected) {
@@ -557,9 +559,9 @@ func TestLines(t *testing.T) {
 	}
 
 	expected := []Token{
-		{TokenPair, 1, 2, Pair{"prop", "line1\nline2"}},
-		{TokenPair, 3, 3, Pair{"prop", "val"}},
-		{TokenPair, 4, 4, Pair{"prop2", "val2"}},
+		{TokenPair, spdx.Meta{1, 2}, Pair{"prop", "line1\nline2"}},
+		{TokenPair, spdx.Meta{3, 3}, Pair{"prop", "val"}},
+		{TokenPair, spdx.Meta{4, 4}, Pair{"prop2", "val2"}},
 	}
 
 	if !sameTokens(tok, expected) {

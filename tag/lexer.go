@@ -1,5 +1,7 @@
 package tag
 
+import "github.com/vladvelici/spdx-go/spdx"
+
 import (
 	"bufio"
 	"bytes"
@@ -24,10 +26,9 @@ var (
 )
 
 type Token struct {
-	Type      int
-	LineStart int
-	LineEnd   int
-	Pair      Pair
+	Type int
+	spdx.Meta
+	Pair
 }
 
 type Pair struct {

@@ -17,6 +17,30 @@ func sameStrSlice(a, b []string) bool {
 	return true
 }
 
+func sameValStrValues(a []spdx.ValueStr, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i].Val != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func sameValSlice(a, b []spdx.Value) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
 // Fake lexer for testing:
 type testLexer struct {
 	i     int
@@ -24,17 +48,21 @@ type testLexer struct {
 }
 
 func (l *testLexer) Lex() bool     { l.i++; return l.i < len(l.pairs) }
-func (l *testLexer) Token() *Token { return &Token{TokenPair, 0, 0, l.pairs[l.i]} }
+func (l *testLexer) Token() *Token { return &Token{TokenPair, spdx.Meta{0, 0}, l.pairs[l.i]} }
 func (l *testLexer) Err() error    { return nil }
 func (l *testLexer) Line() int     { return 0 }
 func l(p []Pair) lexer             { return &testLexer{-1, p} }
+
+func tk(value string) *Token {
+	return &Token{Pair: Pair{Value: value}}
+}
 
 func sameLicence(a, b spdx.AnyLicenceInfo) bool {
 	switch ta := a.(type) {
 	default:
 		return false
 	case spdx.LicenceReference:
-		if tb, ok := b.(spdx.LicenceReference); ok && tb == ta {
+		if tb, ok := b.(spdx.LicenceReference); ok && ta.Equal(tb) {
 			return true
 		}
 		return false
@@ -75,29 +103,28 @@ func joinStrSlice(a []string, glue string) string {
 }
 
 func TestUpd(t *testing.T) {
-	a := ""
+	a := spdx.Str("", nil)
 	f := upd(&a)
-	f("world")
-	if a != "world" {
+	f(tk("world"))
+	if a.Val != "world" {
 		t.Fail()
 	}
 }
-
 func TestUpdFail(t *testing.T) {
-	a := ""
+	a := spdx.Str("", nil)
 	f := upd(&a)
-	f("hello")
-	err := f("world")
+	f(tk("hello"))
+	err := f(tk("world"))
 	if err != ErrAlreadyDefined {
 		t.Errorf("Different error: %s", err)
 	}
 }
 
 func TestUpdList(t *testing.T) {
-	arr := []string{"1", "2", "3"}
+	arr := []spdx.ValueStr{spdx.Str("1", nil), spdx.Str("2", nil), spdx.Str("3", nil)}
 	f := updList(&arr)
-	f("4")
-	if len(arr) != 4 || arr[3] != "4" {
+	f(tk("4"))
+	if len(arr) != 4 || arr[3].Val != "4" {
 		t.Fail()
 	}
 }
@@ -106,11 +133,11 @@ func TestVerifCodeNoExcludes(t *testing.T) {
 	vc := new(spdx.VerificationCode)
 	value := "d6a770ba38583ed4bb4525bd96e50461655d2758"
 	f := verifCode(vc)
-	err := f(value)
+	err := f(tk(value))
 	if err != nil {
 		t.Errorf("Error should be nil but found %s.", err)
 	}
-	if vc.Value != value {
+	if vc.Value.Val != value {
 		t.Error("Verification code value different than given value")
 	}
 
@@ -124,16 +151,16 @@ func TestVerifCodeWithExcludes(t *testing.T) {
 	value := "d6a770ba38583ed4bb4525bd96e50461655d2758"
 	excludes := " (excludes: abc.txt, file.spdx)"
 	f := verifCode(vc)
-	err := f(value + excludes)
+	err := f(tk(value + excludes))
 
 	if err != nil {
 		t.Errorf("Error should be nil but found %s.", err)
 	}
-	if vc.Value != value {
+	if vc.Value.Val != value {
 		t.Error("Verification code value different than given value")
 	}
 
-	if !sameStrSlice(vc.ExcludedFiles, []string{"abc.txt", "file.spdx"}) {
+	if !sameValStrValues(vc.ExcludedFiles, []string{"abc.txt", "file.spdx"}) {
 		t.Error("Different ExcludedFiles. Elements found: %s.", vc.ExcludedFiles)
 	}
 }
@@ -144,17 +171,17 @@ func TestVerifCodeWithExcludes2(t *testing.T) {
 	excludes := " (abc.txt, file.spdx)"
 	f := verifCode(vc)
 
-	err := f(value + excludes)
+	err := f(tk(value + excludes))
 
 	if err != nil {
 		t.Errorf("Error should be nil but found %s.", err)
 	}
 
-	if vc.Value != value {
+	if vc.Value.Val != value {
 		t.Error("Verification code value different than given value")
 	}
 
-	if !sameStrSlice(vc.ExcludedFiles, []string{"abc.txt", "file.spdx"}) {
+	if !sameValStrValues(vc.ExcludedFiles, []string{"abc.txt", "file.spdx"}) {
 		t.Error("Different ExcludedFiles. Elements found: %s.", vc.ExcludedFiles)
 	}
 }
@@ -164,7 +191,7 @@ func TestVerifCodeInvalidExcludesNoClosedParentheses(t *testing.T) {
 	value := "d6a770ba38583ed4bb4525bd96e50461655d2758"
 	excludes := " ("
 	f := verifCode(vc)
-	err := f(value + excludes)
+	err := f(tk(value + excludes))
 
 	if err != ErrNoClosedParen {
 		t.Errorf("Error should be UnclosedParentheses but found %s.", err)
@@ -177,25 +204,25 @@ func TestChecksum(t *testing.T) {
 	algo := "SHA1"
 
 	f := checksum(cksum)
-	err := f(algo + ": " + val)
+	err := f(tk(algo + ": " + val))
 
 	if err != nil {
 		t.Errorf("Error should be nil but found %s.", err)
 	}
 
-	if cksum.Value != "d6a770ba38583ed4bb4525bd96e50461655d2758" {
-		t.Errorf("Checksum value is wrong. Found: '%s'. Expected: '%s'.", cksum.Value, val)
+	if cksum.Value.Val != val {
+		t.Errorf("Checksum value is wrong. Found: '%s'. Expected: '%s'.", cksum.Value.Val, val)
 	}
 
-	if cksum.Algo != algo {
-		t.Errorf("Algo is wrong. Found: '%s'. Expected: '%s'.", cksum.Algo, algo)
+	if cksum.Algo.Val != algo {
+		t.Errorf("Algo is wrong. Found: '%s'. Expected: '%s'.", cksum.Algo.Val, algo)
 	}
 }
 
 func TestChecksumInvalid(t *testing.T) {
 	cksum := new(spdx.Checksum)
 	f := checksum(cksum)
-	err := f("d6a770ba38583ed4bb")
+	err := f(tk("d6a770ba38583ed4bb"))
 
 	if err != ErrInvalidChecksum {
 		t.Errorf("Invalid error found: %s.", err)
@@ -329,8 +356,8 @@ func TestLicenceSetSplitNoSeparator(t *testing.T) {
 
 func TestParseLicenceSetOr(t *testing.T) {
 	input := "(GPLv3 or LicenseRef-1)"
-	expected := spdx.DisjunctiveLicenceList{spdx.NewLicenceReference("GPLv3"), spdx.NewLicenceReference("LicenseRef-1")}
-	output, err := parseLicenceSet(input)
+	expected := spdx.DisjunctiveLicenceList{spdx.NewLicenceReference("GPLv3", nil), spdx.NewLicenceReference("LicenseRef-1", nil)}
+	output, err := parseLicenceSet(tk(input))
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
@@ -342,8 +369,8 @@ func TestParseLicenceSetOr(t *testing.T) {
 
 func TestParseLicenceSetAnd(t *testing.T) {
 	input := "(GPLv3 and LicenseRef-1)"
-	expected := spdx.ConjunctiveLicenceList{spdx.NewLicenceReference("GPLv3"), spdx.NewLicenceReference("LicenseRef-1")}
-	output, err := parseLicenceSet(input)
+	expected := spdx.ConjunctiveLicenceList{spdx.NewLicenceReference("GPLv3", nil), spdx.NewLicenceReference("LicenseRef-1", nil)}
+	output, err := parseLicenceSet(tk(input))
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
@@ -357,15 +384,15 @@ func TestParseLicenceSetNested(t *testing.T) {
 	input := "(GPLv3 or (LicenseRef-1 and LicenseRef-3) or LicenseRef-2)"
 
 	expected := spdx.DisjunctiveLicenceList{
-		spdx.NewLicenceReference("GPLv3"),
+		spdx.NewLicenceReference("GPLv3", nil),
 		spdx.ConjunctiveLicenceList{
-			spdx.NewLicenceReference("LicenseRef-1"),
-			spdx.NewLicenceReference("LicenseRef-3"),
+			spdx.NewLicenceReference("LicenseRef-1", nil),
+			spdx.NewLicenceReference("LicenseRef-3", nil),
 		},
-		spdx.NewLicenceReference("LicenseRef-2"),
+		spdx.NewLicenceReference("LicenseRef-2", nil),
 	}
 
-	output, err := parseLicenceSet(input)
+	output, err := parseLicenceSet(tk(input))
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
@@ -378,9 +405,9 @@ func TestParseLicenceSetNested(t *testing.T) {
 func TestParseLicenceSetSingleValue(t *testing.T) {
 	input := "one value "
 
-	expected := spdx.NewLicenceReference("one value")
+	expected := spdx.NewLicenceReference("one value", nil)
 
-	output, err := parseLicenceSet(input)
+	output, err := parseLicenceSet(tk(input))
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
@@ -393,7 +420,7 @@ func TestParseLicenceSetSingleValue(t *testing.T) {
 func TestParseLicenceSetEmptyLicence(t *testing.T) {
 	input := " "
 
-	_, err := parseLicenceSet(input)
+	_, err := parseLicenceSet(tk(input))
 	if err != ErrEmptyLicence {
 		t.Errorf("Unexpected error: %s", err)
 	}
@@ -402,7 +429,7 @@ func TestParseLicenceSetEmptyLicence(t *testing.T) {
 func TestParseLicenceStringEmptyLicence(t *testing.T) {
 	input := " "
 
-	_, err := parseLicenceString(input)
+	_, err := parseLicenceString(tk(input))
 	if err != ErrEmptyLicence {
 		t.Errorf("Unexpected error: %s", err)
 	}
@@ -411,7 +438,7 @@ func TestParseLicenceStringEmptyLicence(t *testing.T) {
 func TestParseLicenceStringUnbalancedParentheses(t *testing.T) {
 	input := " (()"
 
-	_, err := parseLicenceString(input)
+	_, err := parseLicenceString(tk(input))
 	if err != ErrNoClosedParen {
 		t.Errorf("Unexpected error: %s", err)
 	}
@@ -419,7 +446,7 @@ func TestParseLicenceStringUnbalancedParentheses(t *testing.T) {
 
 func TestLicenceSetConjunctionAndDisjunction(t *testing.T) {
 	input := "a and b or c"
-	_, err := parseLicenceSet(input)
+	_, err := parseLicenceSet(tk(input))
 	if err != ErrConjunctionAndDisjunction {
 		t.Errorf("Unexpected error: %s", err)
 	}
@@ -450,25 +477,25 @@ func TestDoc(t *testing.T) {
 		t.Errorf("Unexpected error: %s", err)
 	}
 
-	if doc.SpecVersion != m["SpecVersion"][0] {
+	if doc.SpecVersion.Val != m["SpecVersion"][0] {
 		t.Errorf("h Invalid doc.SpecVersion: '%s'", doc.SpecVersion)
 	}
-	if doc.DataLicence != m["DataLicense"][0] {
+	if doc.DataLicence.Val != m["DataLicense"][0] {
 		t.Errorf("Invalid doc.DataLicence: '%s'", doc.DataLicence)
 	}
-	if doc.Comment != m["DocumentComment"][0] {
+	if doc.Comment.Val != m["DocumentComment"][0] {
 		t.Errorf("Invalid doc.Comment: '%s'", doc.Comment)
 	}
-	if !sameStrSlice(doc.CreationInfo.Creator, m["Creator"]) {
+	if !sameValStrValues(doc.CreationInfo.Creator, m["Creator"]) {
 		t.Errorf("Invalid doc.CreationInfo.Creator: (len=%d) '%s'", len(doc.CreationInfo.Creator), doc.CreationInfo.Creator)
 	}
-	if doc.CreationInfo.Created != m["Created"][0] {
+	if doc.CreationInfo.Created.Val != m["Created"][0] {
 		t.Errorf("Invalid doc.CreationInfo.Created: '%s'", doc.CreationInfo.Created)
 	}
-	if doc.CreationInfo.Comment != m["CreatorComment"][0] {
+	if doc.CreationInfo.Comment.Val != m["CreatorComment"][0] {
 		t.Errorf("Invalid doc.CreationInfo.Comment: '%s'", doc.CreationInfo.Comment)
 	}
-	if doc.CreationInfo.LicenceListVersion != m["LicenseListVersion"][0] {
+	if doc.CreationInfo.LicenceListVersion.Val != m["LicenseListVersion"][0] {
 		t.Errorf("Invalid doc.LicenceListVersion: '%s'", doc.CreationInfo.LicenceListVersion)
 	}
 }
@@ -488,8 +515,8 @@ func TestSamePropertyTwice(t *testing.T) {
 
 func TestDocNestedPackage(t *testing.T) {
 	cksum := spdx.Checksum{
-		Algo:  "SHA1",
-		Value: "2fd4e1c67a2d28fced849ee1bb76e7391b93eb12",
+		Algo:  spdx.Str("SHA1", nil),
+		Value: spdx.Str("2fd4e1c67a2d28fced849ee1bb76e7391b93eb12", nil),
 	}
 	input := []Pair{
 		{"SpecVersion", "1.2"},
@@ -509,7 +536,7 @@ func TestDocNestedPackage(t *testing.T) {
 		{"PackageLicenseDeclared", "MIT1"},
 		{"PackageLicenseConcluded", "MIT2"},
 		// non-string comparable attributes:
-		{"PackageChecksum", cksum.Algo + ": " + cksum.Value},
+		{"PackageChecksum", cksum.Algo.Val + ": " + cksum.Value.Val},
 		{"PackageLicenseInfoFromFiles", "Apache2"},
 		{"PackageLicenseInfoFromFiles", "MIT"},
 	}
@@ -524,7 +551,7 @@ func TestDocNestedPackage(t *testing.T) {
 	}
 	pkg := doc.Packages[0]
 
-	strExpected := []string{
+	strExpected := []spdx.Value{
 		doc.SpecVersion,
 		pkg.Name,
 		pkg.Version,
@@ -539,19 +566,19 @@ func TestDocNestedPackage(t *testing.T) {
 		pkg.Summary,
 		pkg.Description,
 		pkg.VerificationCode.Value,
-		pkg.LicenceDeclared.LicenceId(),
-		pkg.LicenceConcluded.LicenceId(),
+		pkg.LicenceDeclared,
+		pkg.LicenceConcluded,
 	}
 
 	for i, val := range strExpected {
 		p := input[i]
-		if val != p.Value {
+		if val.V() != p.Value {
 			t.Errorf("Invalid %s: '%s'.", p.Key, val)
 		}
 	}
 
-	if *pkg.Checksum != cksum {
-		t.Errorf("Invalid PackageChecksum: '%s'.", *pkg.Checksum)
+	if !pkg.Checksum.Equal(&cksum) {
+		t.Errorf("Invalid PackageChecksum found: %+v \n Expected: %+v", *pkg.Checksum, cksum)
 	}
 
 	if len(pkg.LicenceInfoFromFiles) != 2 ||
@@ -564,8 +591,8 @@ func TestDocNestedPackage(t *testing.T) {
 
 func TestDocNestedFiles(t *testing.T) {
 	cksum := spdx.Checksum{
-		Algo:  "SHA1",
-		Value: "2fd4e1c67a2d28fced849ee1bb76e7391b93eb12",
+		Algo:  spdx.Str("SHA1", nil),
+		Value: spdx.Str("2fd4e1c67a2d28fced849ee1bb76e7391b93eb12", nil),
 	}
 
 	fContributor := []string{"Person: A", "Person: B", "Organization: LF"}
@@ -596,7 +623,7 @@ func TestDocNestedFiles(t *testing.T) {
 		{"FileType", "SOURCE"},
 
 		// non-string checks
-		{"FileChecksum", cksum.Algo + ": " + cksum.Value},
+		{"FileChecksum", cksum.Algo.Val + ": " + cksum.Value.Val},
 	}
 
 	for _, v := range fContributor {
@@ -636,13 +663,13 @@ func TestDocNestedFiles(t *testing.T) {
 	}
 
 	// check all string properties
-	strExpected := []string{
+	strExpected := []spdx.Value{
 		doc.SpecVersion,
 		pkg.Name,
 
 		file1.Name,
 		file1.Type,
-		file1.LicenceConcluded.LicenceId(),
+		file1.LicenceConcluded,
 		file1.LicenceComments,
 		file1.CopyrightText,
 		file1.Comment,
@@ -659,14 +686,14 @@ func TestDocNestedFiles(t *testing.T) {
 
 	for i, val := range strExpected {
 		p := input[i]
-		if val != p.Value {
+		if val.V() != p.Value {
 			t.Errorf("Invalid %s: '%s'.", p.Key, val)
 		}
 	}
 
 	// same LicenceInfoInFile
 	if len(file2.LicenceInfoInFile) != len(licInfo) {
-		t.Errorf("Wrong file2.LicenceInfoInFile: '%s'", file2.LicenceInfoInFile)
+		t.Errorf("Wrong file2.LicenceInfoInFile: '%+v'", file2.LicenceInfoInFile)
 	} else {
 		fail := false
 		for i, lic := range file2.LicenceInfoInFile {
@@ -676,17 +703,17 @@ func TestDocNestedFiles(t *testing.T) {
 			}
 		}
 		if fail {
-			t.Errorf("Wrong file2.LicenceInfoInFile: '%s'", file2.LicenceInfoInFile)
+			t.Errorf("Wrong file2.LicenceInfoInFile: '%+v'", file2.LicenceInfoInFile)
 		}
 	}
 
 	// sameContributors
-	if !sameStrSlice(fContributor, file2.Contributor) {
-		t.Errorf("Wrong file2.Contributor: '%s'. Expected: '%s'", file2.Contributor, fContributor)
+	if !sameValStrValues(file2.Contributor, fContributor) {
+		t.Errorf("Wrong file2.Contributor: '%+v'. Expected: '%+v'", file2.Contributor, fContributor)
 	}
 
-	if *file2.Checksum != cksum {
-		t.Errorf("Invalid PackageChecksum: '%s'.", *pkg.Checksum)
+	if !file2.Checksum.Equal(&cksum) {
+		t.Errorf("Invalid PackageChecksum: '%+v'.", *pkg.Checksum)
 	}
 
 }
@@ -721,13 +748,13 @@ func TestDocLicenceId(t *testing.T) {
 	}
 
 	for i, extr := range doc.ExtractedLicenceInfo {
-		if extr.Id != ids[i] {
+		if extr.Id.Val != ids[i] {
 			t.Errorf("(#%d) Wrong ID: '%s' (expected '%s')", i, extr.Id, ids[i])
 		}
-		if !sameStrSlice(extr.Name, names[i]) {
+		if !sameValStrValues(extr.Name, names[i]) {
 			t.Errorf("(#%d) Wrong Name: '%s' (expected '%s')", i, extr.Name, names[i])
 		}
-		if !sameStrSlice(extr.CrossReference, xRef[i]) {
+		if !sameValStrValues(extr.CrossReference, xRef[i]) {
 			t.Errorf("(#%d) Wrong CrossReference: '%s' (expected '%s')", i, extr.CrossReference, xRef[i])
 		}
 	}
@@ -802,15 +829,15 @@ func TestVerifCodeAlreadyDefined(t *testing.T) {
 func TestReviewer(t *testing.T) {
 
 	reviews := []spdx.Review{
-		{"a", "b", "c"},
-		{"d", "e", "f"},
+		{spdx.Str("a", nil), spdx.Str("b", nil), spdx.Str("c", nil)},
+		{spdx.Str("d", nil), spdx.Str("e", nil), spdx.Str("f", nil)},
 	}
 
 	input := make([]Pair, 0, 6)
 	for _, rev := range reviews {
-		input = append(input, Pair{"Reviewer", rev.Reviewer})
-		input = append(input, Pair{"ReviewDate", rev.Date})
-		input = append(input, Pair{"ReviewComment", rev.Comment})
+		input = append(input, Pair{"Reviewer", rev.Reviewer.Val})
+		input = append(input, Pair{"ReviewDate", rev.Date.Val})
+		input = append(input, Pair{"ReviewComment", rev.Comment.Val})
 	}
 
 	doc, err := Parse(l(input))
@@ -821,13 +848,13 @@ func TestReviewer(t *testing.T) {
 	}
 
 	if len(doc.Reviews) != len(reviews) {
-		t.Errorf("Invalid reviews (len=%d): '%s' (expected (len=%d): '%s')", len(doc.Reviews), doc.Reviews, len(reviews), reviews)
+		t.Errorf("Invalid reviews (len=%d): '%v'\n (expected (len=%d): '%v')", len(doc.Reviews), doc.Reviews, len(reviews), reviews)
 		t.FailNow()
 	}
 
 	for i, rev := range doc.Reviews {
-		if *rev != reviews[i] {
-			t.Errorf("Invalid reviews (len=%d): '%s' (expected (len=%d): '%s')", len(doc.Reviews), doc.Reviews, len(reviews), reviews)
+		if !rev.Equal(&reviews[i]) {
+			t.Errorf("Invalid reviews (len=%d): '%+v'\n (expected (len=%d): '%+v')", len(doc.Reviews), doc.Reviews, len(reviews), reviews)
 			t.FailNow()
 		}
 	}

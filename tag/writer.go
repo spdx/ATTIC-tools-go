@@ -51,20 +51,20 @@ func multilineInit() map[string]interface{} {
 }
 
 func cksumStr(cksum *spdx.Checksum) string {
-	if cksum == nil || (cksum.Algo == "" && cksum.Value == "") {
+	if cksum == nil || (cksum.Algo.Val == "" && cksum.Value.Val == "") {
 		return ""
 	}
-	return cksum.Algo + ": " + cksum.Value
+	return cksum.Algo.Val + ": " + cksum.Value.Val
 }
 
 func verifCodeStr(verif *spdx.VerificationCode) string {
-	if verif == nil || (verif.Value == "" && len(verif.ExcludedFiles) == 0) {
+	if verif == nil || (verif.Value.Val == "" && len(verif.ExcludedFiles) == 0) {
 		return ""
 	}
 	if len(verif.ExcludedFiles) == 0 {
-		return verif.Value
+		return verif.Value.Val
 	}
-	return verif.Value + " (Excludes: " + strings.Join(verif.ExcludedFiles, ", ") + ")"
+	return verif.Value.Val + " (Excludes: " + spdx.Join(verif.ExcludedFiles, ", ") + ")"
 }
 
 func countLeft(str string, sep byte) (count int) {
@@ -179,9 +179,9 @@ func (f *Formatter) Properties(props []Pair) error {
 }
 
 // Write a property with multiple values
-func (f *Formatter) PropertySlice(tag string, values []string) error {
+func (f *Formatter) PropertySlice(tag string, values []spdx.ValueStr) error {
 	for _, val := range values {
-		if err := f.Property(tag, val); err != nil {
+		if err := f.Property(tag, val.Val); err != nil {
 			return err
 		}
 	}
@@ -205,9 +205,9 @@ func (f *Formatter) Document(doc *spdx.Document) error {
 	}
 
 	err := f.Properties([]Pair{
-		{"SpecVersion", doc.SpecVersion},
-		{"DataLicense", doc.DataLicence},
-		{"DocumentComment", doc.Comment},
+		{"SpecVersion", doc.SpecVersion.Val},
+		{"DataLicense", doc.DataLicence.Val},
+		{"DocumentComment", doc.Comment.Val},
 	})
 
 	if err != nil {
@@ -254,9 +254,9 @@ func (f *Formatter) CreationInfo(ci *spdx.CreationInfo) error {
 	}
 
 	return f.Properties([]Pair{
-		{"Created", ci.Created},
-		{"CreatorComment", ci.Comment},
-		{"LicenseListVersion", ci.LicenceListVersion},
+		{"Created", ci.Created.Val},
+		{"CreatorComment", ci.Comment.Val},
+		{"LicenseListVersion", ci.LicenceListVersion.Val},
 	})
 }
 
@@ -276,16 +276,16 @@ func (f *Formatter) Package(pkg *spdx.Package) error {
 	}
 
 	err := f.Properties([]Pair{
-		{"PackageName", pkg.Name},
-		{"PackageVersion", pkg.Version},
-		{"PackageFileName", pkg.FileName},
-		{"PackageSupplier", pkg.Supplier},
-		{"PackageOriginator", pkg.Originator},
-		{"PackageDownloadLocation", pkg.DownloadLocation},
+		{"PackageName", pkg.Name.Val},
+		{"PackageVersion", pkg.Version.Val},
+		{"PackageFileName", pkg.FileName.Val},
+		{"PackageSupplier", pkg.Supplier.Val},
+		{"PackageOriginator", pkg.Originator.Val},
+		{"PackageDownloadLocation", pkg.DownloadLocation.Val},
 		{"PackageVerificationCode", verifCodeStr(pkg.VerificationCode)},
-		{"PackageChecksum", cksumStr(pkg.Checksum)},
-		{"PackageHomePage", pkg.HomePage},
-		{"PackageSourceInfo", pkg.SourceInfo},
+		{"packageChecksum", cksumStr(pkg.Checksum)},
+		{"PackageHomePage", pkg.HomePage.Val},
+		{"PackageSourceInfo", pkg.SourceInfo.Val},
 	})
 
 	if err != nil {
@@ -306,10 +306,10 @@ func (f *Formatter) Package(pkg *spdx.Package) error {
 	}
 
 	return f.Properties([]Pair{
-		{"PackageLicenseComments", pkg.LicenceComments},
-		{"PackageCopyrightText", pkg.CopyrightText},
-		{"PackageSummary", pkg.Summary},
-		{"PackageDescription", pkg.Description},
+		{"PackageLicenseComments", pkg.LicenceComments.Val},
+		{"PackageCopyrightText", pkg.CopyrightText.Val},
+		{"PackageSummary", pkg.Summary.Val},
+		{"PackageDescription", pkg.Description.Val},
 	})
 }
 
@@ -328,8 +328,8 @@ func (f *Formatter) File(file *spdx.File) error {
 		return nil
 	}
 	err := f.Properties([]Pair{
-		{"FileName", file.Name},
-		{"FileType", file.Type},
+		{"FileName", file.Name.Val},
+		{"FileType", file.Type.Val},
 		{"FileChecksum", cksumStr(file.Checksum)},
 	})
 
@@ -348,10 +348,10 @@ func (f *Formatter) File(file *spdx.File) error {
 	}
 
 	err = f.Properties([]Pair{
-		{"LicenseComments", file.LicenceComments},
-		{"FileCopyrightText", file.CopyrightText},
-		{"FileComment", file.Comment},
-		{"FileNotice", file.Notice},
+		{"LicenseComments", file.LicenceComments.Val},
+		{"FileCopyrightText", file.CopyrightText.Val},
+		{"FileComment", file.Comment.Val},
+		{"FileNotice", file.Notice.Val},
 	})
 	if err != nil {
 		return err
@@ -362,7 +362,7 @@ func (f *Formatter) File(file *spdx.File) error {
 	}
 
 	for _, fname := range file.Dependency {
-		if err = f.Property("FileDependency", fname.Name); err != nil {
+		if err = f.Property("FileDependency", fname.Name.Val); err != nil {
 			return err
 		}
 	}
@@ -385,9 +385,9 @@ func (f *Formatter) Review(review *spdx.Review) error {
 	}
 
 	return f.Properties([]Pair{
-		{"Reviewer", review.Reviewer},
-		{"ReviewDate", review.Date},
-		{"ReviewComment", review.Comment},
+		{"Reviewer", review.Reviewer.Val},
+		{"ReviewDate", review.Date.Val},
+		{"ReviewComment", review.Comment.Val},
 	})
 }
 
@@ -405,8 +405,8 @@ func (f *Formatter) ExtrLicInfo(lic *spdx.ExtractedLicensingInfo) error {
 		return nil
 	}
 	err := f.Properties([]Pair{
-		{"LicenseID", lic.Id},
-		{"ExtractedText", lic.Text},
+		{"LicenseID", lic.Id.Val},
+		{"ExtractedText", lic.Text.Val},
 	})
 	if err != nil {
 		return err
@@ -417,5 +417,5 @@ func (f *Formatter) ExtrLicInfo(lic *spdx.ExtractedLicensingInfo) error {
 	if err = f.PropertySlice("LicenseCrossReference", lic.CrossReference); err != nil {
 		return err
 	}
-	return f.Property("LicenseComment", lic.Comment)
+	return f.Property("LicenseComment", lic.Comment.Val)
 }

@@ -1,7 +1,11 @@
 package spdx
 
 type Review struct {
-	Reviewer string // mandatory
-	Date     string // mandatory
-	Comment  string // optional
+	Reviewer ValueStr // mandatory
+	Date     ValueStr // mandatory
+	Comment  ValueStr // optional
+}
+
+func (a *Review) Equal(b *Review) bool {
+	return a.Reviewer.Val == b.Reviewer.Val && a.Date.Val == b.Date.Val && a.Comment.Val == b.Comment.Val
 }
