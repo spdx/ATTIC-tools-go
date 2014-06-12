@@ -3,7 +3,6 @@ package tag
 import "github.com/vladvelici/spdx-go/spdx"
 
 import (
-	"errors"
 	"regexp"
 	"strings"
 )
@@ -458,7 +457,7 @@ func documentMap(doc *spdx.Document) updaterMapping {
 func applyMapping(tok *Token, mapping updaterMapping) (ok bool, err error) {
 	f, ok := mapping[tok.Key]
 	if !ok {
-		return false, errors.New("Invalid property or property needs another property to be defined before it: " + tok.Key)
+		return false, parseError("Invalid property or property needs another property to be defined before it: "+tok.Key, tok.Meta)
 	}
 	return true, f(tok)
 }

@@ -45,8 +45,21 @@ var (
 
 func xor(a, b bool) bool { return a != b }
 
+func exitErr(err error) {
+	switch e := err.(type) {
+	default:
+		log.Fatal(err)
+	case *tag.ParseError:
+		if e.LineStart != e.LineEnd {
+			log.Fatalf("%s:(%d to %d) %s", input.Name(), e.LineStart, e.LineEnd, e.Error())
+		}
+		log.Fatalf("%s:%d %s", input.Name(), e.LineStart, e.Error())
+	}
+}
+
 func main() {
 	flag.Parse()
+	log.SetFlags(0)
 
 	if *flagHelp {
 		help()
@@ -80,7 +93,7 @@ func main() {
 		input, err = os.Open(flag.Arg(0))
 		defer input.Close()
 		if err != nil {
-			log.Fatal(err.Error())
+			exitErr(err)
 		}
 	}
 
@@ -89,7 +102,7 @@ func main() {
 		output, err = os.Create(*flagOutput)
 		defer output.Close()
 		if err != nil {
-			log.Fatal(err.Error())
+			exitErr(err)
 		}
 	} else if *flagInPlace {
 		if input == os.Stdin {
@@ -106,7 +119,7 @@ func main() {
 			input.Close()
 			CopyFile(output.Name(), input.Name())
 			if err := os.Remove(output.Name()); err != nil {
-				log.Fatal(err.Error())
+				exitErr(err)
 			}
 		}()
 	}
@@ -154,7 +167,7 @@ func detectFormat() string {
 		var err error
 		input, err = os.Open(input.Name())
 		if err != nil {
-			log.Fatal(err.Error())
+			exitErr(err)
 		}
 	}()
 	scanner := bufio.NewScanner(input)
@@ -182,7 +195,7 @@ func convert() {
 	}
 
 	if err != nil {
-		log.Fatal(err)
+		exitErr(err)
 	}
 
 	if *flagConvert == formatTag {
@@ -201,7 +214,7 @@ func format() {
 		lex := tag.NewLexer(input)
 		err := f.Lexer(lex)
 		if err != nil {
-			log.Fatal(err)
+			exitErr(err)
 		}
 	}
 }
