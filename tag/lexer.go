@@ -27,8 +27,8 @@ var (
 
 type Token struct {
 	Type int
-	spdx.Meta
 	Pair
+	*spdx.Meta
 }
 
 type Pair struct {
@@ -99,8 +99,7 @@ func (l *Lexer) Lex() bool {
 		l.token.Type = TokenComment
 		l.token.Pair.Key = ""
 		l.token.Pair.Value = l.scanner.Text()
-		l.token.LineStart = l.line
-		l.token.LineEnd = l.line
+		l.token.Meta = &spdx.Meta{l.line, l.line}
 		return true
 	}
 
@@ -111,8 +110,7 @@ func (l *Lexer) Lex() bool {
 	if l.scanner.Scan() {
 		l.token.Pair.Value = strings.TrimSpace(l.scanner.Text())
 	}
-	l.token.LineEnd = l.line
-	l.token.LineStart = l.line
+	l.token.Meta = &spdx.Meta{l.line, l.line}
 
 	// in case of multiline <text>:
 	if l.lineStart > 0 {

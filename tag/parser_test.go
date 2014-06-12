@@ -48,7 +48,7 @@ type testLexer struct {
 }
 
 func (l *testLexer) Lex() bool     { l.i++; return l.i < len(l.pairs) }
-func (l *testLexer) Token() *Token { return &Token{TokenPair, spdx.Meta{0, 0}, l.pairs[l.i]} }
+func (l *testLexer) Token() *Token { return &Token{TokenPair, l.pairs[l.i], nil} }
 func (l *testLexer) Err() error    { return nil }
 func (l *testLexer) Line() int     { return 0 }
 func l(p []Pair) lexer             { return &testLexer{-1, p} }

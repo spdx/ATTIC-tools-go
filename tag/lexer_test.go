@@ -501,13 +501,17 @@ func TestSomeInvalidText(t *testing.T) {
 
 }
 
+func sameToken(a, b *Token) bool {
+	return a == b || *a == *b || (*a.Meta == *b.Meta && a.Pair == b.Pair)
+}
+
 func sameTokens(a, b []Token) bool {
 	if len(a) != len(b) {
 		return false
 	}
 
 	for i, t := range a {
-		if t != b[i] {
+		if !sameToken(&t, &b[i]) {
 			return false
 		}
 	}
@@ -523,8 +527,8 @@ func TestCommentToken(t *testing.T) {
 	}
 
 	expected := []Token{
-		{TokenComment, spdx.Meta{1, 1}, Pair{"", "comment1"}},
-		{TokenComment, spdx.Meta{3, 3}, Pair{"", "comment2"}},
+		{TokenComment, Pair{"", "comment1"}, &spdx.Meta{1, 1}},
+		{TokenComment, Pair{"", "comment2"}, &spdx.Meta{3, 3}},
 	}
 
 	if !sameTokens(tok, expected) {
@@ -541,8 +545,8 @@ func TestCommentAndProperty(t *testing.T) {
 	}
 
 	expected := []Token{
-		{TokenComment, spdx.Meta{1, 1}, Pair{"", "comment1"}},
-		{TokenPair, spdx.Meta{2, 2}, Pair{"prop", "val"}},
+		{TokenComment, Pair{"", "comment1"}, &spdx.Meta{1, 1}},
+		{TokenPair, Pair{"prop", "val"}, &spdx.Meta{2, 2}},
 	}
 
 	if !sameTokens(tok, expected) {
@@ -559,9 +563,9 @@ func TestLines(t *testing.T) {
 	}
 
 	expected := []Token{
-		{TokenPair, spdx.Meta{1, 2}, Pair{"prop", "line1\nline2"}},
-		{TokenPair, spdx.Meta{3, 3}, Pair{"prop", "val"}},
-		{TokenPair, spdx.Meta{4, 4}, Pair{"prop2", "val2"}},
+		{TokenPair, Pair{"prop", "line1\nline2"}, &spdx.Meta{1, 2}},
+		{TokenPair, Pair{"prop", "val"}, &spdx.Meta{3, 3}},
+		{TokenPair, Pair{"prop2", "val2"}, &spdx.Meta{4, 4}},
 	}
 
 	if !sameTokens(tok, expected) {

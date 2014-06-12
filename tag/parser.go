@@ -34,7 +34,7 @@ func upd(ptr *spdx.ValueStr) updater {
 			return ErrAlreadyDefined
 		}
 		ptr.Val = tok.Pair.Value
-		ptr.Meta = &tok.Meta
+		ptr.Meta = tok.Meta
 		set = true
 		return nil
 	}
@@ -43,7 +43,7 @@ func upd(ptr *spdx.ValueStr) updater {
 // Update a string slice pointer
 func updList(arr *[]spdx.ValueStr) updater {
 	return func(tok *Token) error {
-		*arr = append(*arr, spdx.Str(tok.Pair.Value, &tok.Meta))
+		*arr = append(*arr, spdx.Str(tok.Pair.Value, tok.Meta))
 		return nil
 	}
 }
@@ -58,7 +58,7 @@ func verifCode(vc *spdx.VerificationCode) updater {
 		val := tok.Pair.Value
 		open := strings.Index(val, "(")
 		if open > 0 {
-			vc.Value = spdx.Str(strings.TrimSpace(val[:open]), &tok.Meta)
+			vc.Value = spdx.Str(strings.TrimSpace(val[:open]), tok.Meta)
 
 			val = val[open+1:]
 
@@ -77,10 +77,10 @@ func verifCode(vc *spdx.VerificationCode) updater {
 			exclFiles := strings.Split(val, ",")
 			vc.ExcludedFiles = make([]spdx.ValueStr, len(exclFiles))
 			for i, v := range exclFiles {
-				vc.ExcludedFiles[i] = spdx.Str(strings.TrimSpace(v), &tok.Meta)
+				vc.ExcludedFiles[i] = spdx.Str(strings.TrimSpace(v), tok.Meta)
 			}
 		} else {
-			vc.Value = spdx.Str(strings.TrimSpace(val), &tok.Meta)
+			vc.Value = spdx.Str(strings.TrimSpace(val), tok.Meta)
 		}
 		set = true
 		return nil
@@ -98,7 +98,7 @@ func checksum(cksum *spdx.Checksum) updater {
 		if len(split) != 2 {
 			return ErrInvalidChecksum
 		}
-		cksum.Algo, cksum.Value = spdx.Str(strings.TrimSpace(split[0]), &tok.Meta), spdx.Str(strings.TrimSpace(split[1]), &tok.Meta)
+		cksum.Algo, cksum.Value = spdx.Str(strings.TrimSpace(split[0]), tok.Meta), spdx.Str(strings.TrimSpace(split[1]), tok.Meta)
 		set = true
 		return nil
 	}
@@ -239,7 +239,7 @@ func parseLicenceSet(tok *Token) (spdx.AnyLicenceInfo, error) {
 		return res, nil
 	}
 
-	return spdx.NewLicenceReference(strings.TrimSpace(val), &tok.Meta), nil
+	return spdx.NewLicenceReference(strings.TrimSpace(val), tok.Meta), nil
 
 }
 
@@ -260,7 +260,7 @@ func parseLicenceString(tok *Token) (spdx.AnyLicenceInfo, error) {
 		return parseLicenceSet(tok)
 	}
 
-	return spdx.NewLicenceReference(strings.TrimSpace(val), &tok.Meta), nil
+	return spdx.NewLicenceReference(strings.TrimSpace(val), tok.Meta), nil
 }
 
 // Update a AnyLicenceInfo pointer
@@ -295,7 +295,7 @@ func anyLicenceList(licList *[]spdx.AnyLicenceInfo) updater {
 // Creates a file that only has the FileName and appends it to the initially given pointer
 func updFileNameList(fl *[]*spdx.File) updater {
 	return func(tok *Token) error {
-		file := &spdx.File{Name: spdx.Str(tok.Value, &tok.Meta)}
+		file := &spdx.File{Name: spdx.Str(tok.Value, tok.Meta)}
 		*fl = append(*fl, file)
 		return nil
 	}
@@ -329,7 +329,7 @@ func documentMap(doc *spdx.Document) updaterMapping {
 		// Package
 		"PackageName": func(tok *Token) error {
 			pkg := &spdx.Package{
-				Name:             spdx.Str(tok.Value, &tok.Meta),
+				Name:             spdx.Str(tok.Value, tok.Meta),
 				Checksum:         new(spdx.Checksum),
 				VerificationCode: new(spdx.VerificationCode),
 			}
@@ -368,7 +368,7 @@ func documentMap(doc *spdx.Document) updaterMapping {
 				Checksum:   new(spdx.Checksum),
 				Dependency: make([]*spdx.File, 0),
 				ArtifactOf: make([]*spdx.ArtifactOf, 0),
-				Name:       spdx.Str(tok.Value, &tok.Meta),
+				Name:       spdx.Str(tok.Value, tok.Meta),
 			}
 
 			if doc.Files == nil {
@@ -390,7 +390,7 @@ func documentMap(doc *spdx.Document) updaterMapping {
 				"FileDependency":    updFileNameList(&file.Dependency),
 				"ArtifactOfProjectName": func(tok *Token) error {
 					artif := new(spdx.ArtifactOf)
-					artif.Name = spdx.Str(tok.Value, &tok.Meta)
+					artif.Name = spdx.Str(tok.Value, tok.Meta)
 					mapMerge(&mapping, updaterMapping{
 						"ArtifactOfProjectHomepage": upd(&artif.HomePage),
 						"ArtifactOfProjectUri":      upd(&artif.ProjectUri),
@@ -406,7 +406,7 @@ func documentMap(doc *spdx.Document) updaterMapping {
 		// ExtractedLicensingInfo
 		"LicenseID": func(tok *Token) error {
 			lic := &spdx.ExtractedLicensingInfo{
-				Id:             spdx.Str(tok.Value, &tok.Meta),
+				Id:             spdx.Str(tok.Value, tok.Meta),
 				Name:           make([]spdx.ValueStr, 0),
 				CrossReference: make([]spdx.ValueStr, 0),
 			}
@@ -428,7 +428,7 @@ func documentMap(doc *spdx.Document) updaterMapping {
 
 		"Reviewer": func(tok *Token) error {
 			rev := &spdx.Review{
-				Reviewer: spdx.Str(tok.Value, &tok.Meta),
+				Reviewer: spdx.Str(tok.Value, tok.Meta),
 			}
 
 			if doc.Reviews == nil {
