@@ -9,47 +9,7 @@ import (
 	"unicode"
 )
 
-func isMultiline(property string) bool {
-	_, ok := multilineProperties[property]
-	return ok
-}
-
-func isMultilineValue(val string) bool {
-	return strings.Index(val, "\n") >= 0
-}
-
-var multilineProperties = multilineInit()
-
-func multilineInit() map[string]interface{} {
-	tags := []string{
-		"DocumentComment",
-		"CreatorComment",
-		"LicenseComment",
-		"LicenseComments",
-		"ReviewComment",
-
-		"FileComment",
-		"FileNotice",
-		"FileCopyrightText",
-
-		"PackageLicenseComments",
-		"PackageCopyrightText",
-		"PackageSummary",
-		"PackageDescription",
-
-		"ExtractedText",
-		"PackageSourceInfo",
-	}
-
-	mps := make(map[string]interface{})
-
-	for _, tag := range tags {
-		mps[tag] = nil
-	}
-
-	return mps
-}
-
+// spdx.Checksum representation as Tag string
 func cksumStr(cksum *spdx.Checksum) string {
 	if cksum == nil || (cksum.Algo.Val == "" && cksum.Value.Val == "") {
 		return ""
@@ -57,6 +17,7 @@ func cksumStr(cksum *spdx.Checksum) string {
 	return cksum.Algo.Val + ": " + cksum.Value.Val
 }
 
+// spdx.VerificationCode representation as a valid Tag string
 func verifCodeStr(verif *spdx.VerificationCode) string {
 	if verif == nil || (verif.Value.Val == "" && len(verif.ExcludedFiles) == 0) {
 		return ""
@@ -67,6 +28,7 @@ func verifCodeStr(verif *spdx.VerificationCode) string {
 	return verif.Value.Val + " (Excludes: " + spdx.Join(verif.ExcludedFiles, ", ") + ")"
 }
 
+// Count the number of *sep* at the beginning of *str*.
 func countLeft(str string, sep byte) (count int) {
 	for i := 0; i < len(str); i++ {
 		if str[i] != sep {
@@ -77,6 +39,7 @@ func countLeft(str string, sep byte) (count int) {
 	return
 }
 
+// Checks if the given *spdx.File is in the given []*spdx.File.
 func fileInList(file *spdx.File, list []*spdx.File) bool {
 	for _, f := range list {
 		if f == file {
@@ -93,6 +56,7 @@ type Formatter struct {
 	out         io.Writer
 }
 
+// Create a new *Formatter that writes to f.
 func NewFormatter(f io.Writer) *Formatter {
 	return &Formatter{"", f}
 }
@@ -260,6 +224,7 @@ func (f *Formatter) CreationInfo(ci *spdx.CreationInfo) error {
 	})
 }
 
+// Write all the Packages in the []*spdx.Package
 func (f *Formatter) Packages(pkgs []*spdx.Package) error {
 	for _, pkg := range pkgs {
 		if err := f.Package(pkg); err != nil {
@@ -269,7 +234,7 @@ func (f *Formatter) Packages(pkgs []*spdx.Package) error {
 	return nil
 }
 
-// Write a package
+// Write a *spdx.Package
 func (f *Formatter) Package(pkg *spdx.Package) error {
 	if pkg == nil {
 		return nil
@@ -313,7 +278,7 @@ func (f *Formatter) Package(pkg *spdx.Package) error {
 	})
 }
 
-// Write a list of Files
+// Write all the files in []*spdx.File
 func (f *Formatter) Files(files []*spdx.File) error {
 	for _, file := range files {
 		if err := f.File(file); err != nil {
@@ -323,6 +288,7 @@ func (f *Formatter) Files(files []*spdx.File) error {
 	return nil
 }
 
+// Write a *spdx.File
 func (f *Formatter) File(file *spdx.File) error {
 	if file == nil {
 		return nil
@@ -370,6 +336,7 @@ func (f *Formatter) File(file *spdx.File) error {
 	return nil
 }
 
+// Write all the reviews in the given []*spdx.Review
 func (f *Formatter) Reviews(reviews []*spdx.Review) error {
 	for _, review := range reviews {
 		if err := f.Review(review); err != nil {
@@ -379,6 +346,7 @@ func (f *Formatter) Reviews(reviews []*spdx.Review) error {
 	return nil
 }
 
+// Write a *spdx.Review
 func (f *Formatter) Review(review *spdx.Review) error {
 	if review == nil {
 		return nil
@@ -391,6 +359,7 @@ func (f *Formatter) Review(review *spdx.Review) error {
 	})
 }
 
+// Write all licences in the given slice
 func (f *Formatter) ExtractedLicenceInfo(lics []*spdx.ExtractedLicensingInfo) error {
 	for _, lic := range lics {
 		if err := f.ExtrLicInfo(lic); err != nil {
@@ -400,6 +369,7 @@ func (f *Formatter) ExtractedLicenceInfo(lics []*spdx.ExtractedLicensingInfo) er
 	return nil
 }
 
+// Write the given *ExtractedLicensingInfo
 func (f *Formatter) ExtrLicInfo(lic *spdx.ExtractedLicensingInfo) error {
 	if lic == nil {
 		return nil

@@ -18,6 +18,7 @@ const (
 	propertySep = ':'
 )
 
+// Error messages used in this file
 var (
 	MsgNoCloseTag    = "Text tag opened but not closed. Missing a </text>?"
 	MsgInvalidText   = "Some invalid formatted string found."
@@ -25,12 +26,22 @@ var (
 	MsgInvalidSuffix = "No text is allowed after close text tag (</text>)."
 )
 
+// Types of tokens returned by tokenizer(). Only TokenComment and TokenPair are returned by Lexer.
+const (
+	TokenComment = iota // Token of type Comment
+	tokenKey     = iota // Internally used by Lexer
+	tokenValue   = iota // Internally used by Lexer
+	TokenPair    = iota // Token of type Pair
+)
+
+// Represents a token returned by the Lexer
 type Token struct {
 	Type int
 	Pair
 	*spdx.Meta
 }
 
+// Better string representation for the token.
 func (t *Token) String() string {
 	if t.Type == TokenComment {
 		return fmt.Sprintf("Comment{%s (%v)}", t.Pair.Value, t.Meta)
@@ -38,6 +49,14 @@ func (t *Token) String() string {
 	return fmt.Sprintf("Pair{%+v (%v)}", t.Pair, t.Meta)
 }
 
+// Create a new *Token with Type==TokenPair with the given key and value as the pair.
+// Meta arguments:
+// - if no meta arguments, returned *Token.Meta will be nil.
+// - if 1 meta argument, returned *Token.Meta will be a new spdx.Meta pointer
+//   with StartLine == EndLine == meta argument provided
+// - if 2 or more meta arguments, returned *Token.Meta will be anew spdx.MEta pointer
+//   with StartLine == first meta arugment and EndLine == second meta arguments.
+//   The rest of arguments are ignored.
 func PairTok(key, val string, meta ...int) *Token {
 	var m *spdx.Meta
 	if len(meta) >= 2 {
@@ -48,6 +67,8 @@ func PairTok(key, val string, meta ...int) *Token {
 	return &Token{TokenPair, Pair{key, val}, m}
 }
 
+// Create a new *Token with Type==TokenComment and the given value as Pair.Value.
+// See PairTok() for meta arguments usage.
 func CommentTok(val string, meta ...int) *Token {
 	var m *spdx.Meta
 	if len(meta) >= 2 {
@@ -58,16 +79,10 @@ func CommentTok(val string, meta ...int) *Token {
 	return &Token{TokenComment, Pair{"", val}, m}
 }
 
+// Used to represent the value of a Token.
 type Pair struct {
 	Key, Value string
 }
-
-const (
-	TokenComment = iota
-	tokenKey     = iota
-	tokenValue   = iota
-	TokenPair    = iota
-)
 
 // Using this lexer interface so that we can easily make a fake lexer for testing.
 type lexer interface {
@@ -93,7 +108,16 @@ type Lexer struct {
 	CaseSensitive  bool
 }
 
-// Create a new Lexer
+// Always use this function to create a new *Lexer. The reader given is used to form the tokens.
+//
+// The following settings are available:
+// - IgnoreComments (default false).
+//   Do not return Comment tokens. Ignore all lines that start with '#'.
+// - IgnoreMeta (default false).
+//   Do not assign spdx.Meta information (LineStart and LineEnd) to returned tokens.
+// - CaseSensitive (default false)
+//   If set to false, it tries to transform the case of Token.Pair.Key (of all non-comment tokens) to
+//   match the one in the SPDX specification. E.g. transform "specversion" to "SpecVersion".
 func NewLexer(r io.Reader) *Lexer {
 	lexer := &Lexer{
 		r:         r,
@@ -105,14 +129,20 @@ func NewLexer(r io.Reader) *Lexer {
 	return lexer
 }
 
-// Get the current token (must be called after Lex()
+// Get the current token (must be called after Lex()).
+// The returned *Token will be changed at the next call to Lex(). See Lex() for more.
 func (l *Lexer) Token() *Token {
 	return l.token
 }
 
 // Lex the next token. Returns true if there is a next token, false otherwise.
+//
+// There is only one token created by a Lexer and its properties are updated. Storing
+// the pointer returned by Lexer.Token() itself will result in having its values changed
+// at the next call of Lex().
+//
 // If there is an error while lexing, this method returns false and the
-// error will be available by calling Err()
+// error will be available by calling Err().
 func (l *Lexer) Lex() bool {
 	if !l.scanner.Scan() {
 		l.err = l.scanner.Err()
@@ -161,13 +191,14 @@ func (l *Lexer) Lex() bool {
 	return true
 }
 
-// Get the last error
+// Get the last error. If there is an error, it is either an I/O error returned initially by the associated io.Reader
+// or an error of type *ParseError.
 func (l *Lexer) Err() error {
 	return l.err
 }
 
-// Return the line of last token (end line)
-// Use Token.LineStart and Token.LineEnd when they're available.
+// Return the line of last token (end line). This property is available even when IgnoreMeta is set to true.
+// Use Token.Meta properties Token.LineStart and Token.LineEnd when those are available.
 func (l *Lexer) Line() int {
 	return l.line
 }
@@ -338,7 +369,7 @@ func lexPair(f io.Reader) ([]Pair, error) {
 	return p, nil
 }
 
-// Lex all the tokens
+// Lex all the tokens.
 func lexToken(f io.Reader) ([]*Token, error) {
 	p := make([]*Token, 0)
 	lex := NewLexer(f)

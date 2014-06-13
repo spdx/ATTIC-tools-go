@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// Error messages used in this file
 var (
 	MsgNoClosedParen             = "No closed parentheses at the end."
 	MsgInvalidVerifCodeExcludes  = "VerificationCode: Invalid Excludes format"
@@ -16,16 +17,19 @@ var (
 	MsgAlreadyDefined            = "Property already defined"
 )
 
+// Regular expressions to match licence set separators
 var (
-	orSeparator = regexp.MustCompile("(?i)\\s+or\\s+")
-	andSeprator = regexp.MustCompile("(?i)\\s+and\\s+")
+	orSeparator = regexp.MustCompile("(?i)\\s+or\\s+")  // disjunctive licence set separator
+	andSeprator = regexp.MustCompile("(?i)\\s+and\\s+") // conjunctive licence set separator
 )
 
-// Updater
+// A function that takes a *Token and updates some value in a SPDX element (document, package, ...).
 type updater (func(*Token) error)
+
+// A map of SPDX Tags (properties) and updater functions
 type updaterMapping map[string]updater
 
-// Update a string pointer
+// Update a ValString pointer
 func upd(ptr *spdx.ValueStr) updater {
 	set := false
 	return func(tok *Token) error {
@@ -39,7 +43,7 @@ func upd(ptr *spdx.ValueStr) updater {
 	}
 }
 
-// Update a string slice pointer
+// Update a []ValString pointer
 func updList(arr *[]spdx.ValueStr) updater {
 	return func(tok *Token) error {
 		*arr = append(*arr, spdx.Str(tok.Pair.Value, tok.Meta))
@@ -190,7 +194,7 @@ func licenceSetSplit(sep *regexp.Regexp, str string) []string {
 	return result
 }
 
-// Parses sets of licences
+// Parses sets of licences. Assumes the input tok.Value to have balanced parentheses.
 func parseLicenceSet(tok *Token) (spdx.AnyLicenceInfo, error) {
 	val := strings.TrimSpace(tok.Pair.Value)
 	if len(val) == 0 {
@@ -242,7 +246,8 @@ func parseLicenceSet(tok *Token) (spdx.AnyLicenceInfo, error) {
 
 }
 
-// Given a value from the pair, returns the appropriate spdx.AnyLicenceInfo
+// Given a Token, returns the appropriate spdx.AnyLicenceInfo. If there are parentheses, it
+// checks whether they are balanced and calls parseLicenceSet()
 func parseLicenceString(tok *Token) (spdx.AnyLicenceInfo, error) {
 	val := strings.TrimSpace(tok.Pair.Value)
 	if len(val) == 0 {
@@ -262,7 +267,7 @@ func parseLicenceString(tok *Token) (spdx.AnyLicenceInfo, error) {
 	return spdx.NewLicenceReference(strings.TrimSpace(val), tok.Meta), nil
 }
 
-// Update a AnyLicenceInfo pointer
+// Update a AnyLicenceInfo pointer.
 func anyLicence(lic *spdx.AnyLicenceInfo) updater {
 	set := false
 	return func(tok *Token) error {
@@ -291,7 +296,7 @@ func anyLicenceList(licList *[]spdx.AnyLicenceInfo) updater {
 	}
 }
 
-// Creates a file that only has the FileName and appends it to the initially given pointer
+// Creates a file that only has the FileName and appends it to the given []*File pointer
 func updFileNameList(fl *[]*spdx.File) updater {
 	return func(tok *Token) error {
 		file := &spdx.File{Name: spdx.Str(tok.Value, tok.Meta)}
@@ -308,7 +313,7 @@ func mapMerge(dest *updaterMapping, src updaterMapping) {
 	}
 }
 
-// Document mapping.
+// Creates the mapping of a *spdx.Document in Tag format.
 func documentMap(doc *spdx.Document) updaterMapping {
 	doc.CreationInfo = new(spdx.CreationInfo)
 	doc.CreationInfo.Creator = make([]spdx.ValueStr, 0)
@@ -462,7 +467,9 @@ func applyMapping(tok *Token, mapping updaterMapping) (ok bool, err error) {
 	return true, f(tok)
 }
 
-// Parse Tokens given by a lexer to a *spdx.Document
+// Parse Tokens given by a lexer to a *spdx.Document.
+// Errors returned are either I/O errors returned by the io.Reader associated with the given lexer,
+// lexing errors (still have *ParseError type) or parse errors (type *ParseError).
 func Parse(lex lexer) (*spdx.Document, error) {
 	doc := new(spdx.Document)
 	mapping := documentMap(doc)
