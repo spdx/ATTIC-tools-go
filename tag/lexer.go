@@ -89,6 +89,8 @@ type Lexer struct {
 	token          *Token
 	err            error
 	IgnoreComments bool
+	IgnoreMeta     bool
+	CaseSensitive  bool
 }
 
 // Create a new Lexer
@@ -122,11 +124,14 @@ func (l *Lexer) Lex() bool {
 		l.token = new(Token)
 	}
 
+	if !l.IgnoreMeta {
+		l.token.Meta = &spdx.Meta{l.line, l.line}
+	}
+
 	if l.ttype == TokenComment {
 		l.token.Type = TokenComment
 		l.token.Pair.Key = ""
 		l.token.Pair.Value = l.scanner.Text()
-		l.token.Meta = &spdx.Meta{l.line, l.line}
 		return true
 	}
 
@@ -137,10 +142,9 @@ func (l *Lexer) Lex() bool {
 	if l.scanner.Scan() {
 		l.token.Pair.Value = strings.TrimSpace(l.scanner.Text())
 	}
-	l.token.Meta = &spdx.Meta{l.line, l.line}
 
 	// in case of multiline <text>:
-	if l.lineStart > 0 {
+	if !l.IgnoreMeta && l.lineStart > 0 {
 		l.token.LineStart = l.lineStart
 	}
 
