@@ -5,6 +5,7 @@ import "github.com/vladvelici/spdx-go/spdx"
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"strings"
 	"unicode"
@@ -28,6 +29,33 @@ type Token struct {
 	Type int
 	Pair
 	*spdx.Meta
+}
+
+func (t *Token) String() string {
+	if t.Type == TokenComment {
+		return fmt.Sprintf("Comment{%s (%v)}", t.Pair.Value, t.Meta)
+	}
+	return fmt.Sprintf("Pair{%+v (%v)}", t.Pair, t.Meta)
+}
+
+func PairTok(key, val string, meta ...int) *Token {
+	var m *spdx.Meta
+	if len(meta) >= 2 {
+		m = &spdx.Meta{meta[0], meta[1]}
+	} else if len(meta) == 1 {
+		m = &spdx.Meta{meta[0], meta[0]}
+	}
+	return &Token{TokenPair, Pair{key, val}, m}
+}
+
+func CommentTok(val string, meta ...int) *Token {
+	var m *spdx.Meta
+	if len(meta) >= 2 {
+		m = &spdx.Meta{meta[0], meta[1]}
+	} else if len(meta) == 1 {
+		m = &spdx.Meta{meta[0], meta[0]}
+	}
+	return &Token{TokenComment, Pair{"", val}, m}
 }
 
 type Pair struct {
@@ -297,13 +325,14 @@ func lexPair(f io.Reader) ([]Pair, error) {
 }
 
 // Lex all the tokens
-func lexToken(f io.Reader) ([]Token, error) {
-	p := make([]Token, 0)
+func lexToken(f io.Reader) ([]*Token, error) {
+	p := make([]*Token, 0)
 	lex := NewLexer(f)
 	lex.IgnoreComments = false
 
 	for lex.Lex() {
-		p = append(p, *lex.Token())
+		tok := *lex.Token()
+		p = append(p, &tok)
 	}
 
 	if lex.Err() != nil {

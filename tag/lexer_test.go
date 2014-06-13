@@ -241,20 +241,23 @@ func TestMoreInlineProperties(t *testing.T) {
 func TestInlinePropertiesAndComments(t *testing.T) {
 	r := strings.NewReader("# comment\nProperty1:value1\nProperty2:value2\n# comment no two\nProperty3:value3\n#comm\n")
 
-	doc, err := lexPair(r)
+	doc, err := lexToken(r)
 
-	if len(doc) != 3 || err != nil {
-		t.Errorf("Document: %s. Error: %s", doc, err)
+	if len(doc) != 6 || err != nil {
+		t.Errorf("Error: %s. Doc: %v", err, doc)
 	}
 
-	properties := []Pair{
-		{"Property1", "value1"},
-		{"Property2", "value2"},
-		{"Property3", "value3"},
+	properties := []*Token{
+		CommentTok(" comment", 1),
+		PairTok("Property1", "value1", 2),
+		PairTok("Property2", "value2", 3),
+		CommentTok(" comment no two", 4),
+		PairTok("Property3", "value3", 5),
+		CommentTok("comm", 6),
 	}
 
-	if !sameDoc(properties, doc) {
-		t.Errorf("Expected %s. Got %s", properties, doc)
+	if !sameTokens(properties, doc) {
+		t.Errorf("Expected %s.\n\n Got %s", properties, doc)
 	}
 }
 
@@ -321,20 +324,23 @@ func TestMoreTextPropertiesAndComments(t *testing.T) {
 func TestMoreTextPropertiesCommentsAndNewlines(t *testing.T) {
 	r := strings.NewReader("\n\n# this is a comment\n\nProperty1:<text>value1</text>\n#so is this\n\nProperty2:<text>value2</text>\nProperty3:<text>value3</text>\n#and this\n\n")
 
-	doc, err := lexPair(r)
+	doc, err := lexToken(r)
 
-	if len(doc) != 3 || err != nil {
-		t.Errorf("Document: %s. Error: %s", doc, err)
+	if len(doc) != 6 || err != nil {
+		t.Errorf("Document: %v. Error: %v", doc, err)
 	}
 
-	properties := []Pair{
-		{"Property1", "value1"},
-		{"Property2", "value2"},
-		{"Property3", "value3"},
+	properties := []*Token{
+		CommentTok(" this is a comment", 3, 3),
+		PairTok("Property1", "value1", 5, 5),
+		CommentTok("so is this", 6, 6),
+		PairTok("Property2", "value2", 8, 8),
+		PairTok("Property3", "value3", 9, 9),
+		CommentTok("and this", 10, 10),
 	}
 
-	if !sameDoc(properties, doc) {
-		t.Errorf("Expected %s. Got %s", properties, doc)
+	if !sameTokens(properties, doc) {
+		t.Errorf("Expected:\n %s\n\n Got\n %s", properties, doc)
 	}
 }
 
@@ -512,13 +518,13 @@ func sameToken(a, b *Token) bool {
 	return a == b || *a == *b || (*a.Meta == *b.Meta && a.Pair == b.Pair)
 }
 
-func sameTokens(a, b []Token) bool {
+func sameTokens(a, b []*Token) bool {
 	if len(a) != len(b) {
 		return false
 	}
 
 	for i, t := range a {
-		if !sameToken(&t, &b[i]) {
+		if !sameToken(t, b[i]) {
 			return false
 		}
 	}
@@ -533,9 +539,9 @@ func TestCommentToken(t *testing.T) {
 		t.Errorf("Unexpected error: %s", err)
 	}
 
-	expected := []Token{
-		{TokenComment, Pair{"", "comment1"}, &spdx.Meta{1, 1}},
-		{TokenComment, Pair{"", "comment2"}, &spdx.Meta{3, 3}},
+	expected := []*Token{
+		CommentTok("comment1", 1, 1),
+		CommentTok("comment2", 3, 3),
 	}
 
 	if !sameTokens(tok, expected) {
@@ -551,9 +557,9 @@ func TestCommentAndProperty(t *testing.T) {
 		t.Errorf("Unexpected error: %s", err)
 	}
 
-	expected := []Token{
-		{TokenComment, Pair{"", "comment1"}, &spdx.Meta{1, 1}},
-		{TokenPair, Pair{"prop", "val"}, &spdx.Meta{2, 2}},
+	expected := []*Token{
+		CommentTok("comment1", 1, 1),
+		PairTok("prop", "val", 2, 2),
 	}
 
 	if !sameTokens(tok, expected) {
@@ -569,10 +575,10 @@ func TestLines(t *testing.T) {
 		t.Errorf("Unexpected error: %s", err)
 	}
 
-	expected := []Token{
-		{TokenPair, Pair{"prop", "line1\nline2"}, &spdx.Meta{1, 2}},
-		{TokenPair, Pair{"prop", "val"}, &spdx.Meta{3, 3}},
-		{TokenPair, Pair{"prop2", "val2"}, &spdx.Meta{4, 4}},
+	expected := []*Token{
+		PairTok("prop", "line1\nline2", 1, 2),
+		PairTok("prop", "val", 3, 3),
+		PairTok("prop2", "val2", 4, 4),
 	}
 
 	if !sameTokens(tok, expected) {
