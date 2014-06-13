@@ -391,8 +391,8 @@ func documentMap(doc *spdx.Document) updaterMapping {
 					artif := new(spdx.ArtifactOf)
 					artif.Name = spdx.Str(tok.Value, tok.Meta)
 					mapMerge(&mapping, updaterMapping{
-						"ArtifactOfProjectHomepage": upd(&artif.HomePage),
-						"ArtifactOfProjectUri":      upd(&artif.ProjectUri),
+						"ArtifactOfProjectHomePage": upd(&artif.HomePage),
+						"ArtifactOfProjectURI":      upd(&artif.ProjectUri),
 					})
 					file.ArtifactOf = append(file.ArtifactOf, artif)
 					return nil

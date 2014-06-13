@@ -612,8 +612,8 @@ func TestDocNestedFiles(t *testing.T) {
 
 		// nested attributes
 		{"ArtifactOfProjectName", "spdx-tools-go"},
-		{"ArtifactOfProjectUri", "http://git.spdx.org/spdx-tools-go.git"},
-		{"ArtifactOfProjectHomepage", "http://git.spdx.org/spdx-tools-go.git"},
+		{"ArtifactOfProjectURI", "http://git.spdx.org/spdx-tools-go.git"},
+		{"ArtifactOfProjectHomePage", "http://git.spdx.org/spdx-tools-go.git"},
 
 		{"ArtifactOfProjectName", "spdx"},
 		{"ArtifactOfProjectName", "spdx-tools"},

@@ -137,7 +137,15 @@ func (l *Lexer) Lex() bool {
 
 	// not comment, thus must be property
 	l.token.Type = TokenPair
+
 	l.token.Pair.Key = strings.TrimSpace(l.scanner.Text())
+	if !l.CaseSensitive {
+		ok, ci := IsValidPropertyInsensitive(l.token.Pair.Key)
+		if ok && ci != l.token.Pair.Key {
+			l.token.Pair.Key = ci
+		}
+	}
+
 	l.token.Pair.Value = "" // empty string if no value found
 	if l.scanner.Scan() {
 		l.token.Pair.Value = strings.TrimSpace(l.scanner.Text())
