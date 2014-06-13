@@ -5,7 +5,6 @@ import "github.com/vladvelici/spdx-go/spdx"
 import (
 	"errors"
 	"io"
-	"strings"
 	"unicode"
 )
 

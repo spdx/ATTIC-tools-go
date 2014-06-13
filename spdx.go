@@ -27,15 +27,15 @@ const (
 )
 
 var (
-	flagConvert     = flag.String("c", "-", "Convert input file to the specified format.")
-	flagValidate    = flag.Bool("v", false, "Set action to validate.")
-	flagFmt         = flag.Bool("p", false, "Set action to format (pretty print).")
-	flagOutput      = flag.String("o", "-", "Sets the output file. If not set, output is written to stdout.")
-	flagInPlace     = flag.Bool("w", false, "If defined, it overwrites the input file.")
-	flagIgnoreCase  = flag.Bool("i", false, "If defined, it ignores the case for properties. (e.g. treat \"packagename\" same as \"PackageName\")")
-	flagInputFormat = flag.String("f", "auto", "Defines the format of the input. Valid values: rdf, tag or auto. Default is auto.")
-	flagHelp        = flag.Bool("help", false, "Show help message.")
-	flagVersion     = flag.Bool("version", false, "Show tool version and supported SPDX spec versions.")
+	flagConvert       = flag.String("c", "-", "Convert input file to the specified format.")
+	flagValidate      = flag.Bool("v", false, "Set action to validate.")
+	flagFmt           = flag.Bool("p", false, "Set action to format (pretty print).")
+	flagOutput        = flag.String("o", "-", "Sets the output file. If not set, output is written to stdout.")
+	flagInPlace       = flag.Bool("w", false, "If defined, it overwrites the input file.")
+	flagCaseSensitive = flag.Bool("cs", false, "Case-Sensitivity of properties. (if false, it treats \"packagename\" same as \"PackageName\")")
+	flagInputFormat   = flag.String("f", "auto", "Defines the format of the input. Valid values: rdf, tag or auto. Default is auto.")
+	flagHelp          = flag.Bool("help", false, "Show help message.")
+	flagVersion       = flag.Bool("version", false, "Show tool version and supported SPDX spec versions.")
 )
 
 var (
@@ -189,6 +189,7 @@ func convert() {
 	var err error
 
 	if *flagInputFormat == formatTag {
+		tag.CaseSensitive(*flagCaseSensitive)
 		doc, err = tag.Build(input)
 	} else {
 		// doc, err = rdf.Parse(input)
