@@ -124,14 +124,13 @@ func (l *Lexer) Lex() bool {
 		l.token = new(Token)
 	}
 
-	if !l.IgnoreMeta {
-		l.token.Meta = &spdx.Meta{l.line, l.line}
-	}
-
 	if l.ttype == TokenComment {
 		l.token.Type = TokenComment
 		l.token.Pair.Key = ""
 		l.token.Pair.Value = l.scanner.Text()
+		if !l.IgnoreMeta {
+			l.token.Meta = &spdx.Meta{l.line, l.line}
+		}
 		return true
 	}
 
@@ -151,9 +150,12 @@ func (l *Lexer) Lex() bool {
 		l.token.Pair.Value = strings.TrimSpace(l.scanner.Text())
 	}
 
-	// in case of multiline <text>:
-	if !l.IgnoreMeta && l.lineStart > 0 {
-		l.token.LineStart = l.lineStart
+	if !l.IgnoreMeta {
+		l.token.Meta = &spdx.Meta{l.line, l.line}
+		// in case of multiline <text>:
+		if l.lineStart > 0 {
+			l.token.LineStart = l.lineStart
+		}
 	}
 
 	return true
