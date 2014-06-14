@@ -18,14 +18,6 @@ const (
 	propertySep = ':'
 )
 
-// Error messages used in this file
-var (
-	MsgNoCloseTag    = "Text tag opened but not closed. Missing a </text>?"
-	MsgInvalidText   = "Some invalid formatted string found."
-	MsgInvalidPrefix = "No text is allowed between : and <text>."
-	MsgInvalidSuffix = "No text is allowed after close text tag (</text>)."
-)
-
 // Types of tokens returned by tokenizer(). Only TokenComment and TokenPair are returned by Lexer.
 const (
 	TokenComment = iota // Token of type Comment

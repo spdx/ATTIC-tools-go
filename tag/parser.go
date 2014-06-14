@@ -7,16 +7,6 @@ import (
 	"strings"
 )
 
-// Error messages used in this file
-var (
-	MsgNoClosedParen             = "No closed parentheses at the end."
-	MsgInvalidVerifCodeExcludes  = "VerificationCode: Invalid Excludes format"
-	MsgInvalidChecksum           = "Invalid Package Checksum format."
-	MsgConjunctionAndDisjunction = "Licence sets can only have either disjunction or conjunction, not both. (AND or OR, not both)"
-	MsgEmptyLicence              = "Empty licence"
-	MsgAlreadyDefined            = "Property already defined"
-)
-
 // Regular expressions to match licence set separators
 var (
 	orSeparator = regexp.MustCompile("(?i)\\s+or\\s+")  // disjunctive licence set separator
