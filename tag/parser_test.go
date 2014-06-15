@@ -490,25 +490,25 @@ func TestDoc(t *testing.T) {
 	}
 
 	if doc.SpecVersion.Val != m["SPDXVersion"][0] {
-		t.Errorf("h Invalid doc.SpecVersion: '%s'", doc.SpecVersion)
+		t.Errorf("h Invalid doc.SpecVersion: '%+v'", doc.SpecVersion)
 	}
 	if doc.DataLicence.Val != m["DataLicense"][0] {
-		t.Errorf("Invalid doc.DataLicence: '%s'", doc.DataLicence)
+		t.Errorf("Invalid doc.DataLicence: '%+v'", doc.DataLicence)
 	}
 	if doc.Comment.Val != m["DocumentComment"][0] {
-		t.Errorf("Invalid doc.Comment: '%s'", doc.Comment)
+		t.Errorf("Invalid doc.Comment: '%+v'", doc.Comment)
 	}
 	if !sameValCreatValues(doc.CreationInfo.Creator, m["Creator"]) {
-		t.Errorf("Invalid doc.CreationInfo.Creator: (len=%d) '%s'", len(doc.CreationInfo.Creator), doc.CreationInfo.Creator)
+		t.Errorf("Invalid doc.CreationInfo.Creator: (len=%d) '%+v'", len(doc.CreationInfo.Creator), doc.CreationInfo.Creator)
 	}
-	if doc.CreationInfo.Created.Val != m["Created"][0] {
-		t.Errorf("Invalid doc.CreationInfo.Created: '%s'", doc.CreationInfo.Created)
+	if doc.CreationInfo.Created.V() != m["Created"][0] {
+		t.Errorf("Invalid doc.CreationInfo.Created: '%+v'", doc.CreationInfo.Created)
 	}
 	if doc.CreationInfo.Comment.Val != m["CreatorComment"][0] {
-		t.Errorf("Invalid doc.CreationInfo.Comment: '%s'", doc.CreationInfo.Comment)
+		t.Errorf("Invalid doc.CreationInfo.Comment: '%+v'", doc.CreationInfo.Comment)
 	}
 	if doc.CreationInfo.LicenceListVersion.Val != m["LicenseListVersion"][0] {
-		t.Errorf("Invalid doc.LicenceListVersion: '%s'", doc.CreationInfo.LicenceListVersion)
+		t.Errorf("Invalid doc.LicenceListVersion: '%+v'", doc.CreationInfo.LicenceListVersion)
 	}
 }
 
@@ -841,15 +841,15 @@ func TestVerifCodeAlreadyDefined(t *testing.T) {
 func TestReviewer(t *testing.T) {
 
 	reviews := []spdx.Review{
-		{spdx.NewValueCreator("a", nil), spdx.Str("b", nil), spdx.Str("c", nil)},
-		{spdx.NewValueCreator("d", nil), spdx.Str("e", nil), spdx.Str("f", nil)},
+		{spdx.NewValueCreator("a", nil), spdx.NewValueDate("b", nil), spdx.Str("c", nil)},
+		{spdx.NewValueCreator("d", nil), spdx.NewValueDate("e", nil), spdx.Str("f", nil)},
 	}
 
 	input := make([]Pair, 0, 6)
 	for _, rev := range reviews {
 		input = append(input, Pair{"Reviewer", rev.Reviewer.V()})
-		input = append(input, Pair{"ReviewDate", rev.Date.Val})
-		input = append(input, Pair{"ReviewComment", rev.Comment.Val})
+		input = append(input, Pair{"ReviewDate", rev.Date.V()})
+		input = append(input, Pair{"ReviewComment", rev.Comment.V()})
 	}
 
 	doc, err := Parse(l(input))

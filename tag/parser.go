@@ -41,8 +41,22 @@ func updList(arr *[]spdx.ValueStr) updater {
 	}
 }
 
-// Update a ValString pointer
+// Update a ValueCreator pointer
 func updCreator(ptr *spdx.ValueCreator) updater {
+	set := false
+	return func(tok *Token) error {
+		if set {
+			return parseError(MsgAlreadyDefined, tok.Meta)
+		}
+		ptr.SetValue(tok.Pair.Value)
+		ptr.Meta = tok.Meta
+		set = true
+		return nil
+	}
+}
+
+// Update a ValueDate pointer
+func updDate(ptr *spdx.ValueDate) updater {
 	set := false
 	return func(tok *Token) error {
 		if set {
@@ -338,7 +352,7 @@ func documentMap(doc *spdx.Document) updaterMapping {
 		"DataLicense":        upd(&doc.DataLicence),
 		"DocumentComment":    upd(&doc.Comment),
 		"Creator":            updListCreator(&doc.CreationInfo.Creator),
-		"Created":            upd(&doc.CreationInfo.Created),
+		"Created":            updDate(&doc.CreationInfo.Created),
 		"CreatorComment":     upd(&doc.CreationInfo.Comment),
 		"LicenseListVersion": upd(&doc.CreationInfo.LicenceListVersion),
 
@@ -454,7 +468,7 @@ func documentMap(doc *spdx.Document) updaterMapping {
 			}
 
 			mapMerge(&mapping, updaterMapping{
-				"ReviewDate":    upd(&rev.Date),
+				"ReviewDate":    updDate(&rev.Date),
 				"ReviewComment": upd(&rev.Comment),
 			})
 

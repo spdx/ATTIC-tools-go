@@ -1,6 +1,9 @@
 package spdx
 
-import "regexp"
+import (
+	"regexp"
+	"time"
+)
 
 // File Types
 const (
@@ -53,6 +56,9 @@ func (v ValueBool) V() string {
 	return "false"
 }
 
+// Store data similar to document creator or package spplier or originator.
+// If data stored using SetValue() is of the form `what: name (email)`, where `(email)` is optional,
+// the `what`, `name` and `email` fields get populated.
 type ValueCreator struct {
 	val   string
 	what  string
@@ -79,6 +85,30 @@ func NewValueCreator(val string, m *Meta) ValueCreator {
 	vc := ValueCreator{Meta: m}
 	(&vc).SetValue(val)
 	return vc
+}
+
+// Store Dates of format YYYY-MM-DDThh:mm:ssZ.
+// If the time is in the correct format, it is available parsed into a *time.Time by calling Time().
+type ValueDate struct {
+	val  string
+	time *time.Time
+	*Meta
+}
+
+func (d ValueDate) V() string        { return d.val }
+func (d ValueDate) M() *Meta         { return d.Meta }
+func (d ValueDate) Time() *time.Time { return d.time }
+func (d *ValueDate) SetValue(v string) {
+	d.val = v
+	t, err := time.Parse(time.RFC3339, v)
+	if err == nil {
+		d.time = &t
+	}
+}
+func NewValueDate(val string, m *Meta) ValueDate {
+	vd := ValueDate{Meta: m}
+	(&vd).SetValue(val)
+	return vd
 }
 
 // Store metadata about SPDX Elements

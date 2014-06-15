@@ -17,7 +17,7 @@ type Document struct {
 
 type CreationInfo struct {
 	Creator            []ValueCreator // one or many
-	Created            ValueStr       // one
+	Created            ValueDate      // one
 	LicenceListVersion ValueStr       // zero or one
 	Comment            ValueStr       // zero or one
 }

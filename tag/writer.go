@@ -227,7 +227,7 @@ func (f *Formatter) CreationInfo(ci *spdx.CreationInfo) error {
 	}
 
 	return f.Properties([]Pair{
-		{"Created", ci.Created.Val},
+		{"Created", ci.Created.V()},
 		{"CreatorComment", ci.Comment.Val},
 		{"LicenseListVersion", ci.LicenceListVersion.Val},
 	})
@@ -363,8 +363,8 @@ func (f *Formatter) Review(review *spdx.Review) error {
 
 	return f.Properties([]Pair{
 		{"Reviewer", review.Reviewer.V()},
-		{"ReviewDate", review.Date.Val},
-		{"ReviewComment", review.Comment.Val},
+		{"ReviewDate", review.Date.V()},
+		{"ReviewComment", review.Comment.V()},
 	})
 }
 
