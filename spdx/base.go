@@ -2,6 +2,7 @@ package spdx
 
 import (
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -76,9 +77,9 @@ func (c *ValueCreator) SetValue(v string) {
 	c.val = v
 	match := CreatorRegex.FindStringSubmatch(v)
 	if len(match) == 5 {
-		c.what = match[1]
-		c.name = match[2]
-		c.email = match[4]
+		c.what = strings.TrimSpace(match[1])
+		c.name = strings.TrimSpace(match[2])
+		c.email = strings.TrimSpace(match[4])
 	}
 }
 func NewValueCreator(val string, m *Meta) ValueCreator {
