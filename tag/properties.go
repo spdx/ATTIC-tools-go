@@ -15,7 +15,7 @@ func initProperties() {
 		return
 	}
 	props := []string{
-		"SpecVersion",
+		"SPDXVersion",
 		"DataLicense",
 		"DocumentComment",
 		"Creator",

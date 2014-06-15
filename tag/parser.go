@@ -312,7 +312,7 @@ func documentMap(doc *spdx.Document) updaterMapping {
 
 	mapping = map[string]updater{
 		// SpdxDocument
-		"SpecVersion":        upd(&doc.SpecVersion),
+		"SPDXVersion":        upd(&doc.SpecVersion),
 		"DataLicense":        upd(&doc.DataLicence),
 		"DocumentComment":    upd(&doc.Comment),
 		"Creator":            updList(&doc.CreationInfo.Creator),
