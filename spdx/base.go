@@ -8,6 +8,9 @@ const (
 	FT_OTHER   = iota
 )
 
+// supported specification versions
+var SpecVersions = [][2]int{{1, 2}}
+
 const (
 	NOASSERTION = "NOASSERTION"
 	NONE        = "NONE"

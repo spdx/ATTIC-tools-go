@@ -18,8 +18,6 @@ import (
 const version = "pre0.0"
 const execName = "spdx-go"
 
-var specVersions = []string{"SPDX-1.2"}
-
 const (
 	formatRdf  = "rdf"
 	formatTag  = "tag"
@@ -232,5 +230,9 @@ func help() {
 }
 
 func printVersion() {
-	fmt.Printf("spdx-go version %s.\nSupporting SPDX specifications %s.\n", version, strings.Join(specVersions, ", "))
+	versions := make([]string, len(spdx.SpecVersions))
+	for i, ver := range spdx.SpecVersions {
+		versions[i] = fmt.Sprintf("SPDX-%d.%d", ver[0], ver[1])
+	}
+	fmt.Printf("spdx-go version %s.\nSupporting SPDX specifications %s.\n", version, strings.Join(versions, ", "))
 }
