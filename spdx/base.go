@@ -1,5 +1,7 @@
 package spdx
 
+import "regexp"
+
 // File Types
 const (
 	FT_BINARY  = iota
@@ -11,16 +13,21 @@ const (
 // supported specification versions
 var SpecVersions = [][2]int{{1, 2}}
 
+var CreatorRegex = regexp.MustCompile("^([^:]*):([^\\(]*)(\\((.*)\\))?$")
+
 const (
 	NOASSERTION = "NOASSERTION"
 	NONE        = "NONE"
 )
 
+// Interface to be used for SPDX Elements.
+// Implemented by Value(Str|Bool|Date|Creator)
 type Value interface {
 	V() string
 	M() *Meta
 }
 
+// Store a string with relevant metadata
 type ValueStr struct {
 	Val  string
 	Meta *Meta
@@ -30,6 +37,62 @@ func Str(v string, m *Meta) ValueStr     { return ValueStr{v, m} }
 func (v ValueStr) V() string             { return v.Val }
 func (v ValueStr) M() *Meta              { return v.Meta }
 func (v ValueStr) Equal(w ValueStr) bool { return v.Val == w.Val }
+
+// Store a boolean value with relevant metadata
+type ValueBool struct {
+	Val  bool
+	Meta *Meta
+}
+
+func Bool(v bool, m *Meta) ValueBool { return ValueBool{v, m} }
+func (v ValueBool) M() *Meta         { return v.Meta }
+func (v ValueBool) V() string {
+	if v.Val {
+		return "true"
+	}
+	return "false"
+}
+
+type ValueCreator struct {
+	val   string
+	what  string
+	name  string
+	email string
+	*Meta
+}
+
+func (c ValueCreator) V() string     { return c.val }
+func (c ValueCreator) M() *Meta      { return c.Meta }
+func (c ValueCreator) What() string  { return c.what }
+func (c ValueCreator) Name() string  { return c.name }
+func (c ValueCreator) Email() string { return c.email }
+func (c *ValueCreator) SetValue(v string) {
+	c.val = v
+	match := CreatorRegex.FindStringSubmatch(v)
+	if len(match) == 5 {
+		c.what = match[1]
+		c.name = match[2]
+		c.email = match[4]
+	}
+}
+func NewValueCreator(val string, m *Meta) ValueCreator {
+	vc := ValueCreator{Meta: m}
+	(&vc).SetValue(val)
+	return vc
+}
+
+// Store metadata about SPDX Elements
+type Meta struct {
+	LineStart, LineEnd int
+}
+
+func NewMetaL(line int) *Meta {
+	return &Meta{line, line}
+}
+
+func NewMeta(start, end int) *Meta {
+	return &Meta{start, end}
+}
 
 // strings.Join for ValueStr type
 func Join(a []ValueStr, sep string) string {
@@ -51,30 +114,4 @@ func Join(a []ValueStr, sep string) string {
 		bp += copy(b[bp:], s.Val)
 	}
 	return string(b)
-}
-
-type ValueBool struct {
-	Val  bool
-	Meta *Meta
-}
-
-func Bool(v bool, m *Meta) ValueBool { return ValueBool{v, m} }
-func (v ValueBool) V() string {
-	if v.Val {
-		return "true"
-	}
-	return "false"
-}
-func (v ValueBool) M() *Meta { return v.Meta }
-
-type Meta struct {
-	LineStart, LineEnd int
-}
-
-func NewMetaL(line int) *Meta {
-	return &Meta{line, line}
-}
-
-func NewMeta(start, end int) *Meta {
-	return &Meta{start, end}
 }

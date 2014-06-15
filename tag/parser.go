@@ -41,6 +41,28 @@ func updList(arr *[]spdx.ValueStr) updater {
 	}
 }
 
+// Update a ValString pointer
+func updCreator(ptr *spdx.ValueCreator) updater {
+	set := false
+	return func(tok *Token) error {
+		if set {
+			return parseError(MsgAlreadyDefined, tok.Meta)
+		}
+		ptr.SetValue(tok.Pair.Value)
+		ptr.Meta = tok.Meta
+		set = true
+		return nil
+	}
+}
+
+// Update a []ValueCreator pointer
+func updListCreator(arr *[]spdx.ValueCreator) updater {
+	return func(tok *Token) error {
+		*arr = append(*arr, spdx.NewValueCreator(tok.Pair.Value, tok.Meta))
+		return nil
+	}
+}
+
 // Update a VerificationCode pointer
 func verifCode(vc *spdx.VerificationCode) updater {
 	set := false
@@ -306,7 +328,7 @@ func mapMerge(dest *updaterMapping, src updaterMapping) {
 // Creates the mapping of a *spdx.Document in Tag format.
 func documentMap(doc *spdx.Document) updaterMapping {
 	doc.CreationInfo = new(spdx.CreationInfo)
-	doc.CreationInfo.Creator = make([]spdx.ValueStr, 0)
+	doc.CreationInfo.Creator = make([]spdx.ValueCreator, 0)
 
 	var mapping updaterMapping
 
@@ -315,7 +337,7 @@ func documentMap(doc *spdx.Document) updaterMapping {
 		"SPDXVersion":        upd(&doc.SpecVersion),
 		"DataLicense":        upd(&doc.DataLicence),
 		"DocumentComment":    upd(&doc.Comment),
-		"Creator":            updList(&doc.CreationInfo.Creator),
+		"Creator":            updListCreator(&doc.CreationInfo.Creator),
 		"Created":            upd(&doc.CreationInfo.Created),
 		"CreatorComment":     upd(&doc.CreationInfo.Comment),
 		"LicenseListVersion": upd(&doc.CreationInfo.LicenceListVersion),
@@ -338,8 +360,8 @@ func documentMap(doc *spdx.Document) updaterMapping {
 			mapMerge(&mapping, updaterMapping{
 				"PackageVersion":              upd(&pkg.Version),
 				"PackageFileName":             upd(&pkg.FileName),
-				"PackageSupplier":             upd(&pkg.Supplier),
-				"PackageOriginator":           upd(&pkg.Originator),
+				"PackageSupplier":             updCreator(&pkg.Supplier),
+				"PackageOriginator":           updCreator(&pkg.Originator),
 				"PackageDownloadLocation":     upd(&pkg.DownloadLocation),
 				"PackageVerificationCode":     verifCode(pkg.VerificationCode),
 				"PackageChecksum":             checksum(pkg.Checksum),
@@ -422,7 +444,7 @@ func documentMap(doc *spdx.Document) updaterMapping {
 
 		"Reviewer": func(tok *Token) error {
 			rev := &spdx.Review{
-				Reviewer: spdx.Str(tok.Value, tok.Meta),
+				Reviewer: spdx.NewValueCreator(tok.Value, tok.Meta),
 			}
 
 			if doc.Reviews == nil {

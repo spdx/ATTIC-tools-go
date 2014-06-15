@@ -151,6 +151,16 @@ func (f *Formatter) PropertySlice(tag string, values []spdx.ValueStr) error {
 	return nil
 }
 
+// Write a ValueCreator slice
+func (f *Formatter) CreatorSlice(tag string, values []spdx.ValueCreator) error {
+	for _, val := range values {
+		if err := f.Property(tag, val.V()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Write a list of licences
 func (f *Formatter) PropertyLicenceSlice(tag string, values []spdx.AnyLicenceInfo) error {
 	for _, lic := range values {
@@ -212,7 +222,7 @@ func (f *Formatter) CreationInfo(ci *spdx.CreationInfo) error {
 		return nil
 	}
 
-	if err := f.PropertySlice("Creator", ci.Creator); err != nil {
+	if err := f.CreatorSlice("Creator", ci.Creator); err != nil {
 		return err
 	}
 
@@ -243,8 +253,8 @@ func (f *Formatter) Package(pkg *spdx.Package) error {
 		{"PackageName", pkg.Name.Val},
 		{"PackageVersion", pkg.Version.Val},
 		{"PackageFileName", pkg.FileName.Val},
-		{"PackageSupplier", pkg.Supplier.Val},
-		{"PackageOriginator", pkg.Originator.Val},
+		{"PackageSupplier", pkg.Supplier.V()},
+		{"PackageOriginator", pkg.Originator.V()},
 		{"PackageDownloadLocation", pkg.DownloadLocation.Val},
 		{"PackageVerificationCode", verifCodeStr(pkg.VerificationCode)},
 		{"packageChecksum", cksumStr(pkg.Checksum)},
@@ -352,7 +362,7 @@ func (f *Formatter) Review(review *spdx.Review) error {
 	}
 
 	return f.Properties([]Pair{
-		{"Reviewer", review.Reviewer.Val},
+		{"Reviewer", review.Reviewer.V()},
 		{"ReviewDate", review.Date.Val},
 		{"ReviewComment", review.Comment.Val},
 	})

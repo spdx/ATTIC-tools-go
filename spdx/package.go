@@ -6,8 +6,8 @@ type Package struct {
 	DownloadLocation     ValueStr          // one; NOASSERTION or NONE valid
 	HomePage             ValueStr          // one; NOASSERTION or NONE valid
 	FileName             ValueStr          // zero or one
-	Supplier             ValueStr          // zero or one, NOASSERTION valid
-	Originator           ValueStr          // zero or one, NOASSERTION valid
+	Supplier             ValueCreator      // zero or one, NOASSERTION valid
+	Originator           ValueCreator      // zero or one, NOASSERTION valid
 	VerificationCode     *VerificationCode // mandatory, one
 	Checksum             *Checksum         // zero or one
 	SourceInfo           ValueStr          // zero or one

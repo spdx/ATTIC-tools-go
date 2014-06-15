@@ -29,6 +29,18 @@ func sameValStrValues(a []spdx.ValueStr, b []string) bool {
 	return true
 }
 
+func sameValCreatValues(a []spdx.ValueCreator, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i].V() != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func sameValSlice(a, b []spdx.Value) bool {
 	if len(a) != len(b) {
 		return false
@@ -454,7 +466,7 @@ func TestLicenceSetConjunctionAndDisjunction(t *testing.T) {
 
 func TestDoc(t *testing.T) {
 	m := map[string][]string{
-		"SpecVersion":        {"1.2"},
+		"SPDXVersion":        {"1.2"},
 		"DataLicense":        {"CC-1.0"},
 		"DocumentComment":    {"hahaha hahaha"},
 		"Creator":            {"Organization: F", "Person: Test Testaculous"},
@@ -477,7 +489,7 @@ func TestDoc(t *testing.T) {
 		t.Errorf("Unexpected error: %s", err)
 	}
 
-	if doc.SpecVersion.Val != m["SpecVersion"][0] {
+	if doc.SpecVersion.Val != m["SPDXVersion"][0] {
 		t.Errorf("h Invalid doc.SpecVersion: '%s'", doc.SpecVersion)
 	}
 	if doc.DataLicence.Val != m["DataLicense"][0] {
@@ -486,7 +498,7 @@ func TestDoc(t *testing.T) {
 	if doc.Comment.Val != m["DocumentComment"][0] {
 		t.Errorf("Invalid doc.Comment: '%s'", doc.Comment)
 	}
-	if !sameValStrValues(doc.CreationInfo.Creator, m["Creator"]) {
+	if !sameValCreatValues(doc.CreationInfo.Creator, m["Creator"]) {
 		t.Errorf("Invalid doc.CreationInfo.Creator: (len=%d) '%s'", len(doc.CreationInfo.Creator), doc.CreationInfo.Creator)
 	}
 	if doc.CreationInfo.Created.Val != m["Created"][0] {
@@ -502,8 +514,8 @@ func TestDoc(t *testing.T) {
 
 func TestSamePropertyTwice(t *testing.T) {
 	input := []Pair{
-		{"SpecVersion", "1.2"},
-		{"SpecVersion", "1.3"},
+		{"SPDXVersion", "1.2"},
+		{"SPDXVersion", "1.3"},
 	}
 
 	_, err := Parse(l(input))
@@ -519,7 +531,7 @@ func TestDocNestedPackage(t *testing.T) {
 		Value: spdx.Str("2fd4e1c67a2d28fced849ee1bb76e7391b93eb12", nil),
 	}
 	input := []Pair{
-		{"SpecVersion", "1.2"},
+		{"SPDXVersion", "1.2"},
 		{"PackageName", "spdx-tools-go"},
 		{"PackageVersion", "1.2"},
 		{"PackageFileName", "spdx-tools-go.tar.gz"},
@@ -599,7 +611,7 @@ func TestDocNestedFiles(t *testing.T) {
 	fDependency := []string{"f0.txt", "f1.txt", "f2.txt"}
 	licInfo := []string{"MIT", "Apache", "LicenseRef-0"}
 	input := []Pair{
-		{"SpecVersion", "1.2"},
+		{"SPDXVersion", "1.2"},
 		{"PackageName", "spdx-tools-go"},
 
 		{"FileName", "a.txt"},
@@ -829,13 +841,13 @@ func TestVerifCodeAlreadyDefined(t *testing.T) {
 func TestReviewer(t *testing.T) {
 
 	reviews := []spdx.Review{
-		{spdx.Str("a", nil), spdx.Str("b", nil), spdx.Str("c", nil)},
-		{spdx.Str("d", nil), spdx.Str("e", nil), spdx.Str("f", nil)},
+		{spdx.NewValueCreator("a", nil), spdx.Str("b", nil), spdx.Str("c", nil)},
+		{spdx.NewValueCreator("d", nil), spdx.Str("e", nil), spdx.Str("f", nil)},
 	}
 
 	input := make([]Pair, 0, 6)
 	for _, rev := range reviews {
-		input = append(input, Pair{"Reviewer", rev.Reviewer.Val})
+		input = append(input, Pair{"Reviewer", rev.Reviewer.V()})
 		input = append(input, Pair{"ReviewDate", rev.Date.Val})
 		input = append(input, Pair{"ReviewComment", rev.Comment.Val})
 	}
