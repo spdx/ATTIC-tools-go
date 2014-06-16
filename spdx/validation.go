@@ -46,7 +46,12 @@ type Validator struct {
 	Minor    int // Verison Minor
 	LicMajor int // Licence List Major
 	LicMinor int // Licence List Minor
-	errs     []*ValidationError
+
+	// Licence references used/defined and where
+	licUsed    map[string]*Meta
+	licDefined map[string]*Meta
+
+	errs []*ValidationError
 }
 
 func (v *Validator) Errors() []*ValidationError { return v.errs }
@@ -360,4 +365,121 @@ func (v *Validator) Checksum(cksum *Checksum) bool {
 func isHex(val string) bool {
 	b, _ := regexp.MatchString("^[a-f0-9]*$", val)
 	return b
+}
+
+// Licences
+func (v *Validator) AnyLicenceInfo(lic AnyLicenceInfo, allowSets bool, property string) bool {
+	switch t := lic.(type) {
+	case LicenceReference:
+		if isLicIdRef(t.LicenceId()) {
+			v.LicenceRefId(t.LicenceId(), t.Id.M(), property)
+			v.licUsed[t.LicenceId()] = t.M()
+			if t.Licence != nil {
+				v.defineLicenseRef(t.LicenceId(), t.Id.M())
+				if t.V() != t.Licence.V() {
+					v.addErr("%s: Licence Referece has a different ID than the licence it references to.", t.Licence.Id.M(), property)
+					return false
+				}
+			}
+			return true
+		}
+		// must be in the licence list
+		return true
+	case ConjunctiveLicenceList:
+		if !allowSets {
+			v.addErr("%s: Sets are not allowed but found a Conjunctive Licence Set.", t.M(), property)
+			return false
+		}
+		r := true
+		for _, l := range t {
+			r = r && v.AnyLicenceInfo(l, true, property)
+		}
+		return r
+	case DisjunctiveLicenceList:
+		if !allowSets {
+			v.addErr("%s: Sets are not allowed but found a Disjunctive Licence Set.", t.M(), property)
+			return false
+		}
+		r := true
+		for _, l := range t {
+			r = r && v.AnyLicenceInfo(l, true, property)
+		}
+		return r
+	case *Licence:
+		return v.Licence(t, property)
+	case *ExtractedLicensingInfo:
+		return v.ExtractedLicensingInfo(t)
+	default:
+		v.addErr("%s: Unknown Licence type.", lic.M(), property)
+		return false
+	}
+}
+
+// TODO
+func (v *Validator) Licence(lic *Licence, property string) bool {
+	return false
+}
+
+// Returns whether the given ID is a Licence Reference ID (starts with LicenseRef-)
+func isLicIdRef(id string) bool {
+	return strings.HasPrefix("LicenseRef-", id)
+}
+
+// Raise warning if invalid characters are used in LicenseRef ID
+func (v *Validator) LicenceRefId(id string, meta *Meta, property string) bool {
+	validChars := "a-z A-Z 0-9 + - ."
+	var ok bool
+	if v.Major > 1 || (v.Major == 1 && v.Minor >= 2) {
+		ok, _ = regexp.MatchString("^LicenseRef-[a-zA-Z0-9+\\.-]+$", id)
+	} else {
+		// only numbers allowed in spdx < 1.2
+		ok, _ = regexp.MatchString("^LicenseRef-[0-9]+$", id)
+	}
+	if ok {
+		return true
+	}
+	v.addWarn("%s: Licence ID Reference has unsupported characters. Valid characters for SPDX-%d.%d are: %s", meta, property, v.Major, v.Minor, validChars)
+	return false
+}
+
+func (v *Validator) defineLicenseRef(id string, m *Meta) {
+	at, ok := v.licDefined[id]
+	if ok {
+		if at != nil {
+			v.addWarn("Licence %s already defined at lines %d to %d.", m, id, at.LineStart, at.LineEnd)
+		} else {
+			v.addWarn("Licence %s already defined.", m, id)
+		}
+	}
+	v.licDefined[id] = m
+}
+
+func (v *Validator) ExtractedLicensingInfo(lic *ExtractedLicensingInfo) bool {
+	r := true
+	if isLicIdRef(lic.Id.V()) {
+		r = r && v.LicenceRefId(lic.Id.V(), lic.Id.M(), "Extracted Licence ID")
+		v.defineLicenseRef(lic.Id.V(), lic.Id.M())
+
+		if len(lic.Name) == 0 {
+			v.addErr("Licences not in the SPDX Licence List must have at least one name defined.", lic.Id.M())
+			r = false
+		}
+
+		if len(lic.CrossReference) == 0 {
+			v.addErr("Licences not in the SPDX Licence List must have at least one reference URI.", lic.Id.M())
+		}
+	} else {
+		// check if it's in licence list
+	}
+
+	for _, name := range lic.Name {
+		r = r && v.MandatoryText(name, false, false, "Extracted Licence Name")
+		r = r && v.SingleLineErr(name, "Extracted Licence Name")
+	}
+
+	for _, url := range lic.CrossReference {
+		r = r && v.Url(&url, false, false, "Extracted Licence Cross Reference")
+	}
+
+	return false
 }

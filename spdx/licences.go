@@ -67,7 +67,7 @@ type ExtractedLicensingInfo struct {
 
 func (l *ExtractedLicensingInfo) LicenceId() string { return l.Id.V() }
 func (l *ExtractedLicensingInfo) V() string         { return l.LicenceId() }
-func (l *ExtractedLicensingInfo) M() *Meta          { return nil }
+func (l *ExtractedLicensingInfo) M() *Meta          { return l.Id.M() }
 
 func join(list []AnyLicenceInfo, separator string) string {
 	if len(list) == 0 {
@@ -86,11 +86,25 @@ type ConjunctiveLicenceList []AnyLicenceInfo
 
 func (c ConjunctiveLicenceList) LicenceId() string { return join(c, " and ") }
 func (c ConjunctiveLicenceList) V() string         { return c.LicenceId() }
-func (c ConjunctiveLicenceList) M() *Meta          { return nil }
+func (c ConjunctiveLicenceList) M() *Meta {
+	for _, k := range c {
+		if k != nil {
+			return k.M()
+		}
+	}
+	return nil
+}
 
 // DisjunctiveLicenceList is a AnyLicenceInfo
 type DisjunctiveLicenceList []AnyLicenceInfo
 
-func (d DisjunctiveLicenceList) LicenceId() string { return join(d, " or ") }
+func (c DisjunctiveLicenceList) LicenceId() string { return join(c, " or ") }
 func (c DisjunctiveLicenceList) V() string         { return c.LicenceId() }
-func (c DisjunctiveLicenceList) M() *Meta          { return nil }
+func (c DisjunctiveLicenceList) M() *Meta {
+	for _, k := range c {
+		if k != nil {
+			return k.M()
+		}
+	}
+	return nil
+}
