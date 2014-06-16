@@ -4,7 +4,7 @@ type Package struct {
 	Name                 ValueStr          // one
 	Version              ValueStr          // zero or one
 	DownloadLocation     ValueStr          // one; NOASSERTION or NONE valid
-	HomePage             ValueStr          // one; NOASSERTION or NONE valid
+	HomePage             ValueStr          // zero or one; NOASSERTION or NONE valid
 	FileName             ValueStr          // zero or one
 	Supplier             ValueCreator      // zero or one, NOASSERTION valid
 	Originator           ValueCreator      // zero or one, NOASSERTION valid
