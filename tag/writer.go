@@ -122,7 +122,7 @@ func (f *Formatter) Property(tag, value string) error {
 	}
 
 	f.spaces(tag)
-	if isMultiline(tag) || isMultilineValue(value) {
+	if value != spdx.NOASSERTION && value != spdx.NONE && (isMultiline(tag) || isMultilineValue(value)) {
 		value = "<text>" + value + "</text>"
 	}
 
