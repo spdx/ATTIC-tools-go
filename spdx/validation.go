@@ -415,11 +415,6 @@ func (v *Validator) AnyLicenceInfo(lic AnyLicenceInfo, allowSets bool, property 
 	}
 }
 
-// TODO
-func (v *Validator) Licence(lic *Licence, property string) bool {
-	return false
-}
-
 // Returns whether the given ID is a Licence Reference ID (starts with LicenseRef-)
 func isLicIdRef(id string) bool {
 	return strings.HasPrefix("LicenseRef-", id)
@@ -454,22 +449,42 @@ func (v *Validator) defineLicenseRef(id string, m *Meta) {
 	v.licDefined[id] = m
 }
 
+func (v *Validator) Licence(lic *Licence, property string) bool {
+	r := true
+	if !isLicIdRef(lic.Id.V()) {
+		v.addErr("Not a valid licence reference format.", lic.Id.M())
+	}
+	r = r && v.LicenceRefId(lic.Id.V(), lic.Id.M(), "Licence ID")
+	v.defineLicenseRef(lic.Id.V(), lic.Id.M())
+
+	r = r && v.SingleLineErr(lic.Name, "Licence Name")
+
+	if len(lic.CrossReference) == 0 {
+		v.addErr("Licences not in the SPDX Licence List must have at least one reference URI.", lic.Id.M())
+	}
+
+	for _, url := range lic.CrossReference {
+		r = r && v.Url(&url, false, false, "Licence Cross Reference")
+	}
+
+	return false
+}
+
 func (v *Validator) ExtractedLicensingInfo(lic *ExtractedLicensingInfo) bool {
 	r := true
 	if isLicIdRef(lic.Id.V()) {
-		r = r && v.LicenceRefId(lic.Id.V(), lic.Id.M(), "Extracted Licence ID")
-		v.defineLicenseRef(lic.Id.V(), lic.Id.M())
+		v.addErr("Not a valid licence reference format.", lic.Id.M())
+	}
+	r = r && v.LicenceRefId(lic.Id.V(), lic.Id.M(), "Extracted Licence ID")
+	v.defineLicenseRef(lic.Id.V(), lic.Id.M())
 
-		if len(lic.Name) == 0 {
-			v.addErr("Licences not in the SPDX Licence List must have at least one name defined.", lic.Id.M())
-			r = false
-		}
+	if len(lic.Name) == 0 {
+		v.addErr("Licences not in the SPDX Licence List must have at least one name defined.", lic.Id.M())
+		r = false
+	}
 
-		if len(lic.CrossReference) == 0 {
-			v.addErr("Licences not in the SPDX Licence List must have at least one reference URI.", lic.Id.M())
-		}
-	} else {
-		// check if it's in licence list
+	if len(lic.CrossReference) == 0 {
+		v.addErr("Licences not in the SPDX Licence List must have at least one reference URI.", lic.Id.M())
 	}
 
 	for _, name := range lic.Name {
