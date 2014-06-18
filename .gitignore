@@ -1,3 +1,7 @@
 # possible binaries
 spdx-go
 spdx-tools-go
+
+# licence list compiled file
+licence-list.txt
+spdx/licence-list.txt
