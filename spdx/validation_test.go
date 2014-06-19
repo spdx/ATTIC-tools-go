@@ -233,3 +233,159 @@ func TestCreatorNoEmail(t *testing.T) {
 		t.Error("Doesn't have warnings.")
 	}
 }
+
+func TestCreatorOK(t *testing.T) {
+	val := NewValueCreator("Organization: fdas (contact@example.com)", nil)
+	validator := new(Validator)
+	if !validator.Creator(&val, false, false, "Test", []string{"Test", "Tool", "Organization"}, 0, 1) {
+		t.Error("Should've returned true")
+	}
+	if validator.HasErrors() {
+		t.Error("Shouldn't have errors.")
+	}
+	if validator.HasWarnings() {
+		t.Error("Shouldn't have warnings.")
+	}
+}
+
+// Checksum test
+func TestChecksumOK(t *testing.T) {
+	val := &Checksum{
+		Algo:  Str("SHA1", nil),
+		Value: Str("2fd4e1c67a2d28fced849ee1bb76e7391b93eb12", nil),
+	}
+	validator := new(Validator)
+	validator.Major = 1
+	if !validator.Checksum(val) {
+		t.Error("Should return true.")
+	}
+	if validator.HasErrors() {
+		t.Error("Should not have a errors.")
+	}
+	if validator.HasWarnings() {
+		t.Error("Shouldn't have warnings.")
+	}
+}
+
+func TestChecksumWrongLength(t *testing.T) {
+	val := &Checksum{
+		Algo:  Str("SHA1", nil),
+		Value: Str("2fd4e1c67a2d28fced849ee1bb76e7391b9", nil),
+	}
+	validator := new(Validator)
+	validator.Major = 1
+
+	if validator.Checksum(val) {
+		t.Error("Should return false.")
+	}
+	if !validator.HasErrors() {
+		t.Error("Should have an error")
+	}
+	if validator.HasWarnings() {
+		t.Error("Shouldn't have warnings.")
+	}
+}
+
+func TestChecksumNotHex(t *testing.T) {
+	val := &Checksum{
+		Algo:  Str("SHA1", nil),
+		Value: Str("2fd4e1c67a2d28fced849ee1bb76e7391b9_xb12", nil),
+	}
+	validator := new(Validator)
+	validator.Major = 1
+
+	if validator.Checksum(val) {
+		t.Error("Should return false.")
+	}
+	if !validator.HasErrors() {
+		t.Error("Should have an error")
+	}
+	if validator.HasWarnings() {
+		t.Error("Shouldn't have warnings.")
+	}
+}
+
+func TestChecksumWarning(t *testing.T) {
+	val := &Checksum{
+		Algo:  Str("MD5", nil),
+		Value: Str("2fd4e1c67a2d28fced849ee1bb76e739", nil),
+	}
+	validator := new(Validator)
+	validator.Major = 1
+
+	if !validator.Checksum(val) {
+		t.Error("Should return true.")
+	}
+	if validator.HasErrors() {
+		t.Error("Should not have a errors")
+	}
+	if !validator.HasWarnings() {
+		t.Error("Should have warnings.")
+	}
+}
+
+// Test Verification Code
+func TestVerificationCodeOK(t *testing.T) {
+	val := &VerificationCode{
+		Value: Str("2fd4e1c67a2d28fced849ee1bb76e7391b93eb12", nil),
+	}
+	validator := new(Validator)
+	if !validator.VerificationCode(val) {
+		t.Error("Should return true.")
+	}
+	if validator.HasErrors() {
+		t.Error("Should not have a errors.")
+	}
+	if validator.HasWarnings() {
+		t.Error("Shouldn't have warnings.")
+	}
+}
+
+func TestVerificationCodeWrongLength(t *testing.T) {
+	val := &VerificationCode{
+		Value: Str("2fd4e1c67a2d28f", nil),
+	}
+	validator := new(Validator)
+	if validator.VerificationCode(val) {
+		t.Error("Should return false.")
+	}
+	if !validator.HasErrors() {
+		t.Error("Should have errors.")
+	}
+	if validator.HasWarnings() {
+		t.Error("Shouldn't have warnings.")
+	}
+}
+
+func TestVerificationCodeNotHex(t *testing.T) {
+	val := &VerificationCode{
+		Value: Str("2fd4e1c67a2d28fced849ee1bb76x7391y93eb12", nil),
+	}
+	validator := new(Validator)
+	if validator.VerificationCode(val) {
+		t.Error("Should return false.")
+	}
+	if !validator.HasErrors() {
+		t.Error("Should have errors.")
+	}
+	if validator.HasWarnings() {
+		t.Error("Shouldn't have warnings.")
+	}
+}
+
+func TestVerificationCodeEmptyExcludedFiles(t *testing.T) {
+	val := &VerificationCode{
+		Value:         Str("2fd4e1c67a2d28fced849ee1bb76c7391393eb12", nil),
+		ExcludedFiles: []ValueStr{Str("this_is_fine.txt", nil), Str("", nil)},
+	}
+	validator := new(Validator)
+	if validator.VerificationCode(val) {
+		t.Error("Should return false.")
+	}
+	if !validator.HasErrors() {
+		t.Error("Should have errors.")
+	}
+	if validator.HasWarnings() {
+		t.Error("Shouldn't have warnings.")
+	}
+}

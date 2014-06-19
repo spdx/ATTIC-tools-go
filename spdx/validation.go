@@ -356,27 +356,22 @@ func (v *Validator) VerificationCode(vc *VerificationCode) bool {
 		v.addErr("Package Verification Code is mandatory.", nil)
 		return false
 	}
-
-	if vc.Value.V() == "" {
-		v.addErr("Package Verification Code is mandatory.", vc.Value.Meta)
-		return false
-	}
-
+	r := true
 	if len(vc.Value.V()) != 40 || !isHex(vc.Value.V()) {
 		v.addErr("Package Verification Code value must be exactly 40 lowercase hexadecimal digits.", vc.Value.Meta)
-		return false
+		r = false
 	}
 
 	for _, e := range vc.ExcludedFiles {
-		v.MandatoryText(e, false, false, "Package Verification Code Excluded File")
+		r = r && v.MandatoryText(e, false, false, "Package Verification Code Excluded File")
 	}
 
-	return true
+	return r
 }
 
 // In spec verison SPDX-1.x the recommended algorithm is SHA1. If anything else is used, a warning is generated.
 func (v *Validator) Checksum(cksum *Checksum) bool {
-	if !v.MandatoryText(cksum.Algo, false, false, "Checksum") || !v.MandatoryText(cksum.Value, false, false, "Checksum") {
+	if !v.MandatoryText(cksum.Algo, false, false, "Checksum Algorithm") || !v.MandatoryText(cksum.Value, false, false, "Checksum Value") {
 		return false
 	}
 
@@ -391,19 +386,20 @@ func (v *Validator) Checksum(cksum *Checksum) bool {
 		"SHA384":  96,
 		"SHA-384": 96,
 	}
-	r := true
-	if l, ok := algos[cksum.Algo.V()]; ok && (len(cksum.Value.V()) != l || !isHex(cksum.Value.V())) {
-		r = false
-		v.addErr("Checksum value for algorithm %s must be hexadecimal of length %d.", cksum.Value.Meta, cksum.Algo.V(), l)
-	}
 
 	if v.Major == 1 && cksum.Algo.V() != "SHA1" {
 		v.addWarn("The checksum algorithm recommeded for SPDX-1.x is SHA1 but now using %s.", cksum.Algo.Meta, cksum.Algo.V())
 	}
 
-	return r
+	if l, ok := algos[cksum.Algo.V()]; ok && (len(cksum.Value.V()) != l || !isHex(cksum.Value.V())) {
+		v.addErr("Checksum value for algorithm %s must be hexadecimal of length %d.", cksum.Value.Meta, cksum.Algo.V(), l)
+		return false
+	}
+
+	return true
 }
 
+// Returns whether `val` is a hexadecimal value.
 func isHex(val string) bool {
 	b, _ := regexp.MatchString("^[a-f0-9]*$", val)
 	return b
@@ -460,7 +456,8 @@ func (v *Validator) AnyLicenceInfo(lic AnyLicenceInfo, allowSets bool, property 
 	}
 }
 
-// Returns whether the given ID is a Licence Reference ID (starts with LicenseRef-)
+// Returns whether the given ID is a Licence Reference ID (starts with LicenseRef-).
+// Does not check if the string after "LicenseRef-" satisfies the requirements of any SPDX version.
 func isLicIdRef(id string) bool {
 	return strings.HasPrefix("LicenseRef-", id)
 }
@@ -482,6 +479,7 @@ func (v *Validator) LicenceRefId(id string, meta *Meta, property string) bool {
 	return false
 }
 
+// Adds `id` as a defined Licence for this validator. Creates a warning if the validator already has this Licence ID.
 func (v *Validator) defineLicenseRef(id string, m *Meta) {
 	at, ok := v.licDefined[id]
 	if ok {
@@ -494,6 +492,7 @@ func (v *Validator) defineLicenseRef(id string, m *Meta) {
 	v.licDefined[id] = m
 }
 
+// Validates a Licence object.
 func (v *Validator) Licence(lic *Licence, property string) bool {
 	r := true
 	if !isLicIdRef(lic.Id.V()) {
@@ -505,6 +504,7 @@ func (v *Validator) Licence(lic *Licence, property string) bool {
 	r = r && v.SingleLineErr(lic.Name, "Licence Name")
 
 	if len(lic.CrossReference) == 0 {
+		r = false
 		v.addErr("Licences not in the SPDX Licence List must have at least one reference URI.", lic.Id.M())
 	}
 
@@ -515,20 +515,23 @@ func (v *Validator) Licence(lic *Licence, property string) bool {
 	return false
 }
 
+// Validate ExtractedLicensingInfo object
 func (v *Validator) ExtractedLicensingInfo(lic *ExtractedLicensingInfo) bool {
 	r := true
 	if isLicIdRef(lic.Id.V()) {
+		r = false
 		v.addErr("Not a valid licence reference format.", lic.Id.M())
 	}
 	r = r && v.LicenceRefId(lic.Id.V(), lic.Id.M(), "Extracted Licence ID")
 	v.defineLicenseRef(lic.Id.V(), lic.Id.M())
 
 	if len(lic.Name) == 0 {
-		v.addErr("Licences not in the SPDX Licence List must have at least one name defined.", lic.Id.M())
 		r = false
+		v.addErr("Licences not in the SPDX Licence List must have at least one name defined.", lic.Id.M())
 	}
 
 	if len(lic.CrossReference) == 0 {
+		r = false
 		v.addErr("Licences not in the SPDX Licence List must have at least one reference URI.", lic.Id.M())
 	}
 
