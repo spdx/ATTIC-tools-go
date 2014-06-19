@@ -41,6 +41,17 @@ func correctCaseMatch(val string, correct []string) (caseSensitive bool, index i
 	return false, -1
 }
 
+// A Validator is used to validate SPDX Documents and subsets of documents. A Validator can be created
+// with `new(spdx.Validator)`.
+//
+// Unless the whole document is validated (using `Validator.Document()`), the SPDX Version should be set by either:
+// - Validating the SpecVersion property of a document by calling `Validator.SpecVersion()`
+// - or manually setting the values for `Validator.Major` and `Validator.Minor`.
+//
+// As a convention for validator methods (such as `Validator.Document`, `Validator.Creator`),
+// the return value should be `false` if there were errors added to the validator - warnings do not count.
+// The return value should be `true` if there are no errors added (warnings are allowed). If warnings are added, the return value
+// should still be `true`. If a validator method behaves differently, it will be clearly documented.
 type Validator struct {
 	Major    int // Version major
 	Minor    int // Verison Minor
@@ -54,20 +65,29 @@ type Validator struct {
 	errs []*ValidationError
 }
 
+// Return all the errors and warnings that this validator has.
 func (v *Validator) Errors() []*ValidationError { return v.errs }
 
+// Add a new error to this validator.
 func (v *Validator) addErr(msg string, m *Meta, args ...interface{}) {
 	v.add(NewVError(fmt.Sprintf(msg, args...), m))
 }
 
+// Add a new warning to this validator.
 func (v *Validator) addWarn(msg string, m *Meta, args ...interface{}) {
 	v.add(NewVWarning(fmt.Sprintf(msg, args...), m))
 }
 
-func (v *Validator) Ok() bool          { return len(v.errs) == 0 }
-func (v *Validator) HasWarnings() bool { return v.hasErrType(ValidWarning) }
-func (v *Validator) HasErrors() bool   { return v.hasErrType(ValidError) }
+// Return whether there are no errors and no warnings.
+func (v *Validator) Ok() bool { return len(v.errs) == 0 }
 
+// Returns true if there are no warnings in this validator, false otherwise.
+func (v *Validator) HasWarnings() bool { return v.hasErrType(ValidWarning) }
+
+// Returns true if there are no errors in this validator, false otherwise.
+func (v *Validator) HasErrors() bool { return v.hasErrType(ValidError) }
+
+// Internal usage. Returns true if there are errors of type t (ValidationError.Type==t) in this validator, false otherwise.
 func (v *Validator) hasErrType(t int) bool {
 	for _, e := range v.errs {
 		if e.Type == t {
@@ -77,6 +97,7 @@ func (v *Validator) hasErrType(t int) bool {
 	return false
 }
 
+// Adds a list of errors (or warnings) to this validator. Internally used by *Validator.addErr and *Validator.addWarn
 func (v *Validator) add(err ...*ValidationError) {
 	if len(err) == 0 {
 		return
@@ -88,7 +109,7 @@ func (v *Validator) add(err ...*ValidationError) {
 	v.errs = append(v.errs, err...)
 }
 
-// Single line of text error
+// Adds an error to this validator if `val.V()` has more than one lines of text.
 func (v *Validator) SingleLineErr(val Value, property string) bool {
 	if strings.Index(val.V(), "\n") >= 0 {
 		v.addErr("%s must be a single line.", val.M(), property)
@@ -97,7 +118,8 @@ func (v *Validator) SingleLineErr(val Value, property string) bool {
 	return true
 }
 
-// Single line of text warning
+// Adds a warning to this validator if `val.V()` has more than one lines of text.
+// Returns `false` if there was a warning added, `true` otherwise.
 func (v *Validator) SingleLineWarn(val Value, property string) bool {
 	if strings.Index(val.V(), "\n") >= 0 {
 		v.addWarn("%s should be a single line.", val.M(), property)
@@ -106,7 +128,12 @@ func (v *Validator) SingleLineWarn(val Value, property string) bool {
 	return true
 }
 
-// Validate a field that is mandatory
+// Adds an error if `val.V()` is empty.
+//
+// NOASSERTION and NONE values are considered invalid if `noassert` and `none`, respectively are set to false.
+// These values are treated as valid (do not generate errors) if the arguments are set to true.
+//
+// The `property` string is used in the error message.
 func (v *Validator) MandatoryText(val Value, noassert, none bool, property string) bool {
 	str := val.V()
 
@@ -123,7 +150,8 @@ func (v *Validator) MandatoryText(val Value, noassert, none bool, property strin
 	return true
 }
 
-// Validate dates.
+// Validates `*ValueDate` values. If `val.Time() == nil` this generates an error and returns `false`.
+// It returns `true` otherwise.
 func (v *Validator) Date(val *ValueDate) bool {
 	if val.Time() == nil {
 		v.addErr("Invalid date format.", val.Meta)
@@ -137,7 +165,8 @@ func (v *Validator) Url(val *ValueStr, noassert, none bool, property string) boo
 	if (noassert && val.V() == NOASSERTION) || (none && val.V() == NONE) {
 		return true
 	}
-	if !v.MandatoryText(val, noassert, none, property) {
+	if val.V() == "" {
+		v.addErr("%s cannot be empty.", val.Meta, property)
 		return false
 	}
 	u, err := url.Parse(val.V())
@@ -232,7 +261,8 @@ func (v *Validator) VersionSupported(m *Meta) bool {
 	return false
 }
 
-// Validate Data Licence
+// Validate Data Licence. The only valid value is "CC0-1.0".
+// A warning is generated for non-uppercase "CC".
 func (v *Validator) DataLicence(val *ValueStr) bool {
 	if val.Val == "CC0-1.0" {
 		return true
@@ -344,7 +374,7 @@ func (v *Validator) VerificationCode(vc *VerificationCode) bool {
 	return true
 }
 
-// In spec verison 1.2 the recommended algorithm is SHA1. If anything else is used, this tool generates a warning.
+// In spec verison SPDX-1.x the recommended algorithm is SHA1. If anything else is used, a warning is generated.
 func (v *Validator) Checksum(cksum *Checksum) bool {
 	if !v.MandatoryText(cksum.Algo, false, false, "Checksum") || !v.MandatoryText(cksum.Value, false, false, "Checksum") {
 		return false
