@@ -132,7 +132,7 @@ func (v *Validator) Date(val *ValueDate) bool {
 	return true
 }
 
-// Validate URLs
+// Validate URLs. URLs must have a scheme to be valid.
 func (v *Validator) Url(val *ValueStr, noassert, none bool, property string) bool {
 	if (noassert && val.V() == NOASSERTION) || (none && val.V() == NONE) {
 		return true
@@ -140,8 +140,8 @@ func (v *Validator) Url(val *ValueStr, noassert, none bool, property string) boo
 	if !v.MandatoryText(val, noassert, none, property) {
 		return false
 	}
-	_, err := url.Parse(val.V())
-	if err != nil {
+	u, err := url.Parse(val.V())
+	if err != nil || u.Scheme == "" {
 		v.addErr("%s: Invalid URL.", val.Meta, property)
 		return false
 	}
@@ -190,7 +190,7 @@ func (v *Validator) Document(doc *Document) bool {
 
 	// In SPDX 1.x, there must be one package per document
 	if v.Major == 1 && len(doc.Packages) > 1 {
-		v.addErr("A document cannot have more than one package.", doc.Packages[1].Name.Meta)
+		v.addErr("A document cannot have more than one package in SPDX-1.x.", doc.Packages[1].Name.Meta)
 	} else if v.Major == 1 && len(doc.Packages) == 0 {
 		v.addErr("A document must have one Package in SPDX-1.x.", nil)
 	}
@@ -215,7 +215,7 @@ func (v *Validator) SpecVersion(val *ValueStr) bool {
 		v.addWarn(fmt.Sprintf("SpecVersion was parsed to SPDX-%d.%d but it is in an invalid format.", v.Major, v.Minor), val.Meta)
 		return true
 	}
-	v.addErr("Invalid SpecVersion format.", val.Meta)
+	v.addErr("Invalid SpecVersion format. The rest of the validation might be incorrect or incomplete.", val.Meta)
 	return false
 }
 
@@ -251,6 +251,18 @@ func (v *Validator) DocumentCreator(val *ValueCreator) bool {
 }
 
 // Validate *ValueCreator types.
+//
+// The ValueCreator Syntax is: "What: Who (email)" where the "(email)" is optional.
+//
+// If noassert (or none) parameter is set to true, NOASSERTION (or NONE) value will be considered valid.
+// The property parameter is only used in error/warning messages.
+//
+// whats parameter is a slice of the values that are considered valid for val.What(),
+// which is the part before the first ":" in the ValueCreator syntax. A case-insensitive match
+// is performed, but a warning is added if the case in val.What() is different then the one in whats.
+//
+// noemails is a slice of indexes in the whats slice. For those indexes, an email address is not permitted.
+// A warning is added if there is an e-mail address provided.
 func (v *Validator) Creator(val *ValueCreator, noassert, none bool, property string, whats []string, noemails ...int) bool {
 	if (noassert && val.V() == NOASSERTION) || (none && val.V() == NONE) {
 		return true
@@ -383,7 +395,10 @@ func (v *Validator) AnyLicenceInfo(lic AnyLicenceInfo, allowSets bool, property 
 			}
 			return true
 		}
-		// must be in the licence list
+		if !CheckLicence(t.V()) {
+			v.addErr("%s: Licence Reference not in SPDX Licence List and not a custom licence reference.", t.M(), t.V())
+			return false
+		}
 		return true
 	case ConjunctiveLicenceList:
 		if !allowSets {

@@ -33,6 +33,9 @@ func InitLicenceList() error {
 }
 
 func CheckLicence(lic string) bool {
+	if licenceList == nil {
+		InitLicenceList()
+	}
 	_, ok := licenceList[lic]
 	return ok
 }
