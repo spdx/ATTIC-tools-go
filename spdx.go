@@ -7,8 +7,10 @@ import (
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -205,6 +207,57 @@ func convert() {
 }
 
 func validate() {
+	var doc *spdx.Document
+	var err error
+
+	if *flagInputFormat == formatTag {
+		tag.CaseSensitive(*flagCaseSensitive)
+		doc, err = tag.Build(input)
+	} else {
+		// todo: rdf
+		err = errors.New("Not implemented. :(")
+	}
+
+	if err != nil {
+		exitErr(err)
+	}
+
+	validator := new(spdx.Validator)
+	validator.Document(doc)
+
+	if validator.Ok() {
+		io.WriteString(output, "Document is valid.\n")
+		os.Exit(0)
+	}
+
+	errs := validator.Errors()
+	warnings, errors := 0, 0
+	for _, e := range errs {
+		if e.Type == spdx.ValidError {
+			errors++
+		} else {
+			warnings++
+		}
+	}
+	io.WriteString(output, fmt.Sprintf("Document is invalid. %d errors and %d warnings.\n", errors, warnings))
+	for _, e := range errs {
+		var meta string
+		if e.Meta != nil {
+			if e.Meta.LineStart == e.Meta.LineEnd {
+				meta = fmt.Sprintf(":%d ", e.Meta.LineStart)
+			} else {
+				meta = fmt.Sprintf(":%d to %d ", e.Meta.LineStart, e.Meta.LineEnd)
+			}
+		} else {
+			meta = " "
+		}
+		t := "ERROR: "
+		if e.Type == spdx.ValidWarning {
+			t = "WARNING: "
+		}
+		io.WriteString(output, input.Name()+meta+t+e.Error()+"\n")
+	}
+
 }
 
 func format() {
