@@ -8,10 +8,15 @@ import (
 
 // File Types
 const (
-	FT_BINARY  = iota
-	FT_SOURCE  = iota
-	FT_ARCHIVE = iota
-	FT_OTHER   = iota
+	FT_BINARY      = "BINARY"
+	FT_SOURCE      = "SOURCE"
+	FT_ARCHIVE     = "ARCHIVE"
+	FT_OTHER       = "OTHER"
+	FT_APPLICATION = "APPLICATION"
+	FT_AUDIO       = "AUDIO"
+	FT_IMAGE       = "IMAGE"
+	FT_TEXT        = "TEXT"
+	FT_VIDEO       = "VIDEO"
 )
 
 // supported specification versions
