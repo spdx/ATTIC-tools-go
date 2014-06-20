@@ -5,3 +5,7 @@ spdx-tools-go
 # licence list compiled file
 licence-list.txt
 spdx/licence-list.txt
+
+# test files
+*.tag
+*.rdf
