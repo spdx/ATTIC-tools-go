@@ -20,7 +20,15 @@ type ValidationError struct {
 }
 
 // Make *ValidationError implement the error interface.
-func (err *ValidationError) Error() string { return err.msg }
+func (err *ValidationError) Error() string {
+	var prefix string
+	if err.Type == ValidError {
+		prefix = "ERROR: "
+	} else {
+		prefix = "WARNING: "
+	}
+	return prefix + err.msg
+}
 
 func NewVError(msg string, m *Meta) *ValidationError   { return &ValidationError{msg, ValidError, m} }
 func NewVWarning(msg string, m *Meta) *ValidationError { return &ValidationError{msg, ValidWarning, m} }
@@ -489,6 +497,11 @@ func (v *Validator) LicenceRefId(id string, meta *Meta, property string) bool {
 
 // Adds `id` as a defined Licence for this validator. Creates a warning if the validator already has this Licence ID.
 func (v *Validator) defineLicenceRef(id string, m *Meta) {
+	if v.licDefined == nil {
+		v.licDefined = make(map[string]*Meta)
+		v.licDefined[id] = m
+		return
+	}
 	at, ok := v.licDefined[id]
 	if ok {
 		if at != nil {
@@ -505,8 +518,10 @@ func (v *Validator) Licence(lic *Licence, property string) bool {
 	r := true
 	if !isLicIdRef(lic.Id.V()) {
 		v.addErr("Not a valid licence reference format.", lic.Id.M())
+		r = false
+	} else {
+		v.LicenceRefId(lic.Id.V(), lic.Id.M(), "Licence ID")
 	}
-	r = r && v.LicenceRefId(lic.Id.V(), lic.Id.M(), "Licence ID")
 	v.defineLicenceRef(lic.Id.V(), lic.Id.M())
 
 	r = r && v.SingleLineErr(lic.Name, "Licence Name")
@@ -520,7 +535,7 @@ func (v *Validator) Licence(lic *Licence, property string) bool {
 		r = r && v.Url(&url, false, false, "Licence Cross Reference")
 	}
 
-	return false
+	return r
 }
 
 // Validate ExtractedLicensingInfo object
@@ -529,8 +544,9 @@ func (v *Validator) ExtractedLicensingInfo(lic *ExtractedLicensingInfo) bool {
 	if !isLicIdRef(lic.Id.V()) {
 		r = false
 		v.addErr("Not a valid licence reference format.", lic.Id.M())
+	} else {
+		v.LicenceRefId(lic.Id.V(), lic.Id.M(), "Extracted Licence ID")
 	}
-	r = r && v.LicenceRefId(lic.Id.V(), lic.Id.M(), "Extracted Licence ID")
 	v.defineLicenceRef(lic.Id.V(), lic.Id.M())
 
 	if len(lic.Name) == 0 {
@@ -552,5 +568,5 @@ func (v *Validator) ExtractedLicensingInfo(lic *ExtractedLicensingInfo) bool {
 		r = r && v.Url(&url, false, false, "Extracted Licence Cross Reference")
 	}
 
-	return false
+	return r
 }

@@ -5,7 +5,7 @@ import "testing"
 // validator tester
 func hv(t *testing.T, v *Validator, result, expectedResult, errors, warnings bool) {
 	if result != expectedResult {
-		t.Errorf("Should return %b", expectedResult)
+		t.Errorf("Should return %b. The errors: %+v", expectedResult, v.Errors())
 	}
 	if v.HasErrors() != errors {
 		t.Errorf("Expecting errors: %b. Found: %+v", errors, v.Errors())
@@ -536,4 +536,89 @@ func TestLicenceSetNestedError(t *testing.T) {
 	validator := new(Validator)
 	validator.Major, validator.Minor = 1, 2
 	hv(t, validator, validator.AnyLicenceInfo(val, true, ""), false, true, false)
+}
+
+// Extracted Licensing Info
+func TestExtrLicInfoOK(t *testing.T) {
+	val := &ExtractedLicensingInfo{
+		Id:             Str("LicenseRef-34", nil),
+		Name:           []ValueStr{Str("Some uncommon licence", nil)},
+		Text:           Str("Hahaha.", nil),
+		CrossReference: []ValueStr{Str("http://example.org", nil)},
+	}
+	validator := new(Validator)
+	validator.Major, validator.Minor = 1, 2
+	hv(t, validator, validator.ExtractedLicensingInfo(val), true, false, false)
+}
+
+func TestExtrLicInfoIdError(t *testing.T) {
+	val := &ExtractedLicensingInfo{
+		Id:             Str("License", nil),
+		Name:           []ValueStr{Str("Some uncommon licence", nil)},
+		Text:           Str("Hahaha.", nil),
+		CrossReference: []ValueStr{Str("http://example.org", nil)},
+	}
+	validator := new(Validator)
+	validator.Major, validator.Minor = 1, 2
+	hv(t, validator, validator.ExtractedLicensingInfo(val), false, true, false)
+}
+
+func TestExtrLicInfoIdWarning(t *testing.T) {
+	val := &ExtractedLicensingInfo{
+		Id:             Str("LicenseRef-a", nil),
+		Name:           []ValueStr{Str("Some uncommon licence", nil)},
+		Text:           Str("Hahaha.", nil),
+		CrossReference: []ValueStr{Str("http://example.org", nil)},
+	}
+	validator := new(Validator)
+	validator.Major, validator.Minor = 1, 0
+	hv(t, validator, validator.ExtractedLicensingInfo(val), true, false, true)
+}
+
+func TestExtrLicInfoNoNames(t *testing.T) {
+	val := &ExtractedLicensingInfo{
+		Id:             Str("LicenseRef-0", nil),
+		Name:           nil,
+		Text:           Str("Hahaha.", nil),
+		CrossReference: []ValueStr{Str("http://example.org", nil)},
+	}
+	validator := new(Validator)
+	validator.Major, validator.Minor = 1, 2
+	hv(t, validator, validator.ExtractedLicensingInfo(val), false, true, false)
+}
+
+func TestExtrLicInfoEmptyName(t *testing.T) {
+	val := &ExtractedLicensingInfo{
+		Id:             Str("LicenseRef-0", nil),
+		Name:           []ValueStr{Str("", nil), Str("something", nil)},
+		Text:           Str("Hahaha.", nil),
+		CrossReference: []ValueStr{Str("http://example.org", nil)},
+	}
+	validator := new(Validator)
+	validator.Major, validator.Minor = 1, 2
+	hv(t, validator, validator.ExtractedLicensingInfo(val), false, true, false)
+}
+
+func TestExtrLicInfoNoCrossReference(t *testing.T) {
+	val := &ExtractedLicensingInfo{
+		Id:             Str("LicenseRef-0", nil),
+		Name:           []ValueStr{Str("something", nil)},
+		Text:           Str("Hahaha.", nil),
+		CrossReference: nil,
+	}
+	validator := new(Validator)
+	validator.Major, validator.Minor = 1, 2
+	hv(t, validator, validator.ExtractedLicensingInfo(val), false, true, false)
+}
+
+func TestExtrLicInfoInvalidCrossReference(t *testing.T) {
+	val := &ExtractedLicensingInfo{
+		Id:             Str("LicenseRef-0", nil),
+		Name:           []ValueStr{Str("something", nil)},
+		Text:           Str("Hahaha.", nil),
+		CrossReference: []ValueStr{Str("http://spdx.org", nil), Str("wrong value", nil)},
+	}
+	validator := new(Validator)
+	validator.Major, validator.Minor = 1, 2
+	hv(t, validator, validator.ExtractedLicensingInfo(val), false, true, false)
 }
