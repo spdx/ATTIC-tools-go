@@ -622,3 +622,66 @@ func TestExtrLicInfoInvalidCrossReference(t *testing.T) {
 	validator.Major, validator.Minor = 1, 2
 	hv(t, validator, validator.ExtractedLicensingInfo(val), false, true, false)
 }
+
+// Review Tests
+
+func TestReviewOK(t *testing.T) {
+	val := &Review{
+		Reviewer: NewValueCreator("Person: Me (me@example.org)", nil),
+		Date:     NewValueDate("2014-09-08T14:03:04Z", nil),
+	}
+
+	v := new(Validator)
+	hv(t, v, v.Review(val), true, false, false)
+}
+
+func TestReviewEmptyNameNoDate(t *testing.T) {
+	val := &Review{
+		Reviewer: NewValueCreator("", nil),
+	}
+
+	v := new(Validator)
+	hv(t, v, v.Review(val), true, false, false)
+}
+
+func TestReviewWrongDate(t *testing.T) {
+	val := &Review{
+		Reviewer: NewValueCreator("Person: Me (me@example.org)", nil),
+		Date:     NewValueDate("hahaha", nil),
+	}
+
+	v := new(Validator)
+	hv(t, v, v.Review(val), false, true, false)
+}
+
+// Test date
+func TestDate(t *testing.T) {
+	val := NewValueDate("hahaha", nil)
+	v := new(Validator)
+	if v.Date(&val) {
+		t.Error("Should return an error")
+	}
+	if !v.HasErrors() {
+		t.Error("Should have errors.")
+	}
+	if v.HasWarnings() {
+		t.Error("Should not have warnings.")
+	}
+}
+
+// Test defineLicence
+func TestDefineLicence(t *testing.T) {
+	v := new(Validator)
+	v.defineLicenceRef("lic1", nil)
+	if !v.Ok() {
+		t.Fail()
+	}
+	v.defineLicenceRef("lic2", nil)
+	if !v.Ok() {
+		t.Error("failing at the second licence")
+	}
+	v.defineLicenceRef("lic1", nil)
+	if !v.HasWarnings() {
+		t.Error("Should have warnings.")
+	}
+}

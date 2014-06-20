@@ -7,7 +7,7 @@ type File struct {
 	LicenceConcluded  AnyLicenceInfo   // mandatory, NOASSERTION and NONE allowed
 	LicenceInfoInFile []AnyLicenceInfo // no sets; NOASSERTION and NONE allowed
 	LicenceComments   ValueStr         // optional
-	CopyrightText     ValueStr         // mandatory
+	CopyrightText     ValueStr         // mandatory, NOASSERTION and NONE allowed
 	Notice            ValueStr         // optional
 	ArtifactOf        []*ArtifactOf    // optinal
 	Dependency        []*File          // optional

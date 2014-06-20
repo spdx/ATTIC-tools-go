@@ -70,6 +70,9 @@ type Validator struct {
 	licUsed    map[string]*Meta
 	licDefined map[string]*Meta
 
+	// File references
+	files map[string]*File
+
 	errs []*ValidationError
 }
 
@@ -232,7 +235,43 @@ func (v *Validator) Document(doc *Document) bool {
 		v.addErr("A document must have one Package in SPDX-1.x.", nil)
 	}
 
-	return len(v.errs) == 0
+	for _, file := range doc.Files {
+		v.File(file)
+	}
+
+	for _, lic := range doc.ExtractedLicenceInfo {
+		v.ExtractedLicensingInfo(lic)
+	}
+
+	for _, rev := range doc.Reviews {
+		v.Review(rev)
+	}
+
+	v.LicReferences()
+
+	return v.HasErrors()
+}
+
+// Checks if all the licences referenced in the SPDX Document (and indexed by the Validator) are
+// used and defined.
+// Licence References used but not defined generate errors.
+// Licence References defined but not used generate warnings.
+func (v *Validator) LicReferences() bool {
+	r := true
+	for k, m := range v.licUsed {
+		_, ok := v.licDefined[k]
+		if !ok {
+			v.addErr("Licence reference \"%s\" used but not defined.", m, k)
+			r = false
+		}
+	}
+	for k, m := range v.licDefined {
+		_, ok := v.licUsed[k]
+		if !ok {
+			v.addWarn("Licence reference \"%s\" defined but not used.", m, k)
+		}
+	}
+	return r
 }
 
 // Validate SpecVersion. Updates v.Major and v.Minor.
@@ -336,25 +375,138 @@ func (v *Validator) Creator(val *ValueCreator, noassert, none bool, property str
 	return true
 }
 
+// Validate a Review
+func (v *Validator) Review(rev *Review) bool {
+	if rev.Reviewer.val == "" && rev.Date.val == "" {
+		return true
+	}
+	r := rev.Reviewer.val == "" || v.Creator(&rev.Reviewer, false, false, "Reviewer", []string{"Person", "Organization", "Tool"}, 2)
+	return v.Date(&rev.Date) && r
+}
+
 // Validate a Package
 func (v *Validator) Package(pkg *Package) bool {
 	r := v.MandatoryText(pkg.Name, false, false, "Package Name")
-	r = r && v.SingleLineErr(pkg.Name, "Package Name")
+	r = v.SingleLineErr(pkg.Name, "Package Name") && r
 
-	r = r && v.SingleLineErr(pkg.Version, "Package Version")
-	r = r && v.SingleLineErr(pkg.FileName, "Package File Name")
+	r = v.SingleLineErr(pkg.Version, "Package Version") && r
+	r = v.SingleLineErr(pkg.FileName, "Package File Name") && r
 
-	r = r && (pkg.Supplier.V() == "" || v.Creator(&pkg.Supplier, true, false, "Package Supplier", []string{"Person", "Organization"}))
-	r = r && (pkg.Originator.V() == "" || v.Creator(&pkg.Originator, true, false, "Package Originator", []string{"Person", "Organization"}))
+	r = (pkg.Supplier.V() == "" || v.Creator(&pkg.Supplier, true, false, "Package Supplier", []string{"Person", "Organization"})) && r
+	r = (pkg.Originator.V() == "" || v.Creator(&pkg.Originator, true, false, "Package Originator", []string{"Person", "Organization"})) && r
 
-	r = r && v.Url(&pkg.DownloadLocation, true, true, "Package Download Location")
+	r = v.Url(&pkg.DownloadLocation, true, true, "Package Download Location") && r
 
-	r = r && v.VerificationCode(pkg.VerificationCode)
-	r = r && (pkg.Checksum == nil || (pkg.Checksum.Value.V() == "" && pkg.Checksum.Algo.V() == "") || v.Checksum(pkg.Checksum))
+	r = v.VerificationCode(pkg.VerificationCode) && r
+	r = (pkg.Checksum == nil || (pkg.Checksum.Value.V() == "" && pkg.Checksum.Algo.V() == "") || v.Checksum(pkg.Checksum)) && r
 
-	r = r && (pkg.HomePage.V() == "" || v.Url(&pkg.HomePage, true, true, "Package Home Page"))
-	r = r && v.MandatoryText(&pkg.CopyrightText, true, true, "Package Copyright Text")
+	r = (pkg.HomePage.V() == "" || v.Url(&pkg.HomePage, true, true, "Package Home Page")) && r
+	r = v.MandatoryText(&pkg.CopyrightText, true, true, "Package Copyright Text") && r
 
+	r = v.AnyLicenceInfoOptionals(pkg.LicenceConcluded, true, true, true, "Package Licence Concluded") && r
+	r = v.AnyLicenceInfoOptionals(pkg.LicenceDeclared, true, true, true, "Package Licence Declared") && r
+
+	for _, lic := range pkg.LicenceInfoFromFiles {
+		r = v.AnyLicenceInfoOptionals(lic, false, true, true, "Licence Info From File") && r
+	}
+
+	for _, file := range pkg.Files {
+		r = v.File(file) && r
+	}
+
+	return r
+}
+
+// Validate File
+func (v *Validator) File(f *File) bool {
+	r := v.MandatoryText(&f.Name, false, false, "File Name")
+
+	// file indexing
+	if r {
+		if v.files == nil {
+			v.files = make(map[string]*File)
+		}
+		_f, ok := v.files[f.Name.Val]
+		if ok {
+			if f != _f {
+				// file name already defined
+				if m := _f.Name.Meta; m != nil {
+					v.addErr("File already defined at line %d.", f.Name.Meta, _f.Name.Meta.LineStart)
+				} else {
+					v.addErr("File already defiend.", f.Name.Meta)
+				}
+				r = false
+			} else {
+				// already validated, just return true and skip
+				return true
+			}
+		} else {
+			v.files[f.Name.Val] = f
+		}
+	}
+
+	r = v.SingleLineErr(&f.Name, "File Name") && r
+
+	if f.Type.Val != "" {
+		var fileTypes []string
+		if v.Major == 1 {
+			fileTypes = []string{FT_BINARY, FT_SOURCE, FT_ARCHIVE, FT_OTHER}
+		} else if v.Major == 2 {
+			fileTypes = []string{FT_BINARY, FT_SOURCE, FT_ARCHIVE, FT_OTHER, FT_AUDIO, FT_VIDEO, FT_APPLICATION, FT_TEXT, FT_IMAGE}
+		}
+
+		ci, index := correctCaseMatch(f.Type.Val, fileTypes)
+		if index < 0 {
+			v.addErr("Incorrect File Type. Permitted values for SPDX-%d.%d are: %s.", f.Type.Meta, v.Major, v.Minor, strings.Join(fileTypes, ", "))
+			r = false
+		} else if ci == false {
+			v.addWarn("Incorrect File Type case. Correct value is '%s'.", f.Type.Meta, fileTypes[index])
+		}
+	}
+	r = f.Checksum != nil && v.Checksum(f.Checksum) && r
+	r = v.AnyLicenceInfoOptionals(f.LicenceConcluded, true, true, true, "File Licence Concluded") && r
+
+	for _, lic := range f.LicenceInfoInFile {
+		r = v.AnyLicenceInfoOptionals(lic, false, true, true, "Licence Info in File") && r
+	}
+
+	r = v.MandatoryText(&f.CopyrightText, true, true, "File Copyright Text") && r
+
+	for _, file := range f.Dependency {
+		r = v.File(file) && r
+	}
+
+	for _, contrib := range f.Contributor {
+		r = v.MandatoryText(contrib, false, false, "File Contributor") &&
+			v.SingleLineErr(contrib, "File Contributor") && r
+	}
+
+	// ArtifactOf
+	for _, artif := range f.ArtifactOf {
+		r = v.ArtifactOf(artif) && r
+	}
+
+	return r
+}
+
+// ArtifactOf
+func (v *Validator) ArtifactOf(a *ArtifactOf) bool {
+
+	notEmpty := a.Name.Val != "" || a.ProjectUri.Val != "" || (a.HomePage.Val != "" && a.HomePage.Val != "UNKNOWN")
+	if !notEmpty {
+		m := a.Name.Meta
+		if m == nil && a.ProjectUri.Meta != nil {
+			m = a.ProjectUri.Meta
+		}
+		if m == nil && a.HomePage.Meta != nil {
+			m = a.HomePage.Meta
+		}
+		v.addErr("Artifact is empty.", m)
+		// it's empty, no point in continuing validation
+		return false
+	}
+	r := v.Url(&a.ProjectUri, false, false, "Artifact Project URI")
+	r = (a.HomePage.Val == "UNKNOWN" || v.Url(&a.HomePage, false, false, "Artifact Home Page")) && r
 	return r
 }
 
@@ -371,7 +523,7 @@ func (v *Validator) VerificationCode(vc *VerificationCode) bool {
 	}
 
 	for _, e := range vc.ExcludedFiles {
-		r = r && v.MandatoryText(e, false, false, "Package Verification Code Excluded File")
+		r = v.MandatoryText(e, false, false, "Package Verification Code Excluded File") && r
 	}
 
 	return r
@@ -420,6 +572,14 @@ func (v *Validator) useLicence(id string, m *Meta) {
 	v.licUsed[id] = m
 }
 
+func (v *Validator) AnyLicenceInfoOptionals(lic AnyLicenceInfo, allowSets, none, noassert bool, property string) bool {
+	t, ok := lic.(LicenceReference)
+	if ok && ((none && t.V() == NONE) || (noassert && t.V() == NOASSERTION)) {
+		return true
+	}
+	return v.AnyLicenceInfo(lic, allowSets, property)
+}
+
 // Licences
 func (v *Validator) AnyLicenceInfo(lic AnyLicenceInfo, allowSets bool, property string) bool {
 	switch t := lic.(type) {
@@ -448,7 +608,7 @@ func (v *Validator) AnyLicenceInfo(lic AnyLicenceInfo, allowSets bool, property 
 		}
 		r := true
 		for _, l := range t {
-			r = r && v.AnyLicenceInfo(l, true, property)
+			r = v.AnyLicenceInfo(l, true, property) && r
 		}
 		return r
 	case DisjunctiveLicenceList:
@@ -458,7 +618,7 @@ func (v *Validator) AnyLicenceInfo(lic AnyLicenceInfo, allowSets bool, property 
 		}
 		r := true
 		for _, l := range t {
-			r = r && v.AnyLicenceInfo(l, true, property)
+			r = v.AnyLicenceInfo(l, true, property) && r
 		}
 		return r
 	case *Licence:
@@ -524,7 +684,7 @@ func (v *Validator) Licence(lic *Licence, property string) bool {
 	}
 	v.defineLicenceRef(lic.Id.V(), lic.Id.M())
 
-	r = r && v.SingleLineErr(lic.Name, "Licence Name")
+	r = v.SingleLineErr(lic.Name, "Licence Name") && r
 
 	if len(lic.CrossReference) == 0 {
 		r = false
@@ -532,7 +692,7 @@ func (v *Validator) Licence(lic *Licence, property string) bool {
 	}
 
 	for _, url := range lic.CrossReference {
-		r = r && v.Url(&url, false, false, "Licence Cross Reference")
+		r = v.Url(&url, false, false, "Licence Cross Reference") && r
 	}
 
 	return r
@@ -560,12 +720,12 @@ func (v *Validator) ExtractedLicensingInfo(lic *ExtractedLicensingInfo) bool {
 	}
 
 	for _, name := range lic.Name {
-		r = r && v.MandatoryText(name, false, false, "Extracted Licence Name")
-		r = r && v.SingleLineErr(name, "Extracted Licence Name")
+		r = v.MandatoryText(name, false, false, "Extracted Licence Name") && r
+		r = v.SingleLineErr(name, "Extracted Licence Name") && r
 	}
 
 	for _, url := range lic.CrossReference {
-		r = r && v.Url(&url, false, false, "Extracted Licence Cross Reference")
+		r = v.Url(&url, false, false, "Extracted Licence Cross Reference") && r
 	}
 
 	return r
