@@ -2,6 +2,19 @@ package spdx
 
 import "testing"
 
+// validator tester
+func hv(t *testing.T, v *Validator, result, expectedResult, errors, warnings bool) {
+	if result != expectedResult {
+		t.Errorf("Should return %b", expectedResult)
+	}
+	if v.HasErrors() != errors {
+		t.Errorf("Expecting errors: %b. Found: %+v", errors, v.Errors())
+	}
+	if v.HasWarnings() != warnings {
+		t.Errorf("Expecting warnings: %b. Found: %+v", errors, v.Errors())
+	}
+}
+
 // Testing Validator.SpecVersion
 
 func TestSpecVersion(t *testing.T) {
@@ -388,4 +401,139 @@ func TestVerificationCodeEmptyExcludedFiles(t *testing.T) {
 	if validator.HasWarnings() {
 		t.Error("Shouldn't have warnings.")
 	}
+}
+
+// Test Licence Reference ID
+func TestLicenceRefIdNonNumeric(t *testing.T) {
+	val := NewLicenceReference("LicenseRef-Abc", nil)
+	validator := new(Validator)
+	validator.Major, validator.Minor = 1, 0
+	if validator.LicenceRefId(val.V(), val.M(), "") {
+		t.Error("Should return false.")
+	}
+	if validator.HasErrors() {
+		t.Error("Should not have errors.")
+	}
+	if !validator.HasWarnings() {
+		t.Error("Should have warnings.")
+	}
+}
+
+func TestLicenceRefIdNonNumericValid(t *testing.T) {
+	val := NewLicenceReference("LicenseRef-Abc", nil)
+	validator := new(Validator)
+	validator.Major, validator.Minor = 1, 2
+	if !validator.LicenceRefId(val.V(), val.M(), "") {
+		t.Error("Should return true.")
+	}
+	if validator.HasErrors() {
+		t.Error("Should not have errors.")
+	}
+	if validator.HasWarnings() {
+		t.Error("Should not have warnings.")
+	}
+}
+
+func TestLicenceRefIdInvalid(t *testing.T) {
+	val := NewLicenceReference("LicenseRef-Abc_)f", nil)
+	validator := new(Validator)
+	validator.Major, validator.Minor = 1, 2
+	if validator.LicenceRefId(val.V(), val.M(), "") {
+		t.Error("Should return false.")
+	}
+	if validator.HasErrors() {
+		t.Error("Should not have errors.")
+	}
+	if !validator.HasWarnings() {
+		t.Error("Should have warnings.")
+	}
+}
+
+// Licence Reference
+
+func TestIsLicenceRef(t *testing.T) {
+	if v := "LicenseRef-A"; !isLicIdRef(v) {
+		t.Error(v)
+	}
+	if v := "something"; isLicIdRef(v) {
+		t.Error(v)
+	}
+	if v := "LicenseRef-fdasfdsagds42efsda"; !isLicIdRef(v) {
+		t.Error(v)
+	}
+}
+
+func TestLicenceReference(t *testing.T) {
+	val := NewLicenceReference("LicenseRef-Abc", nil)
+	validator := new(Validator)
+	validator.Major, validator.Minor = 1, 2
+	if !validator.AnyLicenceInfo(val, false, "") {
+		t.Error("Should return true.")
+	}
+	if validator.HasErrors() {
+		t.Error("Should not have errors. %+v", validator.Errors())
+	}
+	if validator.HasWarnings() {
+		t.Error("Should not have warnings. %+v", validator.Errors())
+	}
+	_, ok := validator.licUsed[val.V()]
+	if !ok {
+		t.Error("Licence ID not added as used.")
+	}
+}
+
+func TestLicenceReferenceInList(t *testing.T) {
+	val := NewLicenceReference("GPL-2.0", nil)
+	validator := new(Validator)
+	if !validator.AnyLicenceInfo(val, false, "") {
+		t.Error("Should return true.")
+	}
+	if validator.HasErrors() {
+		t.Error("Should not have errors %+v.", validator.Errors())
+	}
+	if validator.HasWarnings() {
+		t.Error("Should not have warnings %+v.", validator.Errors())
+	}
+}
+
+func TestLicenceReferenceNotInList(t *testing.T) {
+	val := NewLicenceReference("GPL", nil)
+	validator := new(Validator)
+	if validator.AnyLicenceInfo(val, false, "") {
+		t.Error("Should return false.")
+	}
+	if !validator.HasErrors() {
+		t.Error("Should have errors.")
+	}
+	if validator.HasWarnings() {
+		t.Error("Should not have warnings.")
+	}
+}
+
+// Test licence Sets
+func TestLicenceSetNotAllowed(t *testing.T) {
+	val := DisjunctiveLicenceList{NewLicenceReference("LicenseRef-1", nil), NewLicenceReference("LicenseRef-2", nil)}
+	validator := new(Validator)
+	validator.Major, validator.Minor = 1, 2
+	hv(t, validator, validator.AnyLicenceInfo(val, false, ""), false, true, false)
+
+	valc := ConjunctiveLicenceList{NewLicenceReference("LicenseRef-1", nil), NewLicenceReference("LicenseRef-2", nil)}
+	validator = new(Validator)
+	validator.Major, validator.Minor = 1, 2
+	hv(t, validator, validator.AnyLicenceInfo(valc, false, ""), false, true, false)
+
+}
+
+func TestLicenceSetNested(t *testing.T) {
+	val := DisjunctiveLicenceList{NewLicenceReference("LicenseRef-1", nil), ConjunctiveLicenceList{NewLicenceReference("LicenseRef-2", nil)}}
+	validator := new(Validator)
+	validator.Major, validator.Minor = 1, 2
+	hv(t, validator, validator.AnyLicenceInfo(val, true, ""), true, false, false)
+}
+
+func TestLicenceSetNestedError(t *testing.T) {
+	val := DisjunctiveLicenceList{NewLicenceReference("LicenseRef-1", nil), ConjunctiveLicenceList{NewLicenceReference("LicenseR", nil)}}
+	validator := new(Validator)
+	validator.Major, validator.Minor = 1, 2
+	hv(t, validator, validator.AnyLicenceInfo(val, true, ""), false, true, false)
 }

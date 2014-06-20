@@ -405,15 +405,22 @@ func isHex(val string) bool {
 	return b
 }
 
+func (v *Validator) useLicence(id string, m *Meta) {
+	if v.licUsed == nil {
+		v.licUsed = make(map[string]*Meta)
+	}
+	v.licUsed[id] = m
+}
+
 // Licences
 func (v *Validator) AnyLicenceInfo(lic AnyLicenceInfo, allowSets bool, property string) bool {
 	switch t := lic.(type) {
 	case LicenceReference:
 		if isLicIdRef(t.LicenceId()) {
 			v.LicenceRefId(t.LicenceId(), t.Id.M(), property)
-			v.licUsed[t.LicenceId()] = t.M()
+			v.useLicence(t.LicenceId(), t.M())
 			if t.Licence != nil {
-				v.defineLicenseRef(t.LicenceId(), t.Id.M())
+				v.defineLicenceRef(t.LicenceId(), t.Id.M())
 				if t.V() != t.Licence.V() {
 					v.addErr("%s: Licence Referece has a different ID than the licence it references to.", t.Licence.Id.M(), property)
 					return false
@@ -459,10 +466,10 @@ func (v *Validator) AnyLicenceInfo(lic AnyLicenceInfo, allowSets bool, property 
 // Returns whether the given ID is a Licence Reference ID (starts with LicenseRef-).
 // Does not check if the string after "LicenseRef-" satisfies the requirements of any SPDX version.
 func isLicIdRef(id string) bool {
-	return strings.HasPrefix("LicenseRef-", id)
+	return strings.HasPrefix(id, "LicenseRef-")
 }
 
-// Raise warning if invalid characters are used in LicenseRef ID
+// Raise warning if invalid characters are used in LicenseRef ID. Returns `false` if a warnings is created, `true` otherwise.
 func (v *Validator) LicenceRefId(id string, meta *Meta, property string) bool {
 	validChars := "a-z A-Z 0-9 + - ."
 	var ok bool
@@ -471,6 +478,7 @@ func (v *Validator) LicenceRefId(id string, meta *Meta, property string) bool {
 	} else {
 		// only numbers allowed in spdx < 1.2
 		ok, _ = regexp.MatchString("^LicenseRef-[0-9]+$", id)
+		validChars = "0-9"
 	}
 	if ok {
 		return true
@@ -480,7 +488,7 @@ func (v *Validator) LicenceRefId(id string, meta *Meta, property string) bool {
 }
 
 // Adds `id` as a defined Licence for this validator. Creates a warning if the validator already has this Licence ID.
-func (v *Validator) defineLicenseRef(id string, m *Meta) {
+func (v *Validator) defineLicenceRef(id string, m *Meta) {
 	at, ok := v.licDefined[id]
 	if ok {
 		if at != nil {
@@ -499,7 +507,7 @@ func (v *Validator) Licence(lic *Licence, property string) bool {
 		v.addErr("Not a valid licence reference format.", lic.Id.M())
 	}
 	r = r && v.LicenceRefId(lic.Id.V(), lic.Id.M(), "Licence ID")
-	v.defineLicenseRef(lic.Id.V(), lic.Id.M())
+	v.defineLicenceRef(lic.Id.V(), lic.Id.M())
 
 	r = r && v.SingleLineErr(lic.Name, "Licence Name")
 
@@ -518,12 +526,12 @@ func (v *Validator) Licence(lic *Licence, property string) bool {
 // Validate ExtractedLicensingInfo object
 func (v *Validator) ExtractedLicensingInfo(lic *ExtractedLicensingInfo) bool {
 	r := true
-	if isLicIdRef(lic.Id.V()) {
+	if !isLicIdRef(lic.Id.V()) {
 		r = false
 		v.addErr("Not a valid licence reference format.", lic.Id.M())
 	}
 	r = r && v.LicenceRefId(lic.Id.V(), lic.Id.M(), "Extracted Licence ID")
-	v.defineLicenseRef(lic.Id.V(), lic.Id.M())
+	v.defineLicenceRef(lic.Id.V(), lic.Id.M())
 
 	if len(lic.Name) == 0 {
 		r = false
