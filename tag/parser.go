@@ -340,7 +340,7 @@ func mapMerge(dest *updaterMapping, src updaterMapping) {
 }
 
 // Creates the mapping of a *spdx.Document in Tag format.
-func documentMap(doc *spdx.Document) updaterMapping {
+func documentMap(doc *spdx.Document) *updaterMapping {
 	doc.CreationInfo = new(spdx.CreationInfo)
 	doc.CreationInfo.Creator = make([]spdx.ValueCreator, 0)
 
@@ -476,7 +476,7 @@ func documentMap(doc *spdx.Document) updaterMapping {
 		},
 	}
 
-	return mapping
+	return &mapping
 }
 
 // Apply the relevant updater function if the given pair matches any.
@@ -485,8 +485,8 @@ func documentMap(doc *spdx.Document) updaterMapping {
 // err is the error returned by applying the mapping function or, if ok == false, an error with the relevant "mapping not found" message
 //
 // It returns two arguments to allow for easily creating parsing modes such as "ignore not known mapping"
-func applyMapping(tok *Token, mapping updaterMapping) (ok bool, err error) {
-	f, ok := mapping[tok.Key]
+func applyMapping(tok *Token, mapping *updaterMapping) (ok bool, err error) {
+	f, ok := (*mapping)[tok.Key]
 	if !ok {
 		return false, parseError("Invalid property or property needs another property to be defined before it: "+tok.Key, tok.Meta)
 	}
@@ -515,6 +515,19 @@ func Parse(lex lexer) (*spdx.Document, error) {
 
 	if lex.Err() != nil {
 		return nil, lex.Err()
+	}
+
+	// fix file dependency references
+	fileMap := make(map[string]*spdx.File)
+	for _, file := range doc.Files {
+		fileMap[file.Name.Val] = file
+	}
+	for _, file := range doc.Files {
+		for i, dep := range file.Dependency {
+			if f := fileMap[dep.Name.Val]; f != nil {
+				file.Dependency[i] = f
+			}
+		}
 	}
 
 	return doc, nil
