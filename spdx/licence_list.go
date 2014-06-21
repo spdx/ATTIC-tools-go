@@ -7,7 +7,7 @@ import (
 )
 
 // Should be configured accordingly.
-var LicenceListFile = "../licence-list.txt"
+var LicenceListFile = "licence-list.txt"
 
 var licenceList map[string]interface{}
 
@@ -34,7 +34,10 @@ func InitLicenceList() error {
 
 func CheckLicence(lic string) bool {
 	if licenceList == nil {
-		InitLicenceList()
+		err := InitLicenceList()
+		if err != nil {
+			panic(err)
+		}
 	}
 	_, ok := licenceList[lic]
 	return ok

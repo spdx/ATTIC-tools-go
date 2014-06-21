@@ -403,11 +403,27 @@ func (v *Validator) Package(pkg *Package) bool {
 	r = (pkg.HomePage.V() == "" || v.Url(&pkg.HomePage, true, true, "Package Home Page")) && r
 	r = v.MandatoryText(&pkg.CopyrightText, true, true, "Package Copyright Text") && r
 
-	r = v.AnyLicenceInfoOptionals(pkg.LicenceConcluded, true, true, true, "Package Licence Concluded") && r
-	r = v.AnyLicenceInfoOptionals(pkg.LicenceDeclared, true, true, true, "Package Licence Declared") && r
+	if pkg.LicenceConcluded == nil {
+		v.addErr("Package Licence Concluded cannot be empty.", pkg.Name.Meta)
+		r = false
+	} else {
+		r = v.AnyLicenceInfoOptionals(pkg.LicenceConcluded, true, true, true, "Package Licence Concluded") && r
+	}
+
+	if pkg.LicenceDeclared == nil {
+		v.addErr("Package Licence Declared cannot be empty.", pkg.Name.Meta)
+		r = false
+	} else {
+		r = v.AnyLicenceInfoOptionals(pkg.LicenceDeclared, true, true, true, "Package Licence Declared") && r
+	}
 
 	for _, lic := range pkg.LicenceInfoFromFiles {
-		r = v.AnyLicenceInfoOptionals(lic, false, true, true, "Licence Info From File") && r
+		if lic == nil {
+			v.addErr("Package Licence Info from Files cannot be empty.", pkg.Name.Meta)
+			r = false
+		} else {
+			r = v.AnyLicenceInfoOptionals(lic, false, true, true, "Licence Info From File") && r
+		}
 	}
 
 	for _, file := range pkg.Files {
@@ -464,10 +480,19 @@ func (v *Validator) File(f *File) bool {
 		}
 	}
 	r = f.Checksum != nil && v.Checksum(f.Checksum) && r
-	r = v.AnyLicenceInfoOptionals(f.LicenceConcluded, true, true, true, "File Licence Concluded") && r
-
+	if f.LicenceConcluded == nil {
+		v.addErr("File Licence Concluded cannot be empty.", f.Name.Meta)
+		r = false
+	} else {
+		r = v.AnyLicenceInfoOptionals(f.LicenceConcluded, true, true, true, "File Licence Concluded") && r
+	}
 	for _, lic := range f.LicenceInfoInFile {
-		r = v.AnyLicenceInfoOptionals(lic, false, true, true, "Licence Info in File") && r
+		if lic == nil {
+			v.addErr("Licence Info In File cannot be empty.", f.Name.Meta)
+			r = false
+		} else {
+			r = v.AnyLicenceInfoOptionals(lic, false, true, true, "Licence Info in File") && r
+		}
 	}
 
 	r = v.MandatoryText(&f.CopyrightText, true, true, "File Copyright Text") && r
@@ -626,7 +651,11 @@ func (v *Validator) AnyLicenceInfo(lic AnyLicenceInfo, allowSets bool, property 
 	case *ExtractedLicensingInfo:
 		return v.ExtractedLicensingInfo(t)
 	default:
-		v.addErr("%s: Unknown Licence type.", lic.M(), property)
+		var m *Meta
+		if lic != nil {
+			m = lic.M()
+		}
+		v.addErr("%s: Unknown Licence type.", m, property)
 		return false
 	}
 }

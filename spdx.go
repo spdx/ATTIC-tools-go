@@ -251,11 +251,7 @@ func validate() {
 		} else {
 			meta = " "
 		}
-		t := "ERROR: "
-		if e.Type == spdx.ValidWarning {
-			t = "WARNING: "
-		}
-		io.WriteString(output, input.Name()+meta+t+e.Error()+"\n")
+		io.WriteString(output, input.Name()+meta+e.Error()+"\n")
 	}
 
 }

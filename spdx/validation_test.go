@@ -685,3 +685,5 @@ func TestDefineLicence(t *testing.T) {
 		t.Error("Should have warnings.")
 	}
 }
+
+// Test document
