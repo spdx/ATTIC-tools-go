@@ -871,3 +871,36 @@ func TestReviewer(t *testing.T) {
 		}
 	}
 }
+
+func TestFileDependency(t *testing.T) {
+	input := []Pair{
+		Pair{"FileName", "file1.txt"},
+		Pair{"FileDependency", "file2.txt"},
+		Pair{"FileDependency", "file3.txt"},
+		Pair{"FileName", "file2.txt"},
+		Pair{"FileName", "file3.txt"},
+	}
+
+	doc, err := Parse(l(input))
+
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err)
+		t.FailNow()
+	}
+
+	if len(doc.Files) != 3 {
+		t.Errorf("Invalid no. of files. Found %d: %+v", len(doc.Files), doc.Files)
+		t.FailNow()
+	}
+
+	file1 := doc.Files[0]
+
+	if len(file1.Dependency) != 2 {
+		t.Logf("Wrong file dependency for file1. Found %d files: %s", len(file1.Dependency), file1.Dependency)
+		t.FailNow()
+	}
+
+	if file1.Dependency[0] != doc.Files[1] || file1.Dependency[1] != doc.Files[2] {
+		t.Errorf("Wrong dependencies. 1) Expected: %+v but found %+v\n2)Expected: %+v but found %+v\n", doc.Files[1], file1.Dependency[0], doc.Files[2], file1.Dependency[1])
+	}
+}
