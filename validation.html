@@ -17,7 +17,7 @@
       .content:hover {
         background-color: #eee;
       }
-      .col-numbers { background-color: #efefef; border-right: 1px solid #ddd; }
+      .col-numbers { background-color: #efefef; border-right: 1px solid #ddd; width:1%; white-space:nowrap; }
       .notif {
         position: relative;
         width: 5px;
@@ -27,8 +27,8 @@
       }
       .err1 { background: #933; }
       .err1 p { background: #fee; }
-      .err2 { background: #339; }
-      .err2 p { background: #eef; }
+      .err0 { background: #993; }
+      .err0 p { background: #ffe; }
       .notif p, .errlink p {
         position: absolute;
         top: 15px;
@@ -43,11 +43,11 @@
       header { background-color: #dfdfdf; padding: 10px; }
       #errLineSummary{ padding: 5px 10px; background:#efefef; font-size:10px; }
       .errlink { position: relative; }
-      .errlink p { white-space: nowrap; background: #fff; font-size:12px; }
+      .errlink p { white-space: nowrap; background: #fff; font-size:12px; z-index: 5; }
       .lb { display: block; margin: 3px 0px;}
       .lct { display: block; border-bottom: 1px solid #ccc; font-weight: bold; color: #333;}
       .lberr1 { color: #933; }
-      .lberr2 { color: #339; }
+      .lberr0 { color: #993; }
     </style>
   </head>
   <body>
