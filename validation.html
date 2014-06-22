@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <title>{{.FileName}} - SPDX Validation</title>
+    <style>
+      body {font-family: "Lucida Console", Monaco, monospace; margin:0; }
+      table { width: 100% }
+      td { vertical-align: top; }
+      .content, .lineNumber {
+        padding: 5px;
+        height: 15px;
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .lineNumber { text-align: right; }
+      .content:hover {
+        background-color: #eee;
+      }
+      .col-numbers { background-color: #efefef; border-right: 1px solid #ddd; }
+      .notif {
+        position: relative;
+        width: 5px;
+        margin: 0px 1px 0px 1px;
+        height: 12px;
+        display: inline-block;
+      }
+      .err1 { background: #933; }
+      .err1 p { background: #fee; }
+      .err2 { background: #339; }
+      .err2 p { background: #eef; }
+      .notif p, .errlink p {
+        position: absolute;
+        top: 15px;
+        left: -5px;
+        display: none;
+        padding: 5px;
+        border: 1px solid #333;
+      }
+      .notif:hover p, .errlink:hover p { display: inline-block; }
+      .number { display: inline-block; }
+      .invalid { font-weight: bold; color: #933; background: #fee; }
+      header { background-color: #dfdfdf; padding: 10px; }
+      #errLineSummary{ padding: 5px 10px; background:#efefef; font-size:10px; }
+      .errlink { position: relative; }
+      .errlink p { white-space: nowrap; background: #fff; font-size:12px; }
+      .lb { display: block; margin: 3px 0px;}
+      .lct { display: block; border-bottom: 1px solid #ccc; font-weight: bold; color: #333;}
+      .lberr1 { color: #933; }
+      .lberr2 { color: #339; }
+    </style>
+  </head>
+  <body>
+    <header>
+      This document has {{.NoOfErrors}} errors and {{.NoOfWarnings}} warnings.
+      <span style="float:right">{{.FileName}}</span>
+    </header>
+    <div id='errLineSummary'>
+      {{range .Lines}}{{if .Errors}}
+        <a href="#L{{.Number}}" class="errlink">#{{.Number}}<p>
+          <span class="lct">{{.Content}}</span>
+          {{range .Errors}}
+            <span class="lb lberr{{.Type}}">{{.}}</span>
+          {{end}}
+          </p></a>
+      {{end}}{{end}}
+
+    </div>
+    <table cellpadding="0" cellspacing="0">
+      <tr>
+        <td class="col-numbers">
+            {{range .Lines}}
+              <div class="lineNumber" id="L{{.Number}}">
+                <!-- Small red/yellow notifications -->
+                  {{range .Errors}}<div class="notif err{{.Type}}"><p>{{.}}</p></div>{{end}}
+                <div class="number">{{.Number}}</div>
+              </div>
+            {{end}}
+        </td>
+        <td class="col-content">
+            {{with .Lines}}
+              {{range .}}
+                <div id="LC{{.Number}}" class="content {{.Classname}}">
+                  {{.Content}}
+                </div>
+              {{end}}
+            {{end}}
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

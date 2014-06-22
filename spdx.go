@@ -10,10 +10,14 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"html/template"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -36,6 +40,7 @@ var (
 	flagInputFormat   = flag.String("f", "auto", "Defines the format of the input. Valid values: rdf, tag or auto. Default is auto.")
 	flagHelp          = flag.Bool("help", false, "Show help message.")
 	flagVersion       = flag.Bool("version", false, "Show tool version and supported SPDX spec versions.")
+	flagHTML          = flag.Bool("html", false, "In validation, open a browser with visual validation results. If -o is specified, write HTML to file instead.")
 )
 
 var (
@@ -225,6 +230,11 @@ func validate() {
 	validator := new(spdx.Validator)
 	validator.Document(doc)
 
+	if *flagHTML {
+		validateHtml(doc, validator)
+		return
+	}
+
 	if validator.Ok() {
 		io.WriteString(output, "Document is valid.\n")
 		os.Exit(0)
@@ -254,6 +264,117 @@ func validate() {
 		io.WriteString(output, input.Name()+meta+e.Error()+"\n")
 	}
 
+}
+
+type line struct {
+	Number    int
+	Classname string
+	Content   string
+	Errors    []*spdx.ValidationError
+}
+
+type summary struct {
+	Lines        []*line
+	FileName     string
+	NoOfErrors   int
+	NoOfWarnings int
+	OtherErrors  []*spdx.ValidationError
+}
+
+func validateHtml(doc *spdx.Document, validator *spdx.Validator) {
+	sum := new(summary)
+	sum.FileName = input.Name()
+	sum.OtherErrors = make([]*spdx.ValidationError, 0)
+
+	errmap := make(map[int][]*spdx.ValidationError)
+	for _, e := range validator.Errors() {
+		if e.Meta != nil {
+			if _, ok := errmap[e.Meta.LineStart]; ok {
+				errmap[e.Meta.LineStart] = append(errmap[e.Meta.LineStart], e)
+			} else {
+				errmap[e.Meta.LineStart] = []*spdx.ValidationError{e}
+			}
+		} else {
+			sum.OtherErrors = append(sum.OtherErrors, e)
+		}
+		if e.Type == spdx.ValidWarning {
+			sum.NoOfWarnings++
+		} else {
+			sum.NoOfErrors++
+		}
+	}
+
+	// read input again
+	input.Close()
+	input, err := os.Open(sum.FileName)
+	defer input.Close()
+	if err != nil {
+		exitErr(err)
+	}
+
+	sum.Lines = make([]*line, 0, 10)
+
+	scanner := bufio.NewScanner(input)
+	i := 1
+	for scanner.Scan() {
+		clsn := "valid"
+		if len(errmap[i]) > 0 {
+			clsn = "invalid"
+		}
+		sum.Lines = append(sum.Lines, &line{
+			Number:    i,
+			Content:   scanner.Text(),
+			Errors:    errmap[i],
+			Classname: clsn,
+		})
+		i++
+	}
+	if scanner.Err() != nil {
+		exitErr(scanner.Err())
+	}
+
+	if *flagOutput == "-" {
+		dir, err := ioutil.TempDir("", "spdx-go")
+		if err != nil {
+			exitErr(err)
+		}
+		output, err = os.Create(filepath.Join(dir, "spdx-go-valid.html"))
+		if err != nil {
+			exitErr(err)
+		}
+	}
+
+	tmpl, err := template.ParseFiles("validation.html")
+	if err != nil {
+		exitErr(err)
+	}
+
+	err = tmpl.Execute(output, sum)
+	if err != nil {
+		exitErr(err)
+	}
+
+	if *flagOutput == "-" {
+		if !startBrowser(output.Name()) {
+			exitErr(errors.New("Couldn't open browser. Generated file: " + output.Name()))
+		}
+	}
+}
+
+// Credits: https://code.google.com/p/go/source/browse/cmd/cover/html.go?repo=tools
+func startBrowser(url string) bool {
+	// try to start the browser
+	var args []string
+	switch runtime.GOOS {
+	case "darwin":
+		args = []string{"open"}
+	case "windows":
+		args = []string{"cmd", "/c", "start"}
+	default:
+		args = []string{"xdg-open"}
+	}
+	cmd := exec.Command(args[0], append(args[1:], url)...)
+	return cmd.Start() == nil
 }
 
 func format() {
