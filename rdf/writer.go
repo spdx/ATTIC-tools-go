@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"strings"
 )
 
 // Writes the input to the specified RDF format
@@ -118,24 +119,21 @@ func (f *Formatter) Document(doc *spdx.Document) (docId goraptor.Term, err error
 		return
 	}
 
-	/*
-		if err = f.Reviews(docId, "reviewed", doc.Reviews); err != nil {
-			return
-		}
-	*/
+	if err = f.Reviews(docId, "reviewed", doc.Reviews); err != nil {
+		return
+	}
+
 	if err = f.Packages(docId, "describesPackage", doc.Packages); err != nil {
 		return
 	}
 
-	/*
-	   if err = f.Files(docId, "referencesFile", doc.Files); err != nil {
-	       return
-	   }
+	if err = f.Files(docId, "referencesFile", doc.Files); err != nil {
+		return
+	}
 
-	   if err = f.ExtrLicInfos(docId, "hasExtractedLicensingInfo", doc.ExtractedLicenceInfo); err != nil {
-	       return
-	   }
-	*/
+	if err = f.ExtrLicInfos(docId, "hasExtractedLicensingInfo", doc.ExtractedLicenceInfo); err != nil {
+		return
+	}
 
 	return docId, nil
 }
@@ -168,9 +166,16 @@ func (f *Formatter) CreationInfo(cr *spdx.CreationInfo) (id goraptor.Term, err e
 }
 
 // Write a slice of reviews.
-func (f *Formatter) Reviews(rs []*spdx.Review) error {
+func (f *Formatter) Reviews(parent goraptor.Term, element string, rs []*spdx.Review) error {
+	if len(rs) == 0 {
+		return nil
+	}
 	for _, r := range rs {
-		if err := f.Review(r); err != nil {
+		revId, err := f.Review(r)
+		if err != nil {
+			return err
+		}
+		if err = f.addTerm(parent, element, revId); err != nil {
 			return err
 		}
 	}
@@ -178,8 +183,8 @@ func (f *Formatter) Reviews(rs []*spdx.Review) error {
 }
 
 // Write a review.
-func (f *Formatter) Review(r *spdx.Review) error {
-	return nil
+func (f *Formatter) Review(r *spdx.Review) (id goraptor.Term, err error) {
+	return
 }
 
 // Write a slice of packages.
@@ -234,9 +239,21 @@ func (f *Formatter) Package(pkg *spdx.Package) (id goraptor.Term, err error) {
 			return id, err
 		}
 	}
+
+	if pkg.Checksum != nil {
+		cksumId, err := f.Checksum(pkg.Checksum)
+		if err != nil {
+			return id, err
+		}
+		if err = f.addTerm(id, "checksum", cksumId); err != nil {
+			return id, err
+		}
+	}
+
 	return id, nil
 }
 
+// Write a VerificationCode
 func (f *Formatter) VerificationCode(vc *spdx.VerificationCode) (id goraptor.Term, err error) {
 	id = f.newId("vc")
 
@@ -259,10 +276,40 @@ func (f *Formatter) VerificationCode(vc *spdx.VerificationCode) (id goraptor.Ter
 	return id, nil
 }
 
+// Write a Checksum
+func (f *Formatter) Checksum(cksum *spdx.Checksum) (id goraptor.Term, err error) {
+	id = f.newId("cksum")
+
+	if err = f.setType(id, "Checksum"); err != nil {
+		return
+	}
+
+	err = f.addLiteral(id, "checksumValue", cksum.Value.Val)
+	if err != nil {
+		return
+	}
+
+	algo := strings.ToLower(cksum.Algo.Val)
+	if algo == "sha1" {
+		err = f.addTerm(id, "algorithm", prefix("checksumAlgorithm_sha1"))
+	} else {
+		err = f.addLiteral(id, "algorithm", algo)
+	}
+
+	return id, err
+}
+
 // Write a slice of ExtractedLicensingInfo
-func (f *Formatter) ExtrLicInfos(lics []*spdx.ExtractedLicensingInfo) error {
+func (f *Formatter) ExtrLicInfos(parent goraptor.Term, element string, lics []*spdx.ExtractedLicensingInfo) error {
+	if len(lics) == 0 {
+		return nil
+	}
 	for _, lic := range lics {
-		if err := f.ExtrLicInfo(lic); err != nil {
+		licId, err := f.ExtrLicInfo(lic)
+		if err != nil {
+			return err
+		}
+		if err = f.addTerm(parent, element, licId); err != nil {
 			return err
 		}
 	}
@@ -270,14 +317,21 @@ func (f *Formatter) ExtrLicInfos(lics []*spdx.ExtractedLicensingInfo) error {
 }
 
 // Write an ExtractedLicensingInfo
-func (f *Formatter) ExtrLicInfo(lic *spdx.ExtractedLicensingInfo) error {
-	return nil
+func (f *Formatter) ExtrLicInfo(lic *spdx.ExtractedLicensingInfo) (id goraptor.Term, err error) {
+	return
 }
 
 // Write a slice of files.
-func (f *Formatter) Files(files []*spdx.File) error {
+func (f *Formatter) Files(parent goraptor.Term, element string, files []*spdx.File) error {
+	if len(files) == 0 {
+		return nil
+	}
 	for _, file := range files {
-		if err := f.File(file); err != nil {
+		fId, err := f.File(file)
+		if err != nil {
+			return err
+		}
+		if err = f.addTerm(parent, element, fId); err != nil {
 			return err
 		}
 	}
@@ -285,8 +339,8 @@ func (f *Formatter) Files(files []*spdx.File) error {
 }
 
 // Write a file.
-func (f *Formatter) File(file *spdx.File) error {
-	return nil
+func (f *Formatter) File(file *spdx.File) (id goraptor.Term, err error) {
+	return
 }
 
 // Closes the stream and frees the serializer. Always call after writing using the Formatter.
