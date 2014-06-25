@@ -1,7 +1,7 @@
 package rdf
 
 import (
-	"github.com/vladvelici/goraptor"
+	"github.com/deltamobile/goraptor"
 	"github.com/vladvelici/spdx-go/spdx"
 	"io"
 	"os"

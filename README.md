@@ -38,7 +38,7 @@ Dependencies
 ------------
 
 * [libraptor2][raptor] for parsing and serializing RDF
-* my fork of [goraptor][goraptor] by [William Waites][ww]
+* @deltamobile/goraptor fork of [goraptor][goraptor] by [William Waites][ww]
 
 Building and testing
 --------------------
@@ -54,5 +54,5 @@ The code is available in two repositories:
 2. Mirrored on GitHub at https://github.com/vladvelici/spdx-go
 
 [raptor]:http://librdf.org/raptor/
-[goraptor]:http://github.com/vladvelici/goraptor
+[goraptor]:http://github.com/deltamobile/goraptor
 [ww]:https://bitbucket.org/ww/goraptor
