@@ -6,8 +6,7 @@ type AnyLicenceInfo interface {
 }
 
 type LicenceReference struct {
-	Id      ValueStr
-	Licence *Licence
+	Id ValueStr
 }
 
 func (l LicenceReference) LicenceId() string { return l.Id.V() }
@@ -16,45 +15,11 @@ func (l LicenceReference) V() string         { return l.LicenceId() }
 
 // LicenceReference comparison ignoring metadata
 func (a LicenceReference) Equal(b LicenceReference) bool {
-	return a.Id.Val == b.Id.Val && a.Licence.Equal(b.Licence)
+	return a.Id.Val == b.Id.Val
 }
 
 func NewLicenceReference(id string, m *Meta) LicenceReference {
 	return LicenceReference{Id: Str(id, m)}
-}
-
-type Licence struct {
-	Id               ValueStr
-	Name             ValueStr // optional
-	Text             ValueStr
-	isOsiApproved    ValueBool
-	StandardHeader   []ValueStr // optional
-	StandardTemplate ValueStr   // optional
-	CrossReference   []ValueStr // optional
-	Comment          ValueStr   // optional
-}
-
-func (l *Licence) LicenceId() string { return l.Id.V() }
-func (l *Licence) V() string         { return l.LicenceId() }
-func (l *Licence) M() *Meta          { return nil }
-
-// Licence comparison ignoring metadata
-func (a *Licence) Equal(b *Licence) bool {
-	if a == b {
-		return true
-	}
-	if a == nil || b == nil {
-		return false
-	}
-	return a.Id.Equal(b.Id) &&
-		a.Name.Equal(b.Name) &&
-		a.Text.Equal(b.Text) &&
-		a.isOsiApproved.Val == b.isOsiApproved.Val &&
-		len(a.StandardHeader) == len(b.StandardHeader) &&
-		a.StandardTemplate.Equal(b.StandardTemplate) &&
-		len(a.CrossReference) == len(b.CrossReference) &&
-		a.Comment.Equal(b.Comment)
-
 }
 
 type ExtractedLicensingInfo struct {

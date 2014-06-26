@@ -12,7 +12,6 @@ type Document struct {
 	Files                []*File                   // mandatory
 	Comment              ValueStr                  // optional
 	Reviews              []*Review                 // optional
-	OtherLicences        map[string]*Licence       // licences that are not in the spec and are referenced to
 }
 
 type CreationInfo struct {

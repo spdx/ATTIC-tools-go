@@ -612,13 +612,6 @@ func (v *Validator) AnyLicenceInfo(lic AnyLicenceInfo, allowSets bool, property 
 		if isLicIdRef(t.LicenceId()) {
 			v.LicenceRefId(t.LicenceId(), t.Id.M(), property)
 			v.useLicence(t.LicenceId(), t.M())
-			if t.Licence != nil {
-				v.defineLicenceRef(t.LicenceId(), t.Id.M())
-				if t.V() != t.Licence.V() {
-					v.addErr("%s: Licence Referece has a different ID than the licence it references to.", t.Licence.Id.M(), property)
-					return false
-				}
-			}
 			return true
 		}
 		if !CheckLicence(t.V()) {
@@ -646,8 +639,6 @@ func (v *Validator) AnyLicenceInfo(lic AnyLicenceInfo, allowSets bool, property 
 			r = v.AnyLicenceInfo(l, true, property) && r
 		}
 		return r
-	case *Licence:
-		return v.Licence(t, property)
 	case *ExtractedLicensingInfo:
 		return v.ExtractedLicensingInfo(t)
 	default:
@@ -700,31 +691,6 @@ func (v *Validator) defineLicenceRef(id string, m *Meta) {
 		}
 	}
 	v.licDefined[id] = m
-}
-
-// Validates a Licence object.
-func (v *Validator) Licence(lic *Licence, property string) bool {
-	r := true
-	if !isLicIdRef(lic.Id.V()) {
-		v.addErr("Not a valid licence reference format.", lic.Id.M())
-		r = false
-	} else {
-		v.LicenceRefId(lic.Id.V(), lic.Id.M(), "Licence ID")
-	}
-	v.defineLicenceRef(lic.Id.V(), lic.Id.M())
-
-	r = v.SingleLineErr(lic.Name, "Licence Name") && r
-
-	if len(lic.CrossReference) == 0 {
-		r = false
-		v.addErr("Licences not in the SPDX Licence List must have at least one reference URI.", lic.Id.M())
-	}
-
-	for _, url := range lic.CrossReference {
-		r = v.Url(&url, false, false, "Licence Cross Reference") && r
-	}
-
-	return r
 }
 
 // Validate ExtractedLicensingInfo object
