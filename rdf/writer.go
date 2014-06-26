@@ -30,7 +30,15 @@ func WriteRdf(input io.Reader, output io.Writer, format string) error {
 	return err
 }
 
-// Used to write documents in RDF format
+// Writes a SPDX Document to rdf/xml abbreviated format.
+func Write(output *os.File, doc *spdx.Document) error {
+	f := NewFormatter(output, "rdfxml-abbrev")
+	_, err := f.Document(doc)
+	f.Close()
+	return err
+}
+
+// Used to write SPDX Documents in RDF format
 type Formatter struct {
 	serializer *goraptor.Serializer
 	nodeIds    map[string]int
@@ -40,6 +48,12 @@ type Formatter struct {
 func NewFormatter(output *os.File, format string) *Formatter {
 	s := goraptor.NewSerializer(format)
 	s.StartStream(output, baseUri)
+
+	s.SetNamespace("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+	s.SetNamespace("", "http://spdx.org/rdf/terms#")
+	s.SetNamespace("rdfs", "http://www.w3.org/2000/01/rdf-schema#")
+	s.SetNamespace("doap", "http://usefulinc.com/ns/doap#")
+
 	return &Formatter{
 		serializer: s,
 		nodeIds:    make(map[string]int),
@@ -148,8 +162,8 @@ func (f *Formatter) CreationInfo(cr *spdx.CreationInfo) (id goraptor.Term, err e
 
 	err = f.addPairs(id,
 		pair{"created", cr.Created.V()},
-		pair{"rdfs:comment", cr.Comment.V()},
 		pair{"licenseListVersion", cr.LicenceListVersion.V()},
+		pair{"rdfs:comment", cr.Comment.V()},
 	)
 
 	if err != nil {
@@ -175,6 +189,9 @@ func (f *Formatter) Reviews(parent goraptor.Term, element string, rs []*spdx.Rev
 		if err != nil {
 			return err
 		}
+		if revId == nil {
+			continue
+		}
 		if err = f.addTerm(parent, element, revId); err != nil {
 			return err
 		}
@@ -184,7 +201,19 @@ func (f *Formatter) Reviews(parent goraptor.Term, element string, rs []*spdx.Rev
 
 // Write a review.
 func (f *Formatter) Review(r *spdx.Review) (id goraptor.Term, err error) {
-	return
+	id = f.newId("rev")
+
+	if err = f.setType(id, "Review"); err != nil {
+		return
+	}
+
+	err = f.addPairs(id,
+		pair{"reviewer", r.Reviewer.V()},
+		pair{"reviewDate", r.Date.V()},
+		pair{"rdfs:comment", r.Comment.Val},
+	)
+
+	return id, err
 }
 
 // Write a slice of packages.
@@ -250,7 +279,28 @@ func (f *Formatter) Package(pkg *spdx.Package) (id goraptor.Term, err error) {
 		}
 	}
 
-	return id, nil
+	if pkg.LicenceConcluded != nil {
+		licId, err := f.Licence(pkg.LicenceConcluded)
+		if err != nil {
+			return id, err
+		}
+		if err = f.addTerm(id, "licenseConcluded", licId); err != nil {
+			return id, err
+		}
+	}
+
+	if pkg.LicenceDeclared != nil {
+		licId, err := f.Licence(pkg.LicenceDeclared)
+		if err != nil {
+			return id, err
+		}
+		if err = f.addTerm(id, "licenseDeclared", licId); err != nil {
+			return id, err
+		}
+	}
+
+	err = f.Licences(id, "licenseInfoFromFiles", pkg.LicenceInfoFromFiles)
+	return
 }
 
 // Write a VerificationCode
@@ -299,6 +349,69 @@ func (f *Formatter) Checksum(cksum *spdx.Checksum) (id goraptor.Term, err error)
 	return id, err
 }
 
+// Write a slice of AnyLicenceInfo
+func (f *Formatter) Licences(parent goraptor.Term, element string, lics []spdx.AnyLicenceInfo) error {
+	if len(lics) == 0 {
+		return nil
+	}
+	for _, lic := range lics {
+		id, err := f.Licence(lic)
+		if err != nil {
+			return err
+		}
+		if id == nil {
+			continue
+		}
+		if err = f.addTerm(parent, element, id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Write AnyLicenceInfo
+func (f *Formatter) Licence(licence spdx.AnyLicenceInfo) (id goraptor.Term, err error) {
+	switch lic := licence.(type) {
+	case spdx.LicenceReference:
+		val := lic.LicenceId()
+		if spdx.CheckLicence(val) {
+			return uri("http://spdx.org/licenses/" + val), nil
+		}
+		return blank(val), nil
+	case spdx.ConjunctiveLicenceList:
+		id = f.newId("lic")
+		if err = f.setType(id, "ConjunctiveLicenceSet"); err != nil {
+			return
+		}
+		for _, mem := range lic {
+			memberId, err := f.Licence(mem)
+			if err != nil {
+				return id, err
+			}
+			if err = f.addTerm(id, "member", memberId); err != nil {
+				return id, err
+			}
+		}
+		return id, nil
+	case spdx.DisjunctiveLicenceList:
+		id = f.newId("lic")
+		if err = f.setType(id, "DisjunctiveLicenceSet"); err != nil {
+			return
+		}
+		for _, mem := range lic {
+			memberId, err := f.Licence(mem)
+			if err != nil {
+				return id, err
+			}
+			if err = f.addTerm(id, "member", memberId); err != nil {
+				return id, err
+			}
+		}
+		return id, nil
+	}
+	return nil, nil
+}
+
 // Write a slice of ExtractedLicensingInfo
 func (f *Formatter) ExtrLicInfos(parent goraptor.Term, element string, lics []*spdx.ExtractedLicensingInfo) error {
 	if len(lics) == 0 {
@@ -308,6 +421,9 @@ func (f *Formatter) ExtrLicInfos(parent goraptor.Term, element string, lics []*s
 		licId, err := f.ExtrLicInfo(lic)
 		if err != nil {
 			return err
+		}
+		if licId == nil {
+			continue
 		}
 		if err = f.addTerm(parent, element, licId); err != nil {
 			return err
@@ -331,6 +447,9 @@ func (f *Formatter) Files(parent goraptor.Term, element string, files []*spdx.Fi
 		if err != nil {
 			return err
 		}
+		if fId == nil {
+			continue
+		}
 		if err = f.addTerm(parent, element, fId); err != nil {
 			return err
 		}
@@ -340,6 +459,49 @@ func (f *Formatter) Files(parent goraptor.Term, element string, files []*spdx.Fi
 
 // Write a file.
 func (f *Formatter) File(file *spdx.File) (id goraptor.Term, err error) {
+	id = f.newId("file")
+
+	if err = f.setType(id, "File"); err != nil {
+		return
+	}
+
+	err = f.addPairs(id,
+		pair{"fileName", file.Name.Val},
+		pair{"licenseComments", file.LicenceComments.Val},
+		pair{"copyrightText", file.CopyrightText.Val},
+		pair{"rdfs:comment", file.Comment.Val},
+		pair{"noticeText", file.Notice.Val},
+	)
+	if err != nil {
+		return
+	}
+
+	if file.Type.Val != "" {
+		if err = f.addTerm(id, "fileType", prefix(file.Type.Val)); err != nil {
+			return
+		}
+	}
+	if file.Checksum != nil {
+		cksumId, err := f.Checksum(file.Checksum)
+		if err != nil {
+			return id, err
+		}
+		if err = f.addTerm(id, "checksum", cksumId); err != nil {
+			return id, err
+		}
+	}
+
+	if file.LicenceConcluded != nil {
+		licId, err := f.Licence(file.LicenceConcluded)
+		if err != nil {
+			return id, err
+		}
+		if err = f.addTerm(id, "licenseConcluded", licId); err != nil {
+			return id, err
+		}
+	}
+
+	err = f.Licences(id, "licenseInfoInFiles", file.LicenceInfoInFile)
 	return
 }
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/vladvelici/spdx-go/rdf"
 	"github.com/vladvelici/spdx-go/spdx"
 	"github.com/vladvelici/spdx-go/tag"
 )
@@ -205,9 +206,13 @@ func convert() {
 	}
 
 	if *flagConvert == formatTag {
-		tag.Write(output, doc)
+		err = tag.Write(output, doc)
 	} else {
-		// rdf write
+		err = rdf.Write(output, doc)
+	}
+
+	if err != nil {
+		exitErr(err)
 	}
 }
 
