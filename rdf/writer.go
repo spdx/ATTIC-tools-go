@@ -1,6 +1,7 @@
 package rdf
 
 import (
+	"errors"
 	"github.com/deltamobile/goraptor"
 	"github.com/vladvelici/spdx-go/spdx"
 	"io"
@@ -32,7 +33,20 @@ func WriteRdf(input io.Reader, output io.Writer, format string) error {
 
 // Writes a SPDX Document to rdf/xml abbreviated format.
 func Write(output *os.File, doc *spdx.Document) error {
-	f := NewFormatter(output, "rdfxml-abbrev")
+	f := NewFormatter(output, Fmt_rdfxmlAbbrev)
+	_, err := f.Document(doc)
+	f.Close()
+	return err
+}
+
+// Writes a SPDX Document to raptor format. format must be one of the format constants (Fmt_*)
+func WriteFromat(output *os.File, doc *spdx.Document, format string) error {
+	if format == "rdf" {
+		format = Fmt_rdfxmlAbbrev
+	} else if !FormatOk(format) {
+		return errors.New("Invalid output format.")
+	}
+	f := NewFormatter(output, format)
 	_, err := f.Document(doc)
 	f.Close()
 	return err
@@ -42,6 +56,9 @@ func Write(output *os.File, doc *spdx.Document) error {
 type Formatter struct {
 	serializer *goraptor.Serializer
 	nodeIds    map[string]int
+
+	// index file nodes by name
+	fileIds map[string]goraptor.Term
 }
 
 // Create a new Formatter that writes to output
@@ -57,6 +74,7 @@ func NewFormatter(output *os.File, format string) *Formatter {
 	return &Formatter{
 		serializer: s,
 		nodeIds:    make(map[string]int),
+		fileIds:    make(map[string]goraptor.Term),
 	}
 }
 
@@ -375,7 +393,7 @@ func (f *Formatter) Licence(licence spdx.AnyLicenceInfo) (id goraptor.Term, err 
 	case spdx.LicenceReference:
 		val := lic.LicenceId()
 		if spdx.CheckLicence(val) {
-			return uri("http://spdx.org/licenses/" + val), nil
+			return uri(licenceUri + val), nil
 		}
 		return blank(val), nil
 	case spdx.ConjunctiveLicenceList:
@@ -422,9 +440,6 @@ func (f *Formatter) ExtrLicInfos(parent goraptor.Term, element string, lics []*s
 		if err != nil {
 			return err
 		}
-		if licId == nil {
-			continue
-		}
 		if err = f.addTerm(parent, element, licId); err != nil {
 			return err
 		}
@@ -434,6 +449,37 @@ func (f *Formatter) ExtrLicInfos(parent goraptor.Term, element string, lics []*s
 
 // Write an ExtractedLicensingInfo
 func (f *Formatter) ExtrLicInfo(lic *spdx.ExtractedLicensingInfo) (id goraptor.Term, err error) {
+	id = blank(lic.LicenceId())
+	if id == blank("") {
+		id = f.newId("lic")
+	}
+
+	if err = f.setType(id, "ExtractedLicensingInfo"); err != nil {
+		return
+	}
+
+	err = f.addPairs(id,
+		pair{"licenseId", lic.LicenceId()},
+		pair{"extractedText", lic.Text.Val},
+		pair{"rdfs:comment", lic.Comment.Val},
+	)
+
+	if err != nil {
+		return
+	}
+
+	for _, name := range lic.Name {
+		if err = f.addLiteral(id, "licenseName", name.Val); err != nil {
+			return
+		}
+	}
+
+	for _, xref := range lic.CrossReference {
+		if err = f.addLiteral(id, "rdfs:seeAlso", xref.Val); err != nil {
+			return
+		}
+	}
+
 	return
 }
 
@@ -459,7 +505,13 @@ func (f *Formatter) Files(parent goraptor.Term, element string, files []*spdx.Fi
 
 // Write a file.
 func (f *Formatter) File(file *spdx.File) (id goraptor.Term, err error) {
+	id, ok := f.fileIds[file.Name.Val]
+	if ok {
+		return
+	}
+
 	id = f.newId("file")
+	f.fileIds[file.Name.Val] = id
 
 	if err = f.setType(id, "File"); err != nil {
 		return
@@ -472,6 +524,7 @@ func (f *Formatter) File(file *spdx.File) (id goraptor.Term, err error) {
 		pair{"rdfs:comment", file.Comment.Val},
 		pair{"noticeText", file.Notice.Val},
 	)
+
 	if err != nil {
 		return
 	}
@@ -481,6 +534,7 @@ func (f *Formatter) File(file *spdx.File) (id goraptor.Term, err error) {
 			return
 		}
 	}
+
 	if file.Checksum != nil {
 		cksumId, err := f.Checksum(file.Checksum)
 		if err != nil {
@@ -499,6 +553,10 @@ func (f *Formatter) File(file *spdx.File) (id goraptor.Term, err error) {
 		if err = f.addTerm(id, "licenseConcluded", licId); err != nil {
 			return id, err
 		}
+	}
+
+	if err = f.Files(id, "FileDependency", file.Dependency); err != nil {
+		return
 	}
 
 	err = f.Licences(id, "licenseInfoInFiles", file.LicenceInfoInFile)

@@ -146,7 +146,10 @@ func main() {
 }
 
 func validFormat(val string, allowAuto bool) bool {
-	return val == formatRdf || val == formatTag || (val == formatAuto && allowAuto)
+	if val == formatRdf || val == formatTag || (val == formatAuto && allowAuto) {
+		return true
+	}
+	return rdf.FormatOk(val)
 }
 
 // Tries to guess the format of the input file. Does not work on stdin.
@@ -208,7 +211,7 @@ func convert() {
 	if *flagConvert == formatTag {
 		err = tag.Write(output, doc)
 	} else {
-		err = rdf.Write(output, doc)
+		err = rdf.WriteFromat(output, doc, *flagConvert)
 	}
 
 	if err != nil {
