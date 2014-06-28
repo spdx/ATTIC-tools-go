@@ -201,7 +201,7 @@ func convert() {
 		tag.CaseSensitive(*flagCaseSensitive)
 		doc, err = tag.Build(input)
 	} else {
-		// doc, err = rdf.Parse(input)
+		doc, err = rdf.Parse(input, *flagInputFormat)
 	}
 
 	if err != nil {
