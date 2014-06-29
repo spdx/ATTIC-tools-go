@@ -28,6 +28,7 @@ const (
 	msgIncompatibleTypesGo  = "Node %s has type %T but expected %s."
 	msgPropertyNotSupported = "Property %s is not supported for %s."
 	msgAlreadyDefined       = "Property already defined."
+	msgUnknownType          = "Found type %s which is unknown."
 )
 
 // Simple, one function call interface to parse a document
@@ -150,16 +151,24 @@ func NewParser(input io.Reader, format string) *Parser {
 // Parse the whole input stream and return the resulting spdx.Document or the first error that occurred.
 func (p *Parser) Parse() (*spdx.Document, error) {
 	ch := p.rdfparser.Parse(p.input, baseUri)
+	defer func() {
+		// consume the channel if there's anything left.
+		for _ = range ch {
+		}
+	}()
+	var err error
+	for statement := range ch {
+		if err = p.processTruple(statement); err != nil {
+			break
+		}
+	}
 	for {
-		statement, ok := <-ch
+		_, ok := <-ch
 		if !ok {
 			break
 		}
-		if err := p.processTruple(statement); err != nil {
-			return nil, err
-		}
 	}
-	return p.doc, nil
+	return p.doc, err
 }
 
 // Free the goraptor parser.
@@ -182,6 +191,8 @@ func (p *Parser) setType(node string, t goraptor.Term) (interface{}, error) {
 	case t.Equals(typeDocument):
 		p.doc = new(spdx.Document)
 		bldr = p.documentMap(p.doc)
+	default:
+		return nil, fmt.Errorf(msgUnknownType, t)
 	}
 
 	p.index[node] = bldr
