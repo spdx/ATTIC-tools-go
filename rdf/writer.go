@@ -135,8 +135,10 @@ func (f *Formatter) Document(doc *spdx.Document) (docId goraptor.Term, err error
 		return
 	}
 
-	if err = f.addTerm(docId, "dataLicense", uri(licenceUri+doc.DataLicence.Val)); err != nil {
-		return
+	if doc.DataLicence.Val != "" {
+		if err = f.addTerm(docId, "dataLicense", uri(licenceUri+doc.DataLicence.Val)); err != nil {
+			return
+		}
 	}
 
 	if id, err := f.CreationInfo(doc.CreationInfo); err == nil {
