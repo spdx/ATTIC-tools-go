@@ -400,7 +400,7 @@ func (f *Formatter) Licence(licence spdx.AnyLicenceInfo) (id goraptor.Term, err 
 		return blank(val), nil
 	case spdx.ConjunctiveLicenceList:
 		id = f.newId("lic")
-		if err = f.setType(id, "ConjunctiveLicenceSet"); err != nil {
+		if err = f.setType(id, "ConjunctiveLicenseSet"); err != nil {
 			return
 		}
 		for _, mem := range lic {
@@ -415,7 +415,7 @@ func (f *Formatter) Licence(licence spdx.AnyLicenceInfo) (id goraptor.Term, err 
 		return id, nil
 	case spdx.DisjunctiveLicenceList:
 		id = f.newId("lic")
-		if err = f.setType(id, "DisjunctiveLicenceSet"); err != nil {
+		if err = f.setType(id, "DisjunctiveLicenseSet"); err != nil {
 			return
 		}
 		for _, mem := range lic {
@@ -471,7 +471,7 @@ func (f *Formatter) ExtrLicInfo(lic *spdx.ExtractedLicensingInfo) (id goraptor.T
 	}
 
 	for _, name := range lic.Name {
-		if err = f.addLiteral(id, "licenseName", name.Val); err != nil {
+		if err = f.addLiteral(id, "name", name.Val); err != nil {
 			return
 		}
 	}
@@ -557,11 +557,11 @@ func (f *Formatter) File(file *spdx.File) (id goraptor.Term, err error) {
 		}
 	}
 
-	if err = f.Files(id, "FileDependency", file.Dependency); err != nil {
+	if err = f.Files(id, "fileDependency", file.Dependency); err != nil {
 		return
 	}
 
-	err = f.Licences(id, "licenseInfoInFiles", file.LicenceInfoInFile)
+	err = f.Licences(id, "licenseInfoInFile", file.LicenceInfoInFile)
 	return
 }
 
