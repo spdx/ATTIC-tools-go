@@ -83,6 +83,37 @@ func prefix(k string) *goraptor.Uri {
 	return &uri
 }
 
+// change the RDF prefixes to their short forms.
+func shortPrefix(t goraptor.Term) string {
+	str := termStr(t)
+	prefixes := []pair{
+		{"ns:", "http://www.w3.org/1999/02/22-rdf-syntax-ns#"},
+		{"doap:", "http://usefulinc.com/ns/doap#"},
+		{"rdfs:", "http://www.w3.org/2000/01/rdf-schema#"},
+		{"", baseUri},
+	}
+	for _, p := range prefixes {
+		if strings.HasPrefix(str, p.val) {
+			return strings.Replace(str, p.val, p.key, 1)
+		}
+	}
+	return str
+}
+
+// goraptor.Term to string
+func termStr(term goraptor.Term) string {
+	switch t := term.(type) {
+	case *goraptor.Uri:
+		return string(*t)
+	case *goraptor.Blank:
+		return string(*t)
+	case *goraptor.Literal:
+		return t.Value
+	default:
+		return ""
+	}
+}
+
 // Create *goraptor.Uri from string
 func uri(uri string) *goraptor.Uri {
 	return (*goraptor.Uri)(&uri)
