@@ -432,24 +432,34 @@ func documentMap(doc *spdx.Document) *updaterMapping {
 	doc.CreationInfo = new(spdx.CreationInfo)
 	doc.CreationInfo.Creator = make([]spdx.ValueCreator, 0)
 
+	initCreationInfo := func() {
+		if doc.CreationInfo == nil {
+			doc.CreationInfo = new(spdx.CreationInfo)
+		}
+	}
+
 	var mapping updaterMapping
 
 	mapping = map[string]updater{
 		// SpdxDocument
-		"SPDXVersion":        upd(&doc.SpecVersion),
-		"DataLicense":        upd(&doc.DataLicence),
-		"DocumentComment":    upd(&doc.Comment),
-		"Creator":            updCreatorList(&doc.CreationInfo.Creator),
-		"Created":            updDate(&doc.CreationInfo.Created),
-		"CreatorComment":     upd(&doc.CreationInfo.Comment),
-		"LicenseListVersion": upd(&doc.CreationInfo.LicenceListVersion),
+		"SPDXVersion":     upd(&doc.SpecVersion),
+		"DataLicense":     upd(&doc.DataLicence),
+		"DocumentComment": upd(&doc.Comment),
+		"Creator": updCreatorListDelay(func() *[]spdx.ValueCreator {
+			initCreationInfo()
+			if doc.CreationInfo.Creator == nil {
+				doc.CreationInfo.Creator = make([]spdx.ValueCreator, 0)
+			}
+			return &doc.CreationInfo.Creator
+		}),
+		"Created":            updDateDelay(func() *spdx.ValueDate { initCreationInfo(); return &doc.CreationInfo.Created }),
+		"CreatorComment":     updDelay(func() *spdx.ValueStr { initCreationInfo(); return &doc.CreationInfo.Comment }),
+		"LicenseListVersion": updDelay(func() *spdx.ValueStr { initCreationInfo(); return &doc.CreationInfo.LicenceListVersion }),
 
 		// Package
 		"PackageName": func(tok *Token) error {
 			pkg := &spdx.Package{
-				Name:             spdx.Str(tok.Value, tok.Meta),
-				Checksum:         new(spdx.Checksum),
-				VerificationCode: new(spdx.VerificationCode),
+				Name: spdx.Str(tok.Value, tok.Meta),
 			}
 
 			if doc.Packages == nil {
@@ -460,13 +470,23 @@ func documentMap(doc *spdx.Document) *updaterMapping {
 
 			// Add package values that are now available
 			mapMerge(&mapping, updaterMapping{
-				"PackageVersion":              upd(&pkg.Version),
-				"PackageFileName":             upd(&pkg.FileName),
-				"PackageSupplier":             updCreator(&pkg.Supplier),
-				"PackageOriginator":           updCreator(&pkg.Originator),
-				"PackageDownloadLocation":     upd(&pkg.DownloadLocation),
-				"PackageVerificationCode":     updVerifCode(pkg.VerificationCode),
-				"PackageChecksum":             updChecksum(pkg.Checksum),
+				"PackageVersion":          upd(&pkg.Version),
+				"PackageFileName":         upd(&pkg.FileName),
+				"PackageSupplier":         updCreator(&pkg.Supplier),
+				"PackageOriginator":       updCreator(&pkg.Originator),
+				"PackageDownloadLocation": upd(&pkg.DownloadLocation),
+				"PackageVerificationCode": updVerifCodeDelay(func() *spdx.VerificationCode {
+					if pkg.VerificationCode == nil {
+						pkg.VerificationCode = new(spdx.VerificationCode)
+					}
+					return pkg.VerificationCode
+				}),
+				"PackageChecksum": updChecksumDelay(func() *spdx.Checksum {
+					if pkg.Checksum == nil {
+						pkg.Checksum = new(spdx.Checksum)
+					}
+					return pkg.Checksum
+				}),
 				"PackageHomePage":             upd(&pkg.HomePage),
 				"PackageSourceInfo":           upd(&pkg.SourceInfo),
 				"PackageLicenseConcluded":     anyLicence(&pkg.LicenceConcluded),
@@ -485,7 +505,6 @@ func documentMap(doc *spdx.Document) *updaterMapping {
 			file := &spdx.File{
 				Checksum:   new(spdx.Checksum),
 				Dependency: make([]*spdx.File, 0),
-				ArtifactOf: make([]*spdx.ArtifactOf, 0),
 				Name:       spdx.Str(tok.Value, tok.Meta),
 			}
 
@@ -497,7 +516,6 @@ func documentMap(doc *spdx.Document) *updaterMapping {
 
 			mapMerge(&mapping, updaterMapping{
 				"FileType":          upd(&file.Type),
-				"FileChecksum":      updChecksum(file.Checksum),
 				"LicenseConcluded":  anyLicence(&file.LicenceConcluded),
 				"LicenseInfoInFile": anyLicenceList(&file.LicenceInfoInFile),
 				"LicenseComments":   upd(&file.LicenceComments),
@@ -506,6 +524,12 @@ func documentMap(doc *spdx.Document) *updaterMapping {
 				"FileNotice":        upd(&file.Notice),
 				"FileContributor":   updList(&file.Contributor),
 				"FileDependency":    updFileNameList(&file.Dependency),
+				"FileChecksum": updChecksumDelay(func() *spdx.Checksum {
+					if file.Checksum == nil {
+						file.Checksum = new(spdx.Checksum)
+					}
+					return file.Checksum
+				}),
 				"ArtifactOfProjectName": func(tok *Token) error {
 					artif := new(spdx.ArtifactOf)
 					artif.Name = spdx.Str(tok.Value, tok.Meta)
@@ -513,7 +537,11 @@ func documentMap(doc *spdx.Document) *updaterMapping {
 						"ArtifactOfProjectHomePage": upd(&artif.HomePage),
 						"ArtifactOfProjectURI":      upd(&artif.ProjectUri),
 					})
-					file.ArtifactOf = append(file.ArtifactOf, artif)
+					if file.ArtifactOf == nil {
+						file.ArtifactOf = []*spdx.ArtifactOf{artif}
+					} else {
+						file.ArtifactOf = append(file.ArtifactOf, artif)
+					}
 					return nil
 				},
 			})
