@@ -13,13 +13,16 @@ var (
 	andSeprator = regexp.MustCompile("(?i)\\s+and\\s+") // conjunctive licence set separator
 )
 
-// A function that takes a *Token and updates some value in a SPDX element (document, package, ...).
+// A function that takes a *Token and updates some value in a SPDX element
+// (e.g. value SPDXVersion in spdx.Document).
+//
+// All the upd* functions (upd, updList, updCreator, etc.) return updaters for common SPDX values.
 type updater (func(*Token) error)
 
 // A map of SPDX Tags (properties) and updater functions
 type updaterMapping map[string]updater
 
-// Update a ValString pointer
+// Update the spdx.ValueStr pointer ptr.
 func upd(ptr *spdx.ValueStr) updater {
 	set := false
 	return func(tok *Token) error {
@@ -33,7 +36,19 @@ func upd(ptr *spdx.ValueStr) updater {
 	}
 }
 
-// Update a []ValString pointer
+// Update the spdx.ValueStr pointer returned by the delay function, which is called only
+// the first time this element is assigned to a value.
+func updDelay(delay func() *spdx.ValueStr) updater {
+	var f updater
+	return func(tok *Token) error {
+		if f == nil {
+			f = upd(delay())
+		}
+		return f(tok)
+	}
+}
+
+// Update the []spdx.ValueStr pointer arr.
 func updList(arr *[]spdx.ValueStr) updater {
 	return func(tok *Token) error {
 		*arr = append(*arr, spdx.Str(tok.Pair.Value, tok.Meta))
@@ -41,7 +56,19 @@ func updList(arr *[]spdx.ValueStr) updater {
 	}
 }
 
-// Update a ValueCreator pointer
+// Update the []spdx.ValueStr pointer returned by the delay function, which is called only
+// the first time this element is assigned to a value.
+func updListDelay(delay func() *[]spdx.ValueStr) updater {
+	var f updater
+	return func(tok *Token) error {
+		if f == nil {
+			f = updList(delay())
+		}
+		return f(tok)
+	}
+}
+
+// Update the spdx.ValueCreator pointer ptr.
 func updCreator(ptr *spdx.ValueCreator) updater {
 	set := false
 	return func(tok *Token) error {
@@ -55,7 +82,39 @@ func updCreator(ptr *spdx.ValueCreator) updater {
 	}
 }
 
-// Update a ValueDate pointer
+// Update the spdx.ValueCreator pointer returned by the delay function, which is called only
+// the first time this element is assigned to a value.
+func updCreatorDelay(delay func() *spdx.ValueCreator) updater {
+	var f updater
+	return func(tok *Token) error {
+		if f == nil {
+			f = updCreator(delay())
+		}
+		return f(tok)
+	}
+}
+
+// Update the []ValueCreator pointer ptr.
+func updCreatorList(arr *[]spdx.ValueCreator) updater {
+	return func(tok *Token) error {
+		*arr = append(*arr, spdx.NewValueCreator(tok.Pair.Value, tok.Meta))
+		return nil
+	}
+}
+
+// Update the []spdx.ValueCreator pointer returned by the delay function, which is called only
+// the first time this element is assigned to a value.
+func updCreatorListDelay(delay func() *[]spdx.ValueCreator) updater {
+	var f updater
+	return func(tok *Token) error {
+		if f == nil {
+			f = updCreatorList(delay())
+		}
+		return f(tok)
+	}
+}
+
+// Update the spdx.ValueDate pointer ptr.
 func updDate(ptr *spdx.ValueDate) updater {
 	set := false
 	return func(tok *Token) error {
@@ -69,16 +128,20 @@ func updDate(ptr *spdx.ValueDate) updater {
 	}
 }
 
-// Update a []ValueCreator pointer
-func updListCreator(arr *[]spdx.ValueCreator) updater {
+// Update the spdx.ValueDate pointer returned by the delay function, which is called only
+// the first time this element is assigned to a value.
+func updDateDelay(delay func() *spdx.ValueDate) updater {
+	var f updater
 	return func(tok *Token) error {
-		*arr = append(*arr, spdx.NewValueCreator(tok.Pair.Value, tok.Meta))
-		return nil
+		if f == nil {
+			f = updDate(delay())
+		}
+		return f(tok)
 	}
 }
 
-// Update a VerificationCode pointer
-func verifCode(vc *spdx.VerificationCode) updater {
+// Update the spdx.VerificationCode pointer ptr.
+func updVerifCode(vc *spdx.VerificationCode) updater {
 	set := false
 	return func(tok *Token) error {
 		if set {
@@ -116,8 +179,20 @@ func verifCode(vc *spdx.VerificationCode) updater {
 	}
 }
 
-// Update a Checksum pointer
-func checksum(cksum *spdx.Checksum) updater {
+// Update the spdx.VerificationCode pointer returned by the delay function, which
+// is called only the first time this element is assigned to a value.
+func updVerifCodeDelay(delay func() *spdx.VerificationCode) updater {
+	var f updater
+	return func(tok *Token) error {
+		if f == nil {
+			f = updVerifCode(delay())
+		}
+		return f(tok)
+	}
+}
+
+// Update the spdx.Checksum pointer ptr.
+func updChecksum(cksum *spdx.Checksum) updater {
 	set := false
 	return func(tok *Token) error {
 		if set {
@@ -130,6 +205,18 @@ func checksum(cksum *spdx.Checksum) updater {
 		cksum.Algo, cksum.Value = spdx.Str(strings.TrimSpace(split[0]), tok.Meta), spdx.Str(strings.TrimSpace(split[1]), tok.Meta)
 		set = true
 		return nil
+	}
+}
+
+// Update the spdx.Checksum pointer returned by the delay function, which
+// is called only the first time this element is assigned to a value.
+func updChecksumDelay(delay func() *spdx.Checksum) updater {
+	var f updater
+	return func(tok *Token) error {
+		if f == nil {
+			f = updChecksum(delay())
+		}
+		return f(tok)
 	}
 }
 
@@ -341,6 +428,7 @@ func mapMerge(dest *updaterMapping, src updaterMapping) {
 
 // Creates the mapping of a *spdx.Document in Tag format.
 func documentMap(doc *spdx.Document) *updaterMapping {
+
 	doc.CreationInfo = new(spdx.CreationInfo)
 	doc.CreationInfo.Creator = make([]spdx.ValueCreator, 0)
 
@@ -351,7 +439,7 @@ func documentMap(doc *spdx.Document) *updaterMapping {
 		"SPDXVersion":        upd(&doc.SpecVersion),
 		"DataLicense":        upd(&doc.DataLicence),
 		"DocumentComment":    upd(&doc.Comment),
-		"Creator":            updListCreator(&doc.CreationInfo.Creator),
+		"Creator":            updCreatorList(&doc.CreationInfo.Creator),
 		"Created":            updDate(&doc.CreationInfo.Created),
 		"CreatorComment":     upd(&doc.CreationInfo.Comment),
 		"LicenseListVersion": upd(&doc.CreationInfo.LicenceListVersion),
@@ -377,8 +465,8 @@ func documentMap(doc *spdx.Document) *updaterMapping {
 				"PackageSupplier":             updCreator(&pkg.Supplier),
 				"PackageOriginator":           updCreator(&pkg.Originator),
 				"PackageDownloadLocation":     upd(&pkg.DownloadLocation),
-				"PackageVerificationCode":     verifCode(pkg.VerificationCode),
-				"PackageChecksum":             checksum(pkg.Checksum),
+				"PackageVerificationCode":     updVerifCode(pkg.VerificationCode),
+				"PackageChecksum":             updChecksum(pkg.Checksum),
 				"PackageHomePage":             upd(&pkg.HomePage),
 				"PackageSourceInfo":           upd(&pkg.SourceInfo),
 				"PackageLicenseConcluded":     anyLicence(&pkg.LicenceConcluded),
@@ -409,7 +497,7 @@ func documentMap(doc *spdx.Document) *updaterMapping {
 
 			mapMerge(&mapping, updaterMapping{
 				"FileType":          upd(&file.Type),
-				"FileChecksum":      checksum(file.Checksum),
+				"FileChecksum":      updChecksum(file.Checksum),
 				"LicenseConcluded":  anyLicence(&file.LicenceConcluded),
 				"LicenseInfoInFile": anyLicenceList(&file.LicenceInfoInFile),
 				"LicenseComments":   upd(&file.LicenceComments),

@@ -144,7 +144,7 @@ func TestUpdList(t *testing.T) {
 func TestVerifCodeNoExcludes(t *testing.T) {
 	vc := new(spdx.VerificationCode)
 	value := "d6a770ba38583ed4bb4525bd96e50461655d2758"
-	f := verifCode(vc)
+	f := updVerifCode(vc)
 	err := f(tk(value))
 	if err != nil {
 		t.Errorf("Error should be nil but found %s.", err)
@@ -162,7 +162,7 @@ func TestVerifCodeWithExcludes(t *testing.T) {
 	vc := new(spdx.VerificationCode)
 	value := "d6a770ba38583ed4bb4525bd96e50461655d2758"
 	excludes := " (excludes: abc.txt, file.spdx)"
-	f := verifCode(vc)
+	f := updVerifCode(vc)
 	err := f(tk(value + excludes))
 
 	if err != nil {
@@ -181,7 +181,7 @@ func TestVerifCodeWithExcludes2(t *testing.T) {
 	vc := new(spdx.VerificationCode)
 	value := "d6a770ba38583ed4bb4525bd96e50461655d2758"
 	excludes := " (abc.txt, file.spdx)"
-	f := verifCode(vc)
+	f := updVerifCode(vc)
 
 	err := f(tk(value + excludes))
 
@@ -202,7 +202,7 @@ func TestVerifCodeInvalidExcludesNoClosedParentheses(t *testing.T) {
 	vc := new(spdx.VerificationCode)
 	value := "d6a770ba38583ed4bb4525bd96e50461655d2758"
 	excludes := " ("
-	f := verifCode(vc)
+	f := updVerifCode(vc)
 	err := f(tk(value + excludes))
 
 	if err.Error() != MsgNoClosedParen {
@@ -215,7 +215,7 @@ func TestChecksum(t *testing.T) {
 	val := "d6a770ba38583ed4bb4525bd96e50461655d2758"
 	algo := "SHA1"
 
-	f := checksum(cksum)
+	f := updChecksum(cksum)
 	err := f(tk(algo + ": " + val))
 
 	if err != nil {
@@ -233,7 +233,7 @@ func TestChecksum(t *testing.T) {
 
 func TestChecksumInvalid(t *testing.T) {
 	cksum := new(spdx.Checksum)
-	f := checksum(cksum)
+	f := updChecksum(cksum)
 	err := f(tk("d6a770ba38583ed4bb"))
 
 	if err.Error() != MsgInvalidChecksum {
