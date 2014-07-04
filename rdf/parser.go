@@ -56,6 +56,21 @@ func upd(ptr *spdx.ValueStr) updater {
 	}
 }
 
+// Updates a ValString pointer, but cuts the prefix from the value
+func updCutPrefix(prefix string, ptr *spdx.ValueStr) updater {
+	set := false
+	return func(term goraptor.Term, meta *spdx.Meta) error {
+		if set {
+			return spdx.NewParseError(msgAlreadyDefined, meta)
+		}
+
+		ptr.Val = strings.TrimPrefix(termStr(term), prefix)
+		ptr.Meta = meta
+		set = true
+		return nil
+	}
+}
+
 // Update a []ValString pointer
 func updList(arr *[]spdx.ValueStr) updater {
 	return func(term goraptor.Term, meta *spdx.Meta) error {
@@ -383,7 +398,7 @@ func (p *Parser) documentMap(doc *spdx.Document) *builder {
 	bldr := &builder{t: typeDocument, ptr: doc}
 	bldr.updaters = map[string]updater{
 		"specVersion":  upd(&doc.SpecVersion),
-		"dataLicense":  upd(&doc.DataLicence),
+		"dataLicense":  updCutPrefix("http://spdx.org/licenses/", &doc.DataLicence),
 		"rdfs:comment": upd(&doc.Comment),
 		"creationInfo": func(obj goraptor.Term, meta *spdx.Meta) error {
 			cri, err := p.reqCreationInfo(obj)
@@ -530,8 +545,19 @@ func (p *Parser) packageMap(pkg *spdx.Package) *builder {
 
 func (p *Parser) checksumMap(cksum *spdx.Checksum) *builder {
 	bldr := &builder{t: typeChecksum, ptr: cksum}
+	algoSet := false
 	bldr.updaters = map[string]updater{
-		"algorithm":     upd(&cksum.Algo),
+		"algorithm": func(obj goraptor.Term, meta *spdx.Meta) error {
+			if algoSet {
+				return spdx.NewParseError(msgAlreadyDefined, meta)
+			}
+			str := termStr(obj)
+			str = strings.Replace(str, "http://spdx.org/rdf/terms#checksumAlgorithm_", "", 1)
+			str = strings.ToUpper(str)
+			cksum.Algo.Val, cksum.Algo.Meta = str, meta
+			algoSet = true
+			return nil
+		},
 		"checksumValue": upd(&cksum.Value),
 	}
 	return bldr
@@ -551,7 +577,7 @@ func (p *Parser) fileMap(file *spdx.File) *builder {
 	bldr.updaters = map[string]updater{
 		"fileName":     upd(&file.Name),
 		"rdfs:comment": upd(&file.Comment),
-		"fileType":     upd(&file.Type),
+		"fileType":     updCutPrefix("http://spdx.org/rdf/terms#", &file.Type),
 		"checksum": func(obj goraptor.Term, meta *spdx.Meta) error {
 			cksum, err := p.reqChecksum(obj)
 			file.Checksum = cksum
