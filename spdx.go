@@ -25,20 +25,56 @@ import (
 const version = "pre0.0"
 const execName = "spdx-go"
 
+const helpMessage = `Usage: spdx-go <flags> <input-file>
+
+If no input file is specified, the input is read from stdin.
+
+The formats supported by this tool are: %s.
+
+The format "rdf" is special, when using as input, it means rdfxml_abbrev.
+When used as output, it means try to autodetect the rdf format in the input
+file (using raptor "guess" parser).
+
+One (and only one) action flag must be specified. Those are:
+
+    -c <format> for convert
+    -v for validate
+    -p for pretty-print
+
+A list of the flags supported by this tool:
+`
+
 const (
 	formatRdf  = "rdf"
 	formatTag  = "tag"
 	formatAuto = "auto"
 )
 
+var formatList = []string{
+	formatRdf,
+	formatTag,
+	rdf.Fmt_ntriples,
+	rdf.Fmt_turtle,
+	rdf.Fmt_rdfxmlXmp,
+	rdf.Fmt_rdfxmlAbbrev,
+	rdf.Fmt_rdfxml,
+	rdf.Fmt_rss,
+	rdf.Fmt_atom,
+	rdf.Fmt_dot,
+	rdf.Fmt_jsonTriples,
+	rdf.Fmt_json,
+	rdf.Fmt_html,
+	rdf.Fmt_nquads,
+}
+
 var (
-	flagConvert       = flag.String("c", "-", "Convert input file to the specified format.")
+	flagConvert       = flag.String("c", "-", "Set action to convert. Convert input file to the specified format.")
 	flagValidate      = flag.Bool("v", false, "Set action to validate.")
-	flagFmt           = flag.Bool("p", false, "Set action to format (pretty print).")
+	flagFmt           = flag.Bool("p", false, "Set action to format (pretty print). This will not necessarily ")
 	flagOutput        = flag.String("o", "-", "Sets the output file. If not set, output is written to stdout.")
 	flagInPlace       = flag.Bool("w", false, "If defined, it overwrites the input file.")
-	flagCaseSensitive = flag.Bool("cs", false, "Case-Sensitivity of properties. (if false, it treats \"packagename\" same as \"PackageName\")")
-	flagInputFormat   = flag.String("f", "auto", "Defines the format of the input. Valid values: rdf, tag or auto. Default is auto.")
+	flagCaseSensitive = flag.Bool("cs", false, "Case-Sensitivity of properties. Only in tag format. (if false, it treats \"packagename\" same as \"PackageName\")")
+	flagInputFormat   = flag.String("f", "auto", "Defines the format of the input. Valid values: any <format> or auto. Default is auto.")
 	flagHelp          = flag.Bool("help", false, "Show help message.")
 	flagVersion       = flag.Bool("version", false, "Show tool version and supported SPDX spec versions.")
 	flagHTML          = flag.Bool("html", false, "In validation, open a browser with visual validation results. If -o is specified, write HTML to file instead.")
@@ -404,10 +440,8 @@ func format() {
 func help() {
 	printVersion()
 
-	fmt.Printf("\nUsage: spdx-go [<flags>] [<input file>]\n")
-	fmt.Println("Stdin is used as input if <input-file> is not specified.")
-
-	fmt.Println("Exactly ONE of the -conv, -fmt or -valid flags MUST be specified.\n")
+	fmt.Println()
+	fmt.Printf(helpMessage, strings.Join(formatList, ", "))
 
 	flag.PrintDefaults()
 }
