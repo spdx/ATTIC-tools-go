@@ -4,6 +4,7 @@
   <head>
     <title>{{.FileName}} - SPDX Validation</title>
     <style>
+      pre {margin:0; padding:0; }
       body {font-family: "Lucida Console", Monaco, monospace; margin:0; }
       table { width: 100% }
       td { vertical-align: top; }
@@ -81,7 +82,7 @@
             {{with .Lines}}
               {{range .}}
                 <div id="LC{{.Number}}" class="content {{.Classname}}">
-                  {{.Content}}
+                 <pre>{{.Content}}</pre>
                 </div>
               {{end}}
             {{end}}

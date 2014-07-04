@@ -227,8 +227,7 @@ func validate() {
 		tag.CaseSensitive(*flagCaseSensitive)
 		doc, err = tag.Build(input)
 	} else {
-		// todo: rdf
-		err = errors.New("Not implemented. :(")
+		doc, err = rdf.Parse(input, *flagInputFormat)
 	}
 
 	if err != nil {
