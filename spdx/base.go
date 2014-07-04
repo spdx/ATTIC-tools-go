@@ -151,3 +151,19 @@ func Join(a []ValueStr, sep string) string {
 	}
 	return string(b)
 }
+
+// ParseError represents both parsing and lexing errors
+// It includes *spdx.Meta data (LineStart and LineEnd).
+type ParseError struct {
+	msg string
+	*Meta
+}
+
+func (e *ParseError) Error() string {
+	return e.msg
+}
+
+// Create a new *ParseError with the given error message and *spdx.Meta
+func NewParseError(msg string, m *Meta) *ParseError {
+	return &ParseError{msg, m}
+}

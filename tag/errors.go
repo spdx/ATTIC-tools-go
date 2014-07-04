@@ -1,7 +1,5 @@
 package tag
 
-import "github.com/vladvelici/spdx-go/spdx"
-
 // Error messages used by the parser
 var (
 	MsgNoClosedParen             = "No closed parentheses at the end."
@@ -19,19 +17,3 @@ var (
 	MsgInvalidPrefix = "No text is allowed between : and <text>."
 	MsgInvalidSuffix = "No text is allowed after close text tag (</text>)."
 )
-
-// ParseError represents both parsing and lexing errors
-// It includes *spdx.Meta data (LineStart and LineEnd).
-type ParseError struct {
-	msg string
-	*spdx.Meta
-}
-
-func (e *ParseError) Error() string {
-	return e.msg
-}
-
-// Create a new *parseError with the given error message and *spdx.Meta
-func parseError(msg string, m *spdx.Meta) *ParseError {
-	return &ParseError{msg, m}
-}

@@ -267,12 +267,12 @@ func (l *Lexer) tokenizer() bufio.SplitFunc {
 			endl := bytes.IndexByte(data, '\n')
 
 			if endl >= 0 && endl < column {
-				return 0, nil, parseError(MsgInvalidText, &spdx.Meta{l.line, l.line})
+				return 0, nil, spdx.NewParseError(MsgInvalidText, &spdx.Meta{l.line, l.line})
 			}
 
 			if column < 0 {
 				if atEOF {
-					return 0, nil, parseError(MsgInvalidText, &spdx.Meta{l.line, l.line})
+					return 0, nil, spdx.NewParseError(MsgInvalidText, &spdx.Meta{l.line, l.line})
 				}
 				return shifted, nil, nil
 			}
@@ -290,14 +290,14 @@ func (l *Lexer) tokenizer() bufio.SplitFunc {
 
 			l.lineStart = l.line // lineStart is at the start of property
 			if countSpaces(data[:startText]) != startText {
-				return 0, nil, parseError(MsgInvalidPrefix, &spdx.Meta{l.line, l.line})
+				return 0, nil, spdx.NewParseError(MsgInvalidPrefix, &spdx.Meta{l.line, l.line})
 			}
 
 			endText := bytes.Index(data, []byte(closeTag))
 			if endText < 0 {
 				if atEOF {
 					l.line += bytes.Count(data, []byte{'\n'})
-					return 0, nil, parseError(MsgNoCloseTag, &spdx.Meta{l.line, l.line})
+					return 0, nil, spdx.NewParseError(MsgNoCloseTag, &spdx.Meta{l.line, l.line})
 				}
 				return shifted, nil, nil
 			}
@@ -320,7 +320,7 @@ func (l *Lexer) tokenizer() bufio.SplitFunc {
 			}
 
 			if closeToEndl != nil && countSpaces(closeToEndl) != len(closeToEndl) {
-				return 0, nil, parseError(MsgInvalidSuffix, &spdx.Meta{l.line, l.line})
+				return 0, nil, spdx.NewParseError(MsgInvalidSuffix, &spdx.Meta{l.line, l.line})
 			}
 
 			hasKey = false

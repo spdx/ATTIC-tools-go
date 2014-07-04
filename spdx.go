@@ -55,7 +55,7 @@ func exitErr(err error) {
 	switch e := err.(type) {
 	default:
 		log.Fatal(err)
-	case *tag.ParseError:
+	case *spdx.ParseError:
 		if e.LineStart != e.LineEnd {
 			log.Fatalf("%s:(%d to %d) %s", input.Name(), e.LineStart, e.LineEnd, e.Error())
 		}

@@ -27,7 +27,7 @@ func upd(ptr *spdx.ValueStr) updater {
 	set := false
 	return func(tok *Token) error {
 		if set {
-			return parseError(MsgAlreadyDefined, tok.Meta)
+			return spdx.NewParseError(MsgAlreadyDefined, tok.Meta)
 		}
 		ptr.Val = tok.Pair.Value
 		ptr.Meta = tok.Meta
@@ -73,7 +73,7 @@ func updCreator(ptr *spdx.ValueCreator) updater {
 	set := false
 	return func(tok *Token) error {
 		if set {
-			return parseError(MsgAlreadyDefined, tok.Meta)
+			return spdx.NewParseError(MsgAlreadyDefined, tok.Meta)
 		}
 		ptr.SetValue(tok.Pair.Value)
 		ptr.Meta = tok.Meta
@@ -119,7 +119,7 @@ func updDate(ptr *spdx.ValueDate) updater {
 	set := false
 	return func(tok *Token) error {
 		if set {
-			return parseError(MsgAlreadyDefined, tok.Meta)
+			return spdx.NewParseError(MsgAlreadyDefined, tok.Meta)
 		}
 		ptr.SetValue(tok.Pair.Value)
 		ptr.Meta = tok.Meta
@@ -145,7 +145,7 @@ func updVerifCode(vc *spdx.VerificationCode) updater {
 	set := false
 	return func(tok *Token) error {
 		if set {
-			return parseError(MsgAlreadyDefined, tok.Meta)
+			return spdx.NewParseError(MsgAlreadyDefined, tok.Meta)
 		}
 		val := tok.Pair.Value
 		open := strings.Index(val, "(")
@@ -157,7 +157,7 @@ func updVerifCode(vc *spdx.VerificationCode) updater {
 			// close parentheses
 			cls := strings.LastIndex(val, ")")
 			if cls < 0 {
-				return parseError(MsgNoClosedParen, tok.Meta)
+				return spdx.NewParseError(MsgNoClosedParen, tok.Meta)
 			}
 
 			val = val[:cls]
@@ -196,11 +196,11 @@ func updChecksum(cksum *spdx.Checksum) updater {
 	set := false
 	return func(tok *Token) error {
 		if set {
-			return parseError(MsgAlreadyDefined, tok.Meta)
+			return spdx.NewParseError(MsgAlreadyDefined, tok.Meta)
 		}
 		split := strings.Split(tok.Pair.Value, ":")
 		if len(split) != 2 {
-			return parseError(MsgInvalidChecksum, tok.Meta)
+			return spdx.NewParseError(MsgInvalidChecksum, tok.Meta)
 		}
 		cksum.Algo, cksum.Value = spdx.Str(strings.TrimSpace(split[0]), tok.Meta), spdx.Str(strings.TrimSpace(split[1]), tok.Meta)
 		set = true
@@ -311,14 +311,14 @@ func licenceSetSplit(sep *regexp.Regexp, str string) []string {
 func parseLicenceSet(tok *Token) (spdx.AnyLicenceInfo, error) {
 	val := strings.TrimSpace(tok.Pair.Value)
 	if len(val) == 0 {
-		return nil, parseError(MsgEmptyLicence, tok.Meta)
+		return nil, spdx.NewParseError(MsgEmptyLicence, tok.Meta)
 	}
 
 	// if everything is in parentheses, remove the big parentheses
 	o, c := findMatchingParenSet(val)
 	if o == 0 && c == len(val)-1 {
 		if len(val) <= 2 {
-			return nil, parseError(MsgEmptyLicence, tok.Meta)
+			return nil, spdx.NewParseError(MsgEmptyLicence, tok.Meta)
 		}
 		val = val[1 : len(val)-1]
 	}
@@ -326,7 +326,7 @@ func parseLicenceSet(tok *Token) (spdx.AnyLicenceInfo, error) {
 	conj, disj := conjOrDisjSet(val)
 
 	if disj && conj {
-		return nil, parseError(MsgConjunctionAndDisjunction, tok.Meta)
+		return nil, spdx.NewParseError(MsgConjunctionAndDisjunction, tok.Meta)
 	}
 
 	if conj {
@@ -364,13 +364,13 @@ func parseLicenceSet(tok *Token) (spdx.AnyLicenceInfo, error) {
 func parseLicenceString(tok *Token) (spdx.AnyLicenceInfo, error) {
 	val := strings.TrimSpace(tok.Pair.Value)
 	if len(val) == 0 {
-		return nil, parseError(MsgEmptyLicence, tok.Meta)
+		return nil, spdx.NewParseError(MsgEmptyLicence, tok.Meta)
 	}
 	openParen := strings.Count(val, "(")
 	closeParen := strings.Count(val, ")")
 
 	if openParen != closeParen {
-		return nil, parseError(MsgNoClosedParen, tok.Meta)
+		return nil, spdx.NewParseError(MsgNoClosedParen, tok.Meta)
 	}
 
 	if openParen > 0 {
@@ -385,7 +385,7 @@ func anyLicence(lic *spdx.AnyLicenceInfo) updater {
 	set := false
 	return func(tok *Token) error {
 		if set {
-			return parseError(MsgAlreadyDefined, tok.Meta)
+			return spdx.NewParseError(MsgAlreadyDefined, tok.Meta)
 		}
 		l, err := parseLicenceString(tok)
 		if err != nil {
@@ -604,7 +604,7 @@ func documentMap(doc *spdx.Document) *updaterMapping {
 func applyMapping(tok *Token, mapping *updaterMapping) (ok bool, err error) {
 	f, ok := (*mapping)[tok.Key]
 	if !ok {
-		return false, parseError("Invalid property or property needs another property to be defined before it: "+tok.Key, tok.Meta)
+		return false, spdx.NewParseError("Invalid property or property needs another property to be defined before it: "+tok.Key, tok.Meta)
 	}
 	return true, f(tok)
 }
