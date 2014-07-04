@@ -473,10 +473,10 @@ func (v *Validator) File(f *File) bool {
 
 		ci, index := correctCaseMatch(f.Type.Val, fileTypes)
 		if index < 0 {
-			v.addErr("Incorrect File Type. Permitted values for SPDX-%d.%d are: %s.", f.Type.Meta, v.Major, v.Minor, strings.Join(fileTypes, ", "))
+			v.addErr("Incorrect File Type %s. Permitted values for SPDX-%d.%d are: %s.", f.Type.Meta, f.Type.Val, v.Major, v.Minor, strings.Join(fileTypes, ", "))
 			r = false
 		} else if ci == false {
-			v.addWarn("Incorrect File Type case. Correct value is '%s'.", f.Type.Meta, fileTypes[index])
+			v.addWarn("Incorrect File Type case %s. Correct value is '%s'.", f.Type.Meta, f.Type.Val, fileTypes[index])
 		}
 	}
 	r = f.Checksum != nil && v.Checksum(f.Checksum) && r
