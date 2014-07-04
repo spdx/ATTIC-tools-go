@@ -4,31 +4,33 @@ import (
 	"errors"
 	"github.com/vladvelici/goraptor"
 	"github.com/vladvelici/spdx-go/spdx"
-	"io"
 	"os"
 	"strconv"
 	"strings"
 )
 
 // Writes the input to the specified RDF format
-func WriteRdf(input io.Reader, output io.Writer, format string) error {
-	parser := goraptor.NewParser("guess")
+func WriteRdf(input *os.File, output *os.File, formatIn, formatOut string) error {
+	if formatIn == "rdf" {
+		formatIn = "guess"
+	}
+	if formatOut == "rdf" {
+		formatOut = Fmt_rdfxmlAbbrev
+	}
+	parser := goraptor.NewParser(formatIn)
 	defer parser.Free()
 
-	serializer := goraptor.NewSerializer(format)
+	serializer := goraptor.NewSerializer(formatOut)
 	defer serializer.Free()
 
 	parser.SetNamespaceHandler(func(pfx, uri string) { serializer.SetNamespace(pfx, uri) })
 
-	statements := parser.Parse(input, "")
-
-	str, err := serializer.Serialize(statements, "")
+	statements := parser.Parse(input, baseUri)
+	err := serializer.SetFile(output, baseUri)
 	if err != nil {
 		return err
 	}
-
-	_, err = io.WriteString(output, str)
-	return err
+	return serializer.AddN(statements)
 }
 
 // Writes a SPDX Document to rdf/xml abbreviated format.

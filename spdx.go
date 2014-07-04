@@ -392,6 +392,12 @@ func format() {
 		if err != nil {
 			exitErr(err)
 		}
+		return
+	}
+
+	err := rdf.WriteRdf(input, output, *flagInputFormat, *flagInputFormat)
+	if err != nil {
+		exitErr(err)
 	}
 }
 
