@@ -2,7 +2,7 @@ package rdf
 
 import (
 	"fmt"
-	"github.com/deltamobile/goraptor"
+	"github.com/vladvelici/goraptor"
 	"github.com/vladvelici/spdx-go/spdx"
 	"io"
 	"strings"
@@ -44,12 +44,13 @@ func Parse(input io.Reader, format string) (*spdx.Document, error) {
 // Update a ValString pointer
 func upd(ptr *spdx.ValueStr) updater {
 	set := false
-	return func(term goraptor.Term) error {
+	return func(term goraptor.Term, meta *spdx.Meta) error {
 		if set {
-			return fmt.Errorf(msgAlreadyDefined)
+			return spdx.NewParseError(msgAlreadyDefined, meta)
 		}
 
 		ptr.Val = termStr(term)
+		ptr.Meta = meta
 		set = true
 		return nil
 	}
@@ -57,8 +58,8 @@ func upd(ptr *spdx.ValueStr) updater {
 
 // Update a []ValString pointer
 func updList(arr *[]spdx.ValueStr) updater {
-	return func(term goraptor.Term) error {
-		*arr = append(*arr, spdx.Str(termStr(term), nil))
+	return func(term goraptor.Term, meta *spdx.Meta) error {
+		*arr = append(*arr, spdx.Str(termStr(term), meta))
 		return nil
 	}
 }
@@ -66,11 +67,12 @@ func updList(arr *[]spdx.ValueStr) updater {
 // Update a ValueCreator pointer
 func updCreator(ptr *spdx.ValueCreator) updater {
 	set := false
-	return func(term goraptor.Term) error {
+	return func(term goraptor.Term, meta *spdx.Meta) error {
 		if set {
-			return fmt.Errorf(msgAlreadyDefined)
+			return spdx.NewParseError(msgAlreadyDefined, meta)
 		}
 		ptr.SetValue(termStr(term))
+		ptr.Meta = meta
 		set = true
 		return nil
 	}
@@ -79,11 +81,12 @@ func updCreator(ptr *spdx.ValueCreator) updater {
 // Update a ValueDate pointer
 func updDate(ptr *spdx.ValueDate) updater {
 	set := false
-	return func(term goraptor.Term) error {
+	return func(term goraptor.Term, meta *spdx.Meta) error {
 		if set {
-			return fmt.Errorf(msgAlreadyDefined)
+			return spdx.NewParseError(msgAlreadyDefined, meta)
 		}
 		ptr.SetValue(termStr(term))
+		ptr.Meta = meta
 		set = true
 		return nil
 	}
@@ -91,8 +94,8 @@ func updDate(ptr *spdx.ValueDate) updater {
 
 // Update a []ValueCreator pointer
 func updListCreator(arr *[]spdx.ValueCreator) updater {
-	return func(term goraptor.Term) error {
-		*arr = append(*arr, spdx.NewValueCreator(termStr(term), nil))
+	return func(term goraptor.Term, meta *spdx.Meta) error {
+		*arr = append(*arr, spdx.NewValueCreator(termStr(term), meta))
 		return nil
 	}
 }
@@ -103,13 +106,13 @@ type builder struct {
 	updaters map[string]updater
 }
 
-func (b *builder) apply(pred, obj goraptor.Term) error {
+func (b *builder) apply(pred, obj goraptor.Term, meta *spdx.Meta) error {
 	property := shortPrefix(pred)
 	f, ok := b.updaters[property]
 	if !ok {
-		return fmt.Errorf(msgPropertyNotSupported, property, b.t)
+		return spdx.NewParseError(fmt.Sprintf(msgPropertyNotSupported, property, b.t), meta)
 	}
-	return f(obj)
+	return f(obj, meta)
 }
 
 func (b *builder) has(pred string) bool {
@@ -117,13 +120,18 @@ func (b *builder) has(pred string) bool {
 	return ok
 }
 
-type updater func(goraptor.Term) error
+type updater func(goraptor.Term, *spdx.Meta) error
+
+type bufferEntry struct {
+	*goraptor.Statement
+	*spdx.Meta
+}
 
 type Parser struct {
 	rdfparser *goraptor.Parser
 	input     io.Reader
 	index     map[string]*builder
-	buffer    map[string][]*goraptor.Statement
+	buffer    map[string][]bufferEntry
 	doc       *spdx.Document
 }
 
@@ -138,21 +146,25 @@ func NewParser(input io.Reader, format string) *Parser {
 		rdfparser: goraptor.NewParser(format),
 		input:     input,
 		index:     make(map[string]*builder),
-		buffer:    make(map[string][]*goraptor.Statement),
+		buffer:    make(map[string][]bufferEntry),
 	}
 }
 
 // Parse the whole input stream and return the resulting spdx.Document or the first error that occurred.
 func (p *Parser) Parse() (*spdx.Document, error) {
 	ch := p.rdfparser.Parse(p.input, baseUri)
+	locCh := p.rdfparser.LocatorChan()
 	defer func() {
 		// consume the channel if there's anything left.
 		for _ = range ch {
+			<-locCh
 		}
 	}()
 	var err error
 	for statement := range ch {
-		if err = p.processTruple(statement); err != nil {
+		locator := <-locCh
+		meta := spdx.NewMetaL(locator.Line)
+		if err = p.processTruple(statement, meta); err != nil {
 			break
 		}
 	}
@@ -171,19 +183,19 @@ func (p *Parser) Free() {
 	p.doc = nil
 }
 
-func (p *Parser) setType(node, t goraptor.Term) (interface{}, error) {
+func (p *Parser) setType(node, t goraptor.Term, meta *spdx.Meta) (interface{}, error) {
 	nodeStr := termStr(node)
 	bldr, ok := p.index[nodeStr]
 	if ok {
 		if !equalTypes(bldr.t, t) && bldr.has("ns:type") {
 			//apply the type change
-			if err := bldr.apply(uri("ns:type"), t); err != nil {
+			if err := bldr.apply(uri("ns:type"), t, meta); err != nil {
 				return nil, err
 			}
 			return bldr.ptr, nil
 		}
 		if !compatibleTypes(bldr.t, t) {
-			return nil, fmt.Errorf(msgIncompatibleTypes, node, bldr.t, t)
+			return nil, spdx.NewParseError(fmt.Sprintf(msgIncompatibleTypes, node, bldr.t, t), meta)
 		}
 		return bldr.ptr, nil
 	}
@@ -230,7 +242,7 @@ func (p *Parser) setType(node, t goraptor.Term) (interface{}, error) {
 	case t.Equals(typeDisjunctiveSet):
 		bldr = p.disjuntiveSetBuilder()
 	default:
-		return nil, fmt.Errorf(msgUnknownType, t)
+		return nil, spdx.NewParseError(fmt.Sprintf(msgUnknownType, t), meta)
 	}
 
 	p.index[nodeStr] = bldr
@@ -238,7 +250,7 @@ func (p *Parser) setType(node, t goraptor.Term) (interface{}, error) {
 	// run buffer
 	buf := p.buffer[nodeStr]
 	for _, stm := range buf {
-		if err := bldr.apply(stm.Predicate, stm.Object); err != nil {
+		if err := bldr.apply(stm.Predicate, stm.Object, stm.Meta); err != nil {
 			return nil, err
 		}
 	}
@@ -247,24 +259,24 @@ func (p *Parser) setType(node, t goraptor.Term) (interface{}, error) {
 	return bldr.ptr, nil
 }
 
-func (p *Parser) processTruple(stm *goraptor.Statement) error {
+func (p *Parser) processTruple(stm *goraptor.Statement, meta *spdx.Meta) error {
 	node := termStr(stm.Subject)
 	if stm.Predicate.Equals(uri_nstype) {
-		_, err := p.setType(stm.Subject, stm.Object)
+		_, err := p.setType(stm.Subject, stm.Object, meta)
 		return err
 	}
 
 	// apply function if it's a builder
 	bldr, ok := p.index[node]
 	if ok {
-		return bldr.apply(stm.Predicate, stm.Object)
+		return bldr.apply(stm.Predicate, stm.Object, meta)
 	}
 
 	// buffer statement
 	if _, ok := p.buffer[node]; !ok {
-		p.buffer[node] = make([]*goraptor.Statement, 0)
+		p.buffer[node] = make([]bufferEntry, 0)
 	}
-	p.buffer[node] = append(p.buffer[node], stm)
+	p.buffer[node] = append(p.buffer[node], bufferEntry{stm, meta})
 
 	return nil
 }
@@ -305,7 +317,7 @@ func (p *Parser) reqType(node, t goraptor.Term) (interface{}, error) {
 		}
 		return bldr.ptr, nil
 	}
-	return p.setType(node, t)
+	return p.setType(node, t, nil)
 }
 
 func (p *Parser) reqDocument(node goraptor.Term) (*spdx.Document, error) {
@@ -373,12 +385,12 @@ func (p *Parser) documentMap(doc *spdx.Document) *builder {
 		"specVersion":  upd(&doc.SpecVersion),
 		"dataLicense":  upd(&doc.DataLicence),
 		"rdfs:comment": upd(&doc.Comment),
-		"creationInfo": func(obj goraptor.Term) error {
+		"creationInfo": func(obj goraptor.Term, meta *spdx.Meta) error {
 			cri, err := p.reqCreationInfo(obj)
 			doc.CreationInfo = cri
 			return err
 		},
-		"describesPackage": func(obj goraptor.Term) error {
+		"describesPackage": func(obj goraptor.Term, meta *spdx.Meta) error {
 			pkg, err := p.reqPackage(obj)
 			if err != nil {
 				return err
@@ -390,7 +402,7 @@ func (p *Parser) documentMap(doc *spdx.Document) *builder {
 			}
 			return nil
 		},
-		"referencesFile": func(obj goraptor.Term) error {
+		"referencesFile": func(obj goraptor.Term, meta *spdx.Meta) error {
 			file, err := p.reqFile(obj)
 			if err != nil {
 				return err
@@ -402,7 +414,7 @@ func (p *Parser) documentMap(doc *spdx.Document) *builder {
 			}
 			return nil
 		},
-		"reviewed": func(obj goraptor.Term) error {
+		"reviewed": func(obj goraptor.Term, meta *spdx.Meta) error {
 			rev, err := p.reqReview(obj)
 			if err != nil {
 				return err
@@ -414,7 +426,7 @@ func (p *Parser) documentMap(doc *spdx.Document) *builder {
 			}
 			return nil
 		},
-		"hasExtractedLicensingInfo": func(obj goraptor.Term) error {
+		"hasExtractedLicensingInfo": func(obj goraptor.Term, meta *spdx.Meta) error {
 			lic, err := p.reqExtractedLicensingInfo(obj)
 			if err != nil {
 				return err
@@ -462,24 +474,24 @@ func (p *Parser) packageMap(pkg *spdx.Package) *builder {
 		"supplier":         updCreator(&pkg.Supplier),
 		"originator":       updCreator(&pkg.Originator),
 		"downloadLocation": upd(&pkg.DownloadLocation),
-		"packageVerificationCode": func(obj goraptor.Term) error {
+		"packageVerificationCode": func(obj goraptor.Term, meta *spdx.Meta) error {
 			vc, err := p.reqVerificationCode(obj)
 			pkg.VerificationCode = vc
 			return err
 		},
-		"checksum": func(obj goraptor.Term) error {
+		"checksum": func(obj goraptor.Term, meta *spdx.Meta) error {
 			cksum, err := p.reqChecksum(obj)
 			pkg.Checksum = cksum
 			return err
 		},
 		"doap:homepage": upd(&pkg.HomePage),
 		"sourceInfo":    upd(&pkg.SourceInfo),
-		"licenseConcluded": func(obj goraptor.Term) error {
+		"licenseConcluded": func(obj goraptor.Term, meta *spdx.Meta) error {
 			lic, err := p.reqAnyLicenceInfo(obj)
 			pkg.LicenceConcluded = lic
 			return err
 		},
-		"licenseInfoFromFiles": func(obj goraptor.Term) error {
+		"licenseInfoFromFiles": func(obj goraptor.Term, meta *spdx.Meta) error {
 			lic, err := p.reqAnyLicenceInfo(obj)
 			if err != nil {
 				return err
@@ -491,7 +503,7 @@ func (p *Parser) packageMap(pkg *spdx.Package) *builder {
 			}
 			return nil
 		},
-		"licenseDeclared": func(obj goraptor.Term) error {
+		"licenseDeclared": func(obj goraptor.Term, meta *spdx.Meta) error {
 			lic, err := p.reqAnyLicenceInfo(obj)
 			pkg.LicenceDeclared = lic
 			return err
@@ -500,7 +512,7 @@ func (p *Parser) packageMap(pkg *spdx.Package) *builder {
 		"copyrightText":   upd(&pkg.CopyrightText),
 		"summary":         upd(&pkg.Summary),
 		"description":     upd(&pkg.Description),
-		"hasFile": func(obj goraptor.Term) error {
+		"hasFile": func(obj goraptor.Term, meta *spdx.Meta) error {
 			file, err := p.reqFile(obj)
 			if err != nil {
 				return err
@@ -540,19 +552,19 @@ func (p *Parser) fileMap(file *spdx.File) *builder {
 		"fileName":     upd(&file.Name),
 		"rdfs:comment": upd(&file.Comment),
 		"fileType":     upd(&file.Type),
-		"checksum": func(obj goraptor.Term) error {
+		"checksum": func(obj goraptor.Term, meta *spdx.Meta) error {
 			cksum, err := p.reqChecksum(obj)
 			file.Checksum = cksum
 			return err
 		},
 		"copyrightText": upd(&file.CopyrightText),
 		"noticeText":    upd(&file.Notice),
-		"licenseConcluded": func(obj goraptor.Term) error {
+		"licenseConcluded": func(obj goraptor.Term, meta *spdx.Meta) error {
 			lic, err := p.reqAnyLicenceInfo(obj)
 			file.LicenceConcluded = lic
 			return err
 		},
-		"licenseInfoInFile": func(obj goraptor.Term) error {
+		"licenseInfoInFile": func(obj goraptor.Term, meta *spdx.Meta) error {
 			lic, err := p.reqAnyLicenceInfo(obj)
 			if err != nil {
 				return err
@@ -566,7 +578,7 @@ func (p *Parser) fileMap(file *spdx.File) *builder {
 		},
 		"licenseComments": upd(&file.LicenceComments),
 		"fileContributor": updList(&file.Contributor),
-		"fileDependency": func(obj goraptor.Term) error {
+		"fileDependency": func(obj goraptor.Term, meta *spdx.Meta) error {
 			f, err := p.reqFile(obj)
 			if err != nil {
 				return err
@@ -578,7 +590,7 @@ func (p *Parser) fileMap(file *spdx.File) *builder {
 			}
 			return nil
 		},
-		"artifactOf": func(obj goraptor.Term) error {
+		"artifactOf": func(obj goraptor.Term, meta *spdx.Meta) error {
 			artif, err := p.reqArtifactOf(obj)
 			if err != nil {
 				return err
@@ -618,7 +630,7 @@ func (p *Parser) extractedLicensingInfoMap(lic *spdx.ExtractedLicensingInfo) *bu
 func (p *Parser) licenceSetMap(set *[]spdx.AnyLicenceInfo) *builder {
 	bldr := &builder{t: typeAbstractLicenceSet, ptr: set}
 	bldr.updaters = map[string]updater{
-		"member": func(obj goraptor.Term) error {
+		"member": func(obj goraptor.Term, meta *spdx.Meta) error {
 			lic, err := p.reqAnyLicenceInfo(obj)
 			if err != nil {
 				return err
@@ -626,9 +638,9 @@ func (p *Parser) licenceSetMap(set *[]spdx.AnyLicenceInfo) *builder {
 			*set = append(*set, lic)
 			return nil
 		},
-		"ns:type": func(obj goraptor.Term) error {
+		"ns:type": func(obj goraptor.Term, meta *spdx.Meta) error {
 			if !equalTypes(bldr.t, typeAbstractLicenceSet) {
-				return fmt.Errorf(msgAlreadyDefined)
+				return spdx.NewParseError(msgAlreadyDefined, meta)
 			}
 			if equalTypes(obj, typeConjunctiveSet) {
 				bldr.t = typeConjunctiveSet
@@ -637,7 +649,7 @@ func (p *Parser) licenceSetMap(set *[]spdx.AnyLicenceInfo) *builder {
 				bldr.t = typeDisjunctiveSet
 				*set = spdx.DisjunctiveLicenceList(*set)
 			} else {
-				return fmt.Errorf(msgIncompatibleTypes, "Licence Set", bldr.t, obj)
+				return spdx.NewParseError(fmt.Sprintf(msgIncompatibleTypes, "Licence Set", bldr.t, obj), meta)
 			}
 			return nil
 		},
@@ -648,14 +660,14 @@ func (p *Parser) licenceSetMap(set *[]spdx.AnyLicenceInfo) *builder {
 func (p *Parser) conjunctiveSetBuilder() *builder {
 	set := make([]spdx.AnyLicenceInfo, 0)
 	bldr := p.licenceSetMap(&set)
-	bldr.apply(blank("ns:type"), typeConjunctiveSet)
+	bldr.apply(blank("ns:type"), typeConjunctiveSet, nil)
 	return bldr
 }
 
 func (p *Parser) disjuntiveSetBuilder() *builder {
 	set := make([]spdx.AnyLicenceInfo, 0)
 	bldr := p.licenceSetMap(&set)
-	bldr.apply(blank("ns:type"), typeDisjunctiveSet)
+	bldr.apply(blank("ns:type"), typeDisjunctiveSet, nil)
 	return bldr
 }
 

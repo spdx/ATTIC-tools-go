@@ -1,7 +1,7 @@
 package rdf
 
 import (
-	"github.com/deltamobile/goraptor"
+	"github.com/vladvelici/goraptor"
 	"strings"
 )
 

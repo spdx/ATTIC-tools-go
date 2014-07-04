@@ -2,7 +2,7 @@ package rdf
 
 import (
 	"errors"
-	"github.com/deltamobile/goraptor"
+	"github.com/vladvelici/goraptor"
 	"github.com/vladvelici/spdx-go/spdx"
 	"io"
 	"os"
