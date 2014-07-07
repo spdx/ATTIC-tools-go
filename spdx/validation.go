@@ -263,6 +263,8 @@ func (v *Validator) LicReferences() bool {
 		if !ok {
 			v.addErr("Licence reference \"%s\" used but not defined.", m, k)
 			r = false
+		} else {
+			delete(v.licDefined, k)
 		}
 	}
 	for k, m := range v.licDefined {
