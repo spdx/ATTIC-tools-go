@@ -15,6 +15,13 @@ func hv(t *testing.T, v *Validator, result, expectedResult, errors, warnings boo
 	}
 }
 
+// This is not actually a test but initialises the
+// SPDX Licence List and sets the file to "../licence-list.txt"
+// rather than just "licence-list.txt"
+func TestInit(t *testing.T) {
+	LicenceListFile = "../licence-list.txt"
+}
+
 // Testing Validator.SpecVersion
 
 func TestSpecVersion(t *testing.T) {
@@ -467,7 +474,7 @@ func TestLicenceReference(t *testing.T) {
 	val := NewLicenceReference("LicenseRef-Abc", nil)
 	validator := new(Validator)
 	validator.Major, validator.Minor = 1, 2
-	if !validator.AnyLicenceInfo(val, false, "") {
+	if !validator.AnyLicence(val, false, "") {
 		t.Error("Should return true.")
 	}
 	if validator.HasErrors() {
@@ -485,7 +492,7 @@ func TestLicenceReference(t *testing.T) {
 func TestLicenceReferenceInList(t *testing.T) {
 	val := NewLicenceReference("GPL-2.0", nil)
 	validator := new(Validator)
-	if !validator.AnyLicenceInfo(val, false, "") {
+	if !validator.AnyLicence(val, false, "") {
 		t.Error("Should return true.")
 	}
 	if validator.HasErrors() {
@@ -499,7 +506,7 @@ func TestLicenceReferenceInList(t *testing.T) {
 func TestLicenceReferenceNotInList(t *testing.T) {
 	val := NewLicenceReference("GPL", nil)
 	validator := new(Validator)
-	if validator.AnyLicenceInfo(val, false, "") {
+	if validator.AnyLicence(val, false, "") {
 		t.Error("Should return false.")
 	}
 	if !validator.HasErrors() {
@@ -515,12 +522,12 @@ func TestLicenceSetNotAllowed(t *testing.T) {
 	val := DisjunctiveLicenceList{NewLicenceReference("LicenseRef-1", nil), NewLicenceReference("LicenseRef-2", nil)}
 	validator := new(Validator)
 	validator.Major, validator.Minor = 1, 2
-	hv(t, validator, validator.AnyLicenceInfo(val, false, ""), false, true, false)
+	hv(t, validator, validator.AnyLicence(val, false, ""), false, true, false)
 
 	valc := ConjunctiveLicenceList{NewLicenceReference("LicenseRef-1", nil), NewLicenceReference("LicenseRef-2", nil)}
 	validator = new(Validator)
 	validator.Major, validator.Minor = 1, 2
-	hv(t, validator, validator.AnyLicenceInfo(valc, false, ""), false, true, false)
+	hv(t, validator, validator.AnyLicence(valc, false, ""), false, true, false)
 
 }
 
@@ -528,14 +535,14 @@ func TestLicenceSetNested(t *testing.T) {
 	val := DisjunctiveLicenceList{NewLicenceReference("LicenseRef-1", nil), ConjunctiveLicenceList{NewLicenceReference("LicenseRef-2", nil)}}
 	validator := new(Validator)
 	validator.Major, validator.Minor = 1, 2
-	hv(t, validator, validator.AnyLicenceInfo(val, true, ""), true, false, false)
+	hv(t, validator, validator.AnyLicence(val, true, ""), true, false, false)
 }
 
 func TestLicenceSetNestedError(t *testing.T) {
 	val := DisjunctiveLicenceList{NewLicenceReference("LicenseRef-1", nil), ConjunctiveLicenceList{NewLicenceReference("LicenseR", nil)}}
 	validator := new(Validator)
 	validator.Major, validator.Minor = 1, 2
-	hv(t, validator, validator.AnyLicenceInfo(val, true, ""), false, true, false)
+	hv(t, validator, validator.AnyLicence(val, true, ""), false, true, false)
 }
 
 // Extracted Licensing Info
