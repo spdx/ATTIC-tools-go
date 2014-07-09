@@ -372,7 +372,7 @@ func TestInvalidTextValuePrefix(t *testing.T) {
 	if err == nil {
 		t.Fail()
 	}
-	e := err.(*ParseError)
+	e := err.(*spdx.ParseError)
 	if e.Error() != MsgInvalidPrefix || (*e.Meta != spdx.Meta{1, 1}) {
 		t.Errorf("Another error: %+v", err)
 	}
@@ -386,7 +386,7 @@ func TestInvalidTextValueSuffix(t *testing.T) {
 	if err == nil {
 		t.Fail()
 	}
-	e := err.(*ParseError)
+	e := err.(*spdx.ParseError)
 	if e.Error() != MsgInvalidSuffix || (*e.Meta != spdx.Meta{4, 4}) {
 		t.Errorf("Another error: %s", err)
 	}
@@ -400,7 +400,7 @@ func TestInvalidTextValueSuffixComment(t *testing.T) {
 	if err == nil {
 		t.Fail()
 	}
-	e := err.(*ParseError)
+	e := err.(*spdx.ParseError)
 	if e.Error() != MsgInvalidSuffix || (*e.Meta != spdx.Meta{1, 1}) {
 		t.Errorf("Another error: %s", err)
 	}
@@ -415,7 +415,7 @@ func TestInvalidTextValueSuffixProperty(t *testing.T) {
 	if err == nil {
 		t.Fail()
 	}
-	e := err.(*ParseError)
+	e := err.(*spdx.ParseError)
 	if e.Error() != MsgInvalidSuffix || (*e.Meta != spdx.Meta{1, 1}) {
 		t.Errorf("Another error: %s", err)
 	}
@@ -429,7 +429,7 @@ func TestInvalidUnclosedText(t *testing.T) {
 	if err == nil {
 		t.Fail()
 	}
-	e := err.(*ParseError)
+	e := err.(*spdx.ParseError)
 	if err.Error() != MsgNoCloseTag || (*e.Meta != spdx.Meta{4, 4}) {
 		t.Errorf("Another error: (%+v) %s", e.Meta, e)
 	}
@@ -442,8 +442,8 @@ func TestInvalidProperty(t *testing.T) {
 
 	t.Logf("doc len: %d", len(doc))
 
-	e := err.(*ParseError)
-	if e.msg != MsgInvalidText || e.Meta.LineStart != 1 {
+	e := err.(*spdx.ParseError)
+	if e.Error() != MsgInvalidText || e.Meta.LineStart != 1 {
 		t.Errorf("Unexpected error: %+v", err)
 	}
 
@@ -507,8 +507,8 @@ func TestSomeInvalidText(t *testing.T) {
 	if err == nil {
 		t.Fail()
 	}
-	e := err.(*ParseError)
-	if e.msg != MsgInvalidText || e.Meta.LineStart != 1 {
+	e := err.(*spdx.ParseError)
+	if e.Error() != MsgInvalidText || e.Meta.LineStart != 1 {
 		t.Errorf("Unexpected error: %+v", err)
 	}
 
