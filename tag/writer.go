@@ -162,7 +162,7 @@ func (f *Formatter) CreatorSlice(tag string, values []spdx.ValueCreator) error {
 }
 
 // Write a list of licences
-func (f *Formatter) PropertyLicenceSlice(tag string, values []spdx.AnyLicenceInfo) error {
+func (f *Formatter) PropertyLicenceSlice(tag string, values []spdx.AnyLicence) error {
 	for _, lic := range values {
 		if err := f.Property(tag, lic.LicenceId()); err != nil {
 			return err
@@ -369,7 +369,7 @@ func (f *Formatter) Review(review *spdx.Review) error {
 }
 
 // Write all licences in the given slice
-func (f *Formatter) ExtractedLicenceInfo(lics []*spdx.ExtractedLicensingInfo) error {
+func (f *Formatter) ExtractedLicenceInfo(lics []*spdx.ExtractedLicence) error {
 	for _, lic := range lics {
 		if err := f.ExtrLicInfo(lic); err != nil {
 			return err
@@ -378,8 +378,8 @@ func (f *Formatter) ExtractedLicenceInfo(lics []*spdx.ExtractedLicensingInfo) er
 	return nil
 }
 
-// Write the given *ExtractedLicensingInfo
-func (f *Formatter) ExtrLicInfo(lic *spdx.ExtractedLicensingInfo) error {
+// Write the given *ExtractedLicence
+func (f *Formatter) ExtrLicInfo(lic *spdx.ExtractedLicence) error {
 	if lic == nil {
 		return nil
 	}

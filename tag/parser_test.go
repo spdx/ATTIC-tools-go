@@ -69,17 +69,17 @@ func tk(value string) *Token {
 	return &Token{Pair: Pair{Value: value}}
 }
 
-func sameLicence(a, b spdx.AnyLicenceInfo) bool {
+func sameLicence(a, b spdx.AnyLicence) bool {
 	switch ta := a.(type) {
 	default:
 		return false
-	case spdx.LicenceReference:
-		if tb, ok := b.(spdx.LicenceReference); ok && ta.Equal(tb) {
+	case spdx.Licence:
+		if tb, ok := b.(spdx.Licence); ok && ta.Equal(tb) {
 			return true
 		}
 		return false
-	case spdx.DisjunctiveLicenceList:
-		if tb, ok := b.(spdx.DisjunctiveLicenceList); ok && len(ta) == len(tb) {
+	case spdx.DisjunctiveLicenceSet:
+		if tb, ok := b.(spdx.DisjunctiveLicenceSet); ok && len(ta) == len(tb) {
 			for i, lica := range ta {
 				licb := tb[i]
 				if !sameLicence(lica, licb) {
@@ -89,8 +89,8 @@ func sameLicence(a, b spdx.AnyLicenceInfo) bool {
 			return true
 		}
 		return false
-	case spdx.ConjunctiveLicenceList:
-		if tb, ok := b.(spdx.ConjunctiveLicenceList); ok && len(ta) == len(tb) {
+	case spdx.ConjunctiveLicenceSet:
+		if tb, ok := b.(spdx.ConjunctiveLicenceSet); ok && len(ta) == len(tb) {
 			for i, lica := range ta {
 				licb := tb[i]
 				if !sameLicence(lica, licb) {
@@ -368,7 +368,7 @@ func TestLicenceSetSplitNoSeparator(t *testing.T) {
 
 func TestParseLicenceSetOr(t *testing.T) {
 	input := "(GPLv3 or LicenseRef-1)"
-	expected := spdx.DisjunctiveLicenceList{spdx.NewLicenceReference("GPLv3", nil), spdx.NewLicenceReference("LicenseRef-1", nil)}
+	expected := spdx.DisjunctiveLicenceSet{spdx.NewLicence("GPLv3", nil), spdx.NewLicence("LicenseRef-1", nil)}
 	output, err := parseLicenceSet(tk(input))
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
@@ -381,7 +381,7 @@ func TestParseLicenceSetOr(t *testing.T) {
 
 func TestParseLicenceSetAnd(t *testing.T) {
 	input := "(GPLv3 and LicenseRef-1)"
-	expected := spdx.ConjunctiveLicenceList{spdx.NewLicenceReference("GPLv3", nil), spdx.NewLicenceReference("LicenseRef-1", nil)}
+	expected := spdx.ConjunctiveLicenceSet{spdx.NewLicence("GPLv3", nil), spdx.NewLicence("LicenseRef-1", nil)}
 	output, err := parseLicenceSet(tk(input))
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
@@ -395,13 +395,13 @@ func TestParseLicenceSetAnd(t *testing.T) {
 func TestParseLicenceSetNested(t *testing.T) {
 	input := "(GPLv3 or (LicenseRef-1 and LicenseRef-3) or LicenseRef-2)"
 
-	expected := spdx.DisjunctiveLicenceList{
-		spdx.NewLicenceReference("GPLv3", nil),
-		spdx.ConjunctiveLicenceList{
-			spdx.NewLicenceReference("LicenseRef-1", nil),
-			spdx.NewLicenceReference("LicenseRef-3", nil),
+	expected := spdx.DisjunctiveLicenceSet{
+		spdx.NewLicence("GPLv3", nil),
+		spdx.ConjunctiveLicenceSet{
+			spdx.NewLicence("LicenseRef-1", nil),
+			spdx.NewLicence("LicenseRef-3", nil),
 		},
-		spdx.NewLicenceReference("LicenseRef-2", nil),
+		spdx.NewLicence("LicenseRef-2", nil),
 	}
 
 	output, err := parseLicenceSet(tk(input))
@@ -417,7 +417,7 @@ func TestParseLicenceSetNested(t *testing.T) {
 func TestParseLicenceSetSingleValue(t *testing.T) {
 	input := "one value "
 
-	expected := spdx.NewLicenceReference("one value", nil)
+	expected := spdx.NewLicence("one value", nil)
 
 	output, err := parseLicenceSet(tk(input))
 	if err != nil {

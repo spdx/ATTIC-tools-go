@@ -412,7 +412,7 @@ func TestVerificationCodeEmptyExcludedFiles(t *testing.T) {
 
 // Test Licence Reference ID
 func TestLicenceRefIdNonNumeric(t *testing.T) {
-	val := NewLicenceReference("LicenseRef-Abc", nil)
+	val := NewLicence("LicenseRef-Abc", nil)
 	validator := new(Validator)
 	validator.Major, validator.Minor = 1, 0
 	if validator.LicenceRefId(val.V(), val.M(), "") {
@@ -427,7 +427,7 @@ func TestLicenceRefIdNonNumeric(t *testing.T) {
 }
 
 func TestLicenceRefIdNonNumericValid(t *testing.T) {
-	val := NewLicenceReference("LicenseRef-Abc", nil)
+	val := NewLicence("LicenseRef-Abc", nil)
 	validator := new(Validator)
 	validator.Major, validator.Minor = 1, 2
 	if !validator.LicenceRefId(val.V(), val.M(), "") {
@@ -442,7 +442,7 @@ func TestLicenceRefIdNonNumericValid(t *testing.T) {
 }
 
 func TestLicenceRefIdInvalid(t *testing.T) {
-	val := NewLicenceReference("LicenseRef-Abc_)f", nil)
+	val := NewLicence("LicenseRef-Abc_)f", nil)
 	validator := new(Validator)
 	validator.Major, validator.Minor = 1, 2
 	if validator.LicenceRefId(val.V(), val.M(), "") {
@@ -470,8 +470,8 @@ func TestIsLicenceRef(t *testing.T) {
 	}
 }
 
-func TestLicenceReference(t *testing.T) {
-	val := NewLicenceReference("LicenseRef-Abc", nil)
+func TestLicence(t *testing.T) {
+	val := NewLicence("LicenseRef-Abc", nil)
 	validator := new(Validator)
 	validator.Major, validator.Minor = 1, 2
 	if !validator.AnyLicence(val, false, "") {
@@ -489,8 +489,8 @@ func TestLicenceReference(t *testing.T) {
 	}
 }
 
-func TestLicenceReferenceInList(t *testing.T) {
-	val := NewLicenceReference("GPL-2.0", nil)
+func TestLicenceInList(t *testing.T) {
+	val := NewLicence("GPL-2.0", nil)
 	validator := new(Validator)
 	if !validator.AnyLicence(val, false, "") {
 		t.Error("Should return true.")
@@ -503,8 +503,8 @@ func TestLicenceReferenceInList(t *testing.T) {
 	}
 }
 
-func TestLicenceReferenceNotInList(t *testing.T) {
-	val := NewLicenceReference("GPL", nil)
+func TestLicenceNotInList(t *testing.T) {
+	val := NewLicence("GPL", nil)
 	validator := new(Validator)
 	if validator.AnyLicence(val, false, "") {
 		t.Error("Should return false.")
@@ -519,12 +519,12 @@ func TestLicenceReferenceNotInList(t *testing.T) {
 
 // Test licence Sets
 func TestLicenceSetNotAllowed(t *testing.T) {
-	val := DisjunctiveLicenceList{NewLicenceReference("LicenseRef-1", nil), NewLicenceReference("LicenseRef-2", nil)}
+	val := DisjunctiveLicenceSet{NewLicence("LicenseRef-1", nil), NewLicence("LicenseRef-2", nil)}
 	validator := new(Validator)
 	validator.Major, validator.Minor = 1, 2
 	hv(t, validator, validator.AnyLicence(val, false, ""), false, true, false)
 
-	valc := ConjunctiveLicenceList{NewLicenceReference("LicenseRef-1", nil), NewLicenceReference("LicenseRef-2", nil)}
+	valc := ConjunctiveLicenceSet{NewLicence("LicenseRef-1", nil), NewLicence("LicenseRef-2", nil)}
 	validator = new(Validator)
 	validator.Major, validator.Minor = 1, 2
 	hv(t, validator, validator.AnyLicence(valc, false, ""), false, true, false)
@@ -532,14 +532,14 @@ func TestLicenceSetNotAllowed(t *testing.T) {
 }
 
 func TestLicenceSetNested(t *testing.T) {
-	val := DisjunctiveLicenceList{NewLicenceReference("LicenseRef-1", nil), ConjunctiveLicenceList{NewLicenceReference("LicenseRef-2", nil)}}
+	val := DisjunctiveLicenceSet{NewLicence("LicenseRef-1", nil), ConjunctiveLicenceSet{NewLicence("LicenseRef-2", nil)}}
 	validator := new(Validator)
 	validator.Major, validator.Minor = 1, 2
 	hv(t, validator, validator.AnyLicence(val, true, ""), true, false, false)
 }
 
 func TestLicenceSetNestedError(t *testing.T) {
-	val := DisjunctiveLicenceList{NewLicenceReference("LicenseRef-1", nil), ConjunctiveLicenceList{NewLicenceReference("LicenseR", nil)}}
+	val := DisjunctiveLicenceSet{NewLicence("LicenseRef-1", nil), ConjunctiveLicenceSet{NewLicence("LicenseR", nil)}}
 	validator := new(Validator)
 	validator.Major, validator.Minor = 1, 2
 	hv(t, validator, validator.AnyLicence(val, true, ""), false, true, false)
@@ -547,7 +547,7 @@ func TestLicenceSetNestedError(t *testing.T) {
 
 // Extracted Licensing Info
 func TestExtrLicInfoOK(t *testing.T) {
-	val := &ExtractedLicensingInfo{
+	val := &ExtractedLicence{
 		Id:             Str("LicenseRef-34", nil),
 		Name:           []ValueStr{Str("Some uncommon licence", nil)},
 		Text:           Str("Hahaha.", nil),
@@ -555,11 +555,11 @@ func TestExtrLicInfoOK(t *testing.T) {
 	}
 	validator := new(Validator)
 	validator.Major, validator.Minor = 1, 2
-	hv(t, validator, validator.ExtractedLicensingInfo(val), true, false, false)
+	hv(t, validator, validator.ExtractedLicence(val), true, false, false)
 }
 
 func TestExtrLicInfoIdError(t *testing.T) {
-	val := &ExtractedLicensingInfo{
+	val := &ExtractedLicence{
 		Id:             Str("License", nil),
 		Name:           []ValueStr{Str("Some uncommon licence", nil)},
 		Text:           Str("Hahaha.", nil),
@@ -567,11 +567,11 @@ func TestExtrLicInfoIdError(t *testing.T) {
 	}
 	validator := new(Validator)
 	validator.Major, validator.Minor = 1, 2
-	hv(t, validator, validator.ExtractedLicensingInfo(val), false, true, false)
+	hv(t, validator, validator.ExtractedLicence(val), false, true, false)
 }
 
 func TestExtrLicInfoIdWarning(t *testing.T) {
-	val := &ExtractedLicensingInfo{
+	val := &ExtractedLicence{
 		Id:             Str("LicenseRef-a", nil),
 		Name:           []ValueStr{Str("Some uncommon licence", nil)},
 		Text:           Str("Hahaha.", nil),
@@ -579,11 +579,11 @@ func TestExtrLicInfoIdWarning(t *testing.T) {
 	}
 	validator := new(Validator)
 	validator.Major, validator.Minor = 1, 0
-	hv(t, validator, validator.ExtractedLicensingInfo(val), true, false, true)
+	hv(t, validator, validator.ExtractedLicence(val), true, false, true)
 }
 
 func TestExtrLicInfoNoNames(t *testing.T) {
-	val := &ExtractedLicensingInfo{
+	val := &ExtractedLicence{
 		Id:             Str("LicenseRef-0", nil),
 		Name:           nil,
 		Text:           Str("Hahaha.", nil),
@@ -591,11 +591,11 @@ func TestExtrLicInfoNoNames(t *testing.T) {
 	}
 	validator := new(Validator)
 	validator.Major, validator.Minor = 1, 2
-	hv(t, validator, validator.ExtractedLicensingInfo(val), false, true, false)
+	hv(t, validator, validator.ExtractedLicence(val), false, true, false)
 }
 
 func TestExtrLicInfoEmptyName(t *testing.T) {
-	val := &ExtractedLicensingInfo{
+	val := &ExtractedLicence{
 		Id:             Str("LicenseRef-0", nil),
 		Name:           []ValueStr{Str("", nil), Str("something", nil)},
 		Text:           Str("Hahaha.", nil),
@@ -603,11 +603,11 @@ func TestExtrLicInfoEmptyName(t *testing.T) {
 	}
 	validator := new(Validator)
 	validator.Major, validator.Minor = 1, 2
-	hv(t, validator, validator.ExtractedLicensingInfo(val), false, true, false)
+	hv(t, validator, validator.ExtractedLicence(val), false, true, false)
 }
 
 func TestExtrLicInfoNoCrossReference(t *testing.T) {
-	val := &ExtractedLicensingInfo{
+	val := &ExtractedLicence{
 		Id:             Str("LicenseRef-0", nil),
 		Name:           []ValueStr{Str("something", nil)},
 		Text:           Str("Hahaha.", nil),
@@ -615,11 +615,11 @@ func TestExtrLicInfoNoCrossReference(t *testing.T) {
 	}
 	validator := new(Validator)
 	validator.Major, validator.Minor = 1, 2
-	hv(t, validator, validator.ExtractedLicensingInfo(val), false, true, false)
+	hv(t, validator, validator.ExtractedLicence(val), false, true, false)
 }
 
 func TestExtrLicInfoInvalidCrossReference(t *testing.T) {
-	val := &ExtractedLicensingInfo{
+	val := &ExtractedLicence{
 		Id:             Str("LicenseRef-0", nil),
 		Name:           []ValueStr{Str("something", nil)},
 		Text:           Str("Hahaha.", nil),
@@ -627,7 +627,7 @@ func TestExtrLicInfoInvalidCrossReference(t *testing.T) {
 	}
 	validator := new(Validator)
 	validator.Major, validator.Minor = 1, 2
-	hv(t, validator, validator.ExtractedLicensingInfo(val), false, true, false)
+	hv(t, validator, validator.ExtractedLicence(val), false, true, false)
 }
 
 // Review Tests

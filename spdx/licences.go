@@ -1,28 +1,28 @@
 package spdx
 
-type AnyLicenceInfo interface {
+type AnyLicence interface {
 	Value
 	LicenceId() string
 }
 
-type LicenceReference struct {
+type Licence struct {
 	Id ValueStr
 }
 
-func (l LicenceReference) LicenceId() string { return l.Id.V() }
-func (l LicenceReference) M() *Meta          { return l.Id.M() }
-func (l LicenceReference) V() string         { return l.LicenceId() }
+func (l Licence) LicenceId() string { return l.Id.V() }
+func (l Licence) M() *Meta          { return l.Id.M() }
+func (l Licence) V() string         { return l.LicenceId() }
 
-// LicenceReference comparison ignoring metadata
-func (a LicenceReference) Equal(b LicenceReference) bool {
+// Licence comparison ignoring metadata
+func (a Licence) Equal(b Licence) bool {
 	return a.Id.Val == b.Id.Val
 }
 
-func NewLicenceReference(id string, m *Meta) LicenceReference {
-	return LicenceReference{Id: Str(id, m)}
+func NewLicence(id string, m *Meta) Licence {
+	return Licence{Id: Str(id, m)}
 }
 
-type ExtractedLicensingInfo struct {
+type ExtractedLicence struct {
 	Id             ValueStr
 	Name           []ValueStr // conditional. one required if the licence is not in the SPDX Licence List
 	Text           ValueStr
@@ -30,11 +30,11 @@ type ExtractedLicensingInfo struct {
 	Comment        ValueStr   //optional
 }
 
-func (l *ExtractedLicensingInfo) LicenceId() string { return l.Id.V() }
-func (l *ExtractedLicensingInfo) V() string         { return l.LicenceId() }
-func (l *ExtractedLicensingInfo) M() *Meta          { return l.Id.M() }
+func (l *ExtractedLicence) LicenceId() string { return l.Id.V() }
+func (l *ExtractedLicence) V() string         { return l.LicenceId() }
+func (l *ExtractedLicence) M() *Meta          { return l.Id.M() }
 
-func join(list []AnyLicenceInfo, separator string) string {
+func join(list []AnyLicence, separator string) string {
 	if len(list) == 0 {
 		return "()"
 	}
@@ -46,12 +46,12 @@ func join(list []AnyLicenceInfo, separator string) string {
 	return res
 }
 
-// DisjunctiveLicenceList is a AnyLicenceInfo
-type ConjunctiveLicenceList []AnyLicenceInfo
+// DisjunctiveLicenceSet is a AnyLicence
+type ConjunctiveLicenceSet []AnyLicence
 
-func (c ConjunctiveLicenceList) LicenceId() string { return join(c, " and ") }
-func (c ConjunctiveLicenceList) V() string         { return c.LicenceId() }
-func (c ConjunctiveLicenceList) M() *Meta {
+func (c ConjunctiveLicenceSet) LicenceId() string { return join(c, " and ") }
+func (c ConjunctiveLicenceSet) V() string         { return c.LicenceId() }
+func (c ConjunctiveLicenceSet) M() *Meta {
 	for _, k := range c {
 		if k != nil {
 			return k.M()
@@ -60,12 +60,12 @@ func (c ConjunctiveLicenceList) M() *Meta {
 	return nil
 }
 
-// DisjunctiveLicenceList is a AnyLicenceInfo
-type DisjunctiveLicenceList []AnyLicenceInfo
+// DisjunctiveLicenceSet is a AnyLicence
+type DisjunctiveLicenceSet []AnyLicence
 
-func (c DisjunctiveLicenceList) LicenceId() string { return join(c, " or ") }
-func (c DisjunctiveLicenceList) V() string         { return c.LicenceId() }
-func (c DisjunctiveLicenceList) M() *Meta {
+func (c DisjunctiveLicenceSet) LicenceId() string { return join(c, " or ") }
+func (c DisjunctiveLicenceSet) V() string         { return c.LicenceId() }
+func (c DisjunctiveLicenceSet) M() *Meta {
 	for _, k := range c {
 		if k != nil {
 			return k.M()

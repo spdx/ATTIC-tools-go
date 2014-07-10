@@ -240,7 +240,7 @@ func (v *Validator) Document(doc *Document) bool {
 	}
 
 	for _, lic := range doc.ExtractedLicenceInfo {
-		v.ExtractedLicensingInfo(lic)
+		v.ExtractedLicence(lic)
 	}
 
 	for _, rev := range doc.Reviews {
@@ -409,14 +409,14 @@ func (v *Validator) Package(pkg *Package) bool {
 		v.addErr("Package Licence Concluded cannot be empty.", pkg.Name.Meta)
 		r = false
 	} else {
-		r = v.AnyLicenceInfoOptionals(pkg.LicenceConcluded, true, true, true, "Package Licence Concluded") && r
+		r = v.AnyLicenceOptionals(pkg.LicenceConcluded, true, true, true, "Package Licence Concluded") && r
 	}
 
 	if pkg.LicenceDeclared == nil {
 		v.addErr("Package Licence Declared cannot be empty.", pkg.Name.Meta)
 		r = false
 	} else {
-		r = v.AnyLicenceInfoOptionals(pkg.LicenceDeclared, true, true, true, "Package Licence Declared") && r
+		r = v.AnyLicenceOptionals(pkg.LicenceDeclared, true, true, true, "Package Licence Declared") && r
 	}
 
 	for _, lic := range pkg.LicenceInfoFromFiles {
@@ -424,7 +424,7 @@ func (v *Validator) Package(pkg *Package) bool {
 			v.addErr("Package Licence Info from Files cannot be empty.", pkg.Name.Meta)
 			r = false
 		} else {
-			r = v.AnyLicenceInfoOptionals(lic, false, true, true, "Licence Info From File") && r
+			r = v.AnyLicenceOptionals(lic, false, true, true, "Licence Info From File") && r
 		}
 	}
 
@@ -486,14 +486,14 @@ func (v *Validator) File(f *File) bool {
 		v.addErr("File Licence Concluded cannot be empty.", f.Name.Meta)
 		r = false
 	} else {
-		r = v.AnyLicenceInfoOptionals(f.LicenceConcluded, true, true, true, "File Licence Concluded") && r
+		r = v.AnyLicenceOptionals(f.LicenceConcluded, true, true, true, "File Licence Concluded") && r
 	}
 	for _, lic := range f.LicenceInfoInFile {
 		if lic == nil {
 			v.addErr("Licence Info In File cannot be empty.", f.Name.Meta)
 			r = false
 		} else {
-			r = v.AnyLicenceInfoOptionals(lic, false, true, true, "Licence Info in File") && r
+			r = v.AnyLicenceOptionals(lic, false, true, true, "Licence Info in File") && r
 		}
 	}
 
@@ -599,18 +599,18 @@ func (v *Validator) useLicence(id string, m *Meta) {
 	v.licUsed[id] = m
 }
 
-func (v *Validator) AnyLicenceInfoOptionals(lic AnyLicenceInfo, allowSets, none, noassert bool, property string) bool {
-	t, ok := lic.(LicenceReference)
+func (v *Validator) AnyLicenceOptionals(lic AnyLicence, allowSets, none, noassert bool, property string) bool {
+	t, ok := lic.(Licence)
 	if ok && ((none && t.V() == NONE) || (noassert && t.V() == NOASSERTION)) {
 		return true
 	}
-	return v.AnyLicenceInfo(lic, allowSets, property)
+	return v.AnyLicence(lic, allowSets, property)
 }
 
 // Licences
-func (v *Validator) AnyLicenceInfo(lic AnyLicenceInfo, allowSets bool, property string) bool {
+func (v *Validator) AnyLicence(lic AnyLicence, allowSets bool, property string) bool {
 	switch t := lic.(type) {
-	case LicenceReference:
+	case Licence:
 		if isLicIdRef(t.LicenceId()) {
 			v.LicenceRefId(t.LicenceId(), t.Id.M(), property)
 			v.useLicence(t.LicenceId(), t.M())
@@ -621,28 +621,28 @@ func (v *Validator) AnyLicenceInfo(lic AnyLicenceInfo, allowSets bool, property 
 			return false
 		}
 		return true
-	case ConjunctiveLicenceList:
+	case ConjunctiveLicenceSet:
 		if !allowSets {
 			v.addErr("%s: Sets are not allowed but found a Conjunctive Licence Set.", t.M(), property)
 			return false
 		}
 		r := true
 		for _, l := range t {
-			r = v.AnyLicenceInfo(l, true, property) && r
+			r = v.AnyLicence(l, true, property) && r
 		}
 		return r
-	case DisjunctiveLicenceList:
+	case DisjunctiveLicenceSet:
 		if !allowSets {
 			v.addErr("%s: Sets are not allowed but found a Disjunctive Licence Set.", t.M(), property)
 			return false
 		}
 		r := true
 		for _, l := range t {
-			r = v.AnyLicenceInfo(l, true, property) && r
+			r = v.AnyLicence(l, true, property) && r
 		}
 		return r
-	case *ExtractedLicensingInfo:
-		return v.ExtractedLicensingInfo(t)
+	case *ExtractedLicence:
+		return v.ExtractedLicence(t)
 	default:
 		var m *Meta
 		if lic != nil {
@@ -695,8 +695,8 @@ func (v *Validator) defineLicenceRef(id string, m *Meta) {
 	v.licDefined[id] = m
 }
 
-// Validate ExtractedLicensingInfo object
-func (v *Validator) ExtractedLicensingInfo(lic *ExtractedLicensingInfo) bool {
+// Validate ExtractedLicence object
+func (v *Validator) ExtractedLicence(lic *ExtractedLicence) bool {
 	r := true
 	if !isLicIdRef(lic.Id.V()) {
 		r = false

@@ -7,7 +7,7 @@ type Document struct {
 	SpecVersion          ValueStr                  // one
 	DataLicence          ValueStr                  // one
 	CreationInfo         *CreationInfo             //
-	ExtractedLicenceInfo []*ExtractedLicensingInfo // optional
+	ExtractedLicenceInfo []*ExtractedLicence // optional
 	Packages             []*Package                // spdx1.2: one, spdx2: one or more
 	Files                []*File                   // mandatory
 	Comment              ValueStr                  // optional

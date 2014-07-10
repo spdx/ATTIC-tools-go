@@ -167,7 +167,7 @@ func (f *Formatter) Document(doc *spdx.Document) (docId goraptor.Term, err error
 		return
 	}
 
-	if err = f.ExtrLicInfos(docId, "hasExtractedLicensingInfo", doc.ExtractedLicenceInfo); err != nil {
+	if err = f.ExtrLicInfos(docId, "hasExtractedLicence", doc.ExtractedLicenceInfo); err != nil {
 		return
 	}
 
@@ -371,8 +371,8 @@ func (f *Formatter) Checksum(cksum *spdx.Checksum) (id goraptor.Term, err error)
 	return id, err
 }
 
-// Write a slice of AnyLicenceInfo
-func (f *Formatter) Licences(parent goraptor.Term, element string, lics []spdx.AnyLicenceInfo) error {
+// Write a slice of AnyLicence
+func (f *Formatter) Licences(parent goraptor.Term, element string, lics []spdx.AnyLicence) error {
 	if len(lics) == 0 {
 		return nil
 	}
@@ -391,16 +391,16 @@ func (f *Formatter) Licences(parent goraptor.Term, element string, lics []spdx.A
 	return nil
 }
 
-// Write AnyLicenceInfo
-func (f *Formatter) Licence(licence spdx.AnyLicenceInfo) (id goraptor.Term, err error) {
+// Write AnyLicence
+func (f *Formatter) Licence(licence spdx.AnyLicence) (id goraptor.Term, err error) {
 	switch lic := licence.(type) {
-	case spdx.LicenceReference:
+	case spdx.Licence:
 		val := lic.LicenceId()
 		if spdx.CheckLicence(val) {
 			return uri(licenceUri + val), nil
 		}
 		return blank(val), nil
-	case spdx.ConjunctiveLicenceList:
+	case spdx.ConjunctiveLicenceSet:
 		id = f.newId("lic")
 		if err = f.setType(id, "ConjunctiveLicenseSet"); err != nil {
 			return
@@ -415,7 +415,7 @@ func (f *Formatter) Licence(licence spdx.AnyLicenceInfo) (id goraptor.Term, err 
 			}
 		}
 		return id, nil
-	case spdx.DisjunctiveLicenceList:
+	case spdx.DisjunctiveLicenceSet:
 		id = f.newId("lic")
 		if err = f.setType(id, "DisjunctiveLicenseSet"); err != nil {
 			return
@@ -434,8 +434,8 @@ func (f *Formatter) Licence(licence spdx.AnyLicenceInfo) (id goraptor.Term, err 
 	return nil, nil
 }
 
-// Write a slice of ExtractedLicensingInfo
-func (f *Formatter) ExtrLicInfos(parent goraptor.Term, element string, lics []*spdx.ExtractedLicensingInfo) error {
+// Write a slice of ExtractedLicence
+func (f *Formatter) ExtrLicInfos(parent goraptor.Term, element string, lics []*spdx.ExtractedLicence) error {
 	if len(lics) == 0 {
 		return nil
 	}
@@ -451,14 +451,14 @@ func (f *Formatter) ExtrLicInfos(parent goraptor.Term, element string, lics []*s
 	return nil
 }
 
-// Write an ExtractedLicensingInfo
-func (f *Formatter) ExtrLicInfo(lic *spdx.ExtractedLicensingInfo) (id goraptor.Term, err error) {
+// Write an ExtractedLicence
+func (f *Formatter) ExtrLicInfo(lic *spdx.ExtractedLicence) (id goraptor.Term, err error) {
 	id = blank(lic.LicenceId())
 	if id == blank("") {
 		id = f.newId("lic")
 	}
 
-	if err = f.setType(id, "ExtractedLicensingInfo"); err != nil {
+	if err = f.setType(id, "ExtractedLicence"); err != nil {
 		return
 	}
 

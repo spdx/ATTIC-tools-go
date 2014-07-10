@@ -4,8 +4,8 @@ type File struct {
 	Name              ValueStr         // mandatory
 	Type              ValueStr         // optional
 	Checksum          *Checksum        // mandatory
-	LicenceConcluded  AnyLicenceInfo   // mandatory, NOASSERTION and NONE allowed
-	LicenceInfoInFile []AnyLicenceInfo // no sets; NOASSERTION and NONE allowed
+	LicenceConcluded  AnyLicence   // mandatory, NOASSERTION and NONE allowed
+	LicenceInfoInFile []AnyLicence // no sets; NOASSERTION and NONE allowed
 	LicenceComments   ValueStr         // optional
 	CopyrightText     ValueStr         // mandatory, NOASSERTION and NONE allowed
 	Notice            ValueStr         // optional

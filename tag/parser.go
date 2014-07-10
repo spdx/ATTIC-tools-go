@@ -308,7 +308,7 @@ func licenceSetSplit(sep *regexp.Regexp, str string) []string {
 }
 
 // Parses sets of licences. Assumes the input tok.Value to have balanced parentheses.
-func parseLicenceSet(tok *Token) (spdx.AnyLicenceInfo, error) {
+func parseLicenceSet(tok *Token) (spdx.AnyLicence, error) {
 	val := strings.TrimSpace(tok.Pair.Value)
 	if len(val) == 0 {
 		return nil, spdx.NewParseError(MsgEmptyLicence, tok.Meta)
@@ -331,7 +331,7 @@ func parseLicenceSet(tok *Token) (spdx.AnyLicenceInfo, error) {
 
 	if conj {
 		tokens := licenceSetSplit(andSeprator, val)
-		res := make(spdx.ConjunctiveLicenceList, 0, len(tokens))
+		res := make(spdx.ConjunctiveLicenceSet, 0, len(tokens))
 		for _, t := range tokens {
 			lic, err := parseLicenceSet(&Token{Type: tok.Type, Meta: tok.Meta, Pair: Pair{Value: t}})
 			if err != nil {
@@ -344,7 +344,7 @@ func parseLicenceSet(tok *Token) (spdx.AnyLicenceInfo, error) {
 
 	if disj {
 		tokens := licenceSetSplit(orSeparator, val)
-		res := make(spdx.DisjunctiveLicenceList, 0, len(tokens))
+		res := make(spdx.DisjunctiveLicenceSet, 0, len(tokens))
 		for _, t := range tokens {
 			lic, err := parseLicenceSet(&Token{Type: tok.Type, Meta: tok.Meta, Pair: Pair{Value: t}})
 			if err != nil {
@@ -355,13 +355,13 @@ func parseLicenceSet(tok *Token) (spdx.AnyLicenceInfo, error) {
 		return res, nil
 	}
 
-	return spdx.NewLicenceReference(strings.TrimSpace(val), tok.Meta), nil
+	return spdx.NewLicence(strings.TrimSpace(val), tok.Meta), nil
 
 }
 
-// Given a Token, returns the appropriate spdx.AnyLicenceInfo. If there are parentheses, it
+// Given a Token, returns the appropriate spdx.AnyLicence. If there are parentheses, it
 // checks whether they are balanced and calls parseLicenceSet()
-func parseLicenceString(tok *Token) (spdx.AnyLicenceInfo, error) {
+func parseLicenceString(tok *Token) (spdx.AnyLicence, error) {
 	val := strings.TrimSpace(tok.Pair.Value)
 	if len(val) == 0 {
 		return nil, spdx.NewParseError(MsgEmptyLicence, tok.Meta)
@@ -377,11 +377,11 @@ func parseLicenceString(tok *Token) (spdx.AnyLicenceInfo, error) {
 		return parseLicenceSet(tok)
 	}
 
-	return spdx.NewLicenceReference(strings.TrimSpace(val), tok.Meta), nil
+	return spdx.NewLicence(strings.TrimSpace(val), tok.Meta), nil
 }
 
-// Update a AnyLicenceInfo pointer.
-func anyLicence(lic *spdx.AnyLicenceInfo) updater {
+// Update a AnyLicence pointer.
+func anyLicence(lic *spdx.AnyLicence) updater {
 	set := false
 	return func(tok *Token) error {
 		if set {
@@ -398,7 +398,7 @@ func anyLicence(lic *spdx.AnyLicenceInfo) updater {
 }
 
 // Update a []anyLicenceInfo pointer
-func anyLicenceList(licList *[]spdx.AnyLicenceInfo) updater {
+func anyLicenceList(licList *[]spdx.AnyLicence) updater {
 	return func(tok *Token) error {
 		l, err := parseLicenceString(tok)
 		if err != nil {
@@ -549,9 +549,9 @@ func documentMap(doc *spdx.Document) *updaterMapping {
 			return nil
 		},
 
-		// ExtractedLicensingInfo
+		// ExtractedLicence
 		"LicenseID": func(tok *Token) error {
-			lic := &spdx.ExtractedLicensingInfo{
+			lic := &spdx.ExtractedLicence{
 				Id:             spdx.Str(tok.Value, tok.Meta),
 				Name:           make([]spdx.ValueStr, 0),
 				CrossReference: make([]spdx.ValueStr, 0),
@@ -564,7 +564,7 @@ func documentMap(doc *spdx.Document) *updaterMapping {
 			})
 
 			if doc.ExtractedLicenceInfo == nil {
-				doc.ExtractedLicenceInfo = []*spdx.ExtractedLicensingInfo{lic}
+				doc.ExtractedLicenceInfo = []*spdx.ExtractedLicence{lic}
 			} else {
 				doc.ExtractedLicenceInfo = append(doc.ExtractedLicenceInfo, lic)
 			}
