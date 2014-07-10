@@ -519,12 +519,12 @@ func TestLicenceNotInList(t *testing.T) {
 
 // Test licence Sets
 func TestLicenceSetNotAllowed(t *testing.T) {
-	val := DisjunctiveLicenceSet{NewLicence("LicenseRef-1", nil), NewLicence("LicenseRef-2", nil)}
+	val := NewDisjunctiveSet(nil, NewLicence("LicenseRef-1", nil), NewLicence("LicenseRef-2", nil))
 	validator := new(Validator)
 	validator.Major, validator.Minor = 1, 2
 	hv(t, validator, validator.AnyLicence(val, false, ""), false, true, false)
 
-	valc := ConjunctiveLicenceSet{NewLicence("LicenseRef-1", nil), NewLicence("LicenseRef-2", nil)}
+	valc := NewConjunctiveSet(nil, NewLicence("LicenseRef-1", nil), NewLicence("LicenseRef-2", nil))
 	validator = new(Validator)
 	validator.Major, validator.Minor = 1, 2
 	hv(t, validator, validator.AnyLicence(valc, false, ""), false, true, false)
@@ -532,14 +532,14 @@ func TestLicenceSetNotAllowed(t *testing.T) {
 }
 
 func TestLicenceSetNested(t *testing.T) {
-	val := DisjunctiveLicenceSet{NewLicence("LicenseRef-1", nil), ConjunctiveLicenceSet{NewLicence("LicenseRef-2", nil)}}
+	val := NewDisjunctiveSet(nil, NewLicence("LicenseRef-1", nil), NewConjunctiveSet(nil, NewLicence("LicenseRef-2", nil)))
 	validator := new(Validator)
 	validator.Major, validator.Minor = 1, 2
 	hv(t, validator, validator.AnyLicence(val, true, ""), true, false, false)
 }
 
 func TestLicenceSetNestedError(t *testing.T) {
-	val := DisjunctiveLicenceSet{NewLicence("LicenseRef-1", nil), ConjunctiveLicenceSet{NewLicence("LicenseR", nil)}}
+	val := NewDisjunctiveSet(nil, NewLicence("LicenseRef-1", nil), NewConjunctiveSet(nil, NewLicence("LicenseR", nil)))
 	validator := new(Validator)
 	validator.Major, validator.Minor = 1, 2
 	hv(t, validator, validator.AnyLicence(val, true, ""), false, true, false)

@@ -35,39 +35,42 @@ type ExtractedLicence struct {
 	Text           ValueStr
 	CrossReference []ValueStr //optional
 	Comment        ValueStr   //optional
+	*Meta
 }
 
 func (l *ExtractedLicence) LicenceId() string { return l.Id.V() }
 func (l *ExtractedLicence) V() string         { return l.LicenceId() }
-func (l *ExtractedLicence) M() *Meta          { return l.Id.M() }
+func (l *ExtractedLicence) M() *Meta          { return l.Meta }
 
-// DisjunctiveLicenceSet is a AnyLicence
-type ConjunctiveLicenceSet []AnyLicence
-
-func (c ConjunctiveLicenceSet) LicenceId() string { return join(c, " and ") }
-func (c ConjunctiveLicenceSet) V() string         { return c.LicenceId() }
-func (c ConjunctiveLicenceSet) M() *Meta {
-	for _, k := range c {
-		if k != nil {
-			return k.M()
-		}
-	}
-	return nil
+// Abstract licence set representation
+type LicenceSet struct {
+	Members []AnyLicence
+	*Meta
 }
 
-// DisjunctiveLicenceSet is a AnyLicence
-type DisjunctiveLicenceSet []AnyLicence
+func (s *LicenceSet) Add(lic AnyLicence) { s.Members = append(s.Members, lic) }
 
-func (c DisjunctiveLicenceSet) LicenceId() string { return join(c, " or ") }
-func (c DisjunctiveLicenceSet) V() string         { return c.LicenceId() }
-func (c DisjunctiveLicenceSet) M() *Meta {
-	for _, k := range c {
-		if k != nil {
-			return k.M()
-		}
-	}
-	return nil
+// DisjunctiveLicenceSet
+type ConjunctiveLicenceSet LicenceSet
+
+func NewConjunctiveSet(meta *Meta, lics ...AnyLicence) ConjunctiveLicenceSet {
+	return ConjunctiveLicenceSet{lics, meta}
 }
+func (c ConjunctiveLicenceSet) LicenceId() string   { return join(c.Members, " and ") }
+func (c ConjunctiveLicenceSet) V() string           { return c.LicenceId() }
+func (c ConjunctiveLicenceSet) M() *Meta            { return c.Meta }
+func (c *ConjunctiveLicenceSet) Add(lic AnyLicence) { c.Members = append(c.Members, lic) }
+
+// DisjunctiveLicenceSet
+type DisjunctiveLicenceSet LicenceSet
+
+func NewDisjunctiveSet(meta *Meta, lics ...AnyLicence) DisjunctiveLicenceSet {
+	return DisjunctiveLicenceSet{lics, meta}
+}
+func (c DisjunctiveLicenceSet) LicenceId() string   { return join(c.Members, " or ") }
+func (c DisjunctiveLicenceSet) V() string           { return c.LicenceId() }
+func (c DisjunctiveLicenceSet) M() *Meta            { return c.Meta }
+func (c *DisjunctiveLicenceSet) Add(lic AnyLicence) { c.Members = append(c.Members, lic) }
 
 // Useful functions for working with licences
 

@@ -648,7 +648,7 @@ func (v *Validator) AnyLicence(lic AnyLicence, allowSets bool, property string) 
 			return false
 		}
 		r := true
-		for _, l := range t {
+		for _, l := range t.Members {
 			r = v.AnyLicence(l, true, property) && r
 		}
 		return r
@@ -658,7 +658,7 @@ func (v *Validator) AnyLicence(lic AnyLicence, allowSets bool, property string) 
 			return false
 		}
 		r := true
-		for _, l := range t {
+		for _, l := range t.Members {
 			r = v.AnyLicence(l, true, property) && r
 		}
 		return r

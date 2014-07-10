@@ -38,11 +38,11 @@ func upd(ptr *spdx.ValueStr) updater {
 
 // Update the spdx.ValueStr pointer returned by the delay function, which is called only
 // the first time this element is assigned to a value.
-func updDelay(delay func() *spdx.ValueStr) updater {
+func updDelay(delay func(*Token) *spdx.ValueStr) updater {
 	var f updater
 	return func(tok *Token) error {
 		if f == nil {
-			f = upd(delay())
+			f = upd(delay(tok))
 		}
 		return f(tok)
 	}
@@ -58,11 +58,11 @@ func updList(arr *[]spdx.ValueStr) updater {
 
 // Update the []spdx.ValueStr pointer returned by the delay function, which is called only
 // the first time this element is assigned to a value.
-func updListDelay(delay func() *[]spdx.ValueStr) updater {
+func updListDelay(delay func(*Token) *[]spdx.ValueStr) updater {
 	var f updater
 	return func(tok *Token) error {
 		if f == nil {
-			f = updList(delay())
+			f = updList(delay(tok))
 		}
 		return f(tok)
 	}
@@ -84,11 +84,11 @@ func updCreator(ptr *spdx.ValueCreator) updater {
 
 // Update the spdx.ValueCreator pointer returned by the delay function, which is called only
 // the first time this element is assigned to a value.
-func updCreatorDelay(delay func() *spdx.ValueCreator) updater {
+func updCreatorDelay(delay func(*Token) *spdx.ValueCreator) updater {
 	var f updater
 	return func(tok *Token) error {
 		if f == nil {
-			f = updCreator(delay())
+			f = updCreator(delay(tok))
 		}
 		return f(tok)
 	}
@@ -104,11 +104,11 @@ func updCreatorList(arr *[]spdx.ValueCreator) updater {
 
 // Update the []spdx.ValueCreator pointer returned by the delay function, which is called only
 // the first time this element is assigned to a value.
-func updCreatorListDelay(delay func() *[]spdx.ValueCreator) updater {
+func updCreatorListDelay(delay func(*Token) *[]spdx.ValueCreator) updater {
 	var f updater
 	return func(tok *Token) error {
 		if f == nil {
-			f = updCreatorList(delay())
+			f = updCreatorList(delay(tok))
 		}
 		return f(tok)
 	}
@@ -130,11 +130,11 @@ func updDate(ptr *spdx.ValueDate) updater {
 
 // Update the spdx.ValueDate pointer returned by the delay function, which is called only
 // the first time this element is assigned to a value.
-func updDateDelay(delay func() *spdx.ValueDate) updater {
+func updDateDelay(delay func(tok *Token) *spdx.ValueDate) updater {
 	var f updater
 	return func(tok *Token) error {
 		if f == nil {
-			f = updDate(delay())
+			f = updDate(delay(tok))
 		}
 		return f(tok)
 	}
@@ -181,11 +181,11 @@ func updVerifCode(vc *spdx.VerificationCode) updater {
 
 // Update the spdx.VerificationCode pointer returned by the delay function, which
 // is called only the first time this element is assigned to a value.
-func updVerifCodeDelay(delay func() *spdx.VerificationCode) updater {
+func updVerifCodeDelay(delay func(*Token) *spdx.VerificationCode) updater {
 	var f updater
 	return func(tok *Token) error {
 		if f == nil {
-			f = updVerifCode(delay())
+			f = updVerifCode(delay(tok))
 		}
 		return f(tok)
 	}
@@ -210,11 +210,11 @@ func updChecksum(cksum *spdx.Checksum) updater {
 
 // Update the spdx.Checksum pointer returned by the delay function, which
 // is called only the first time this element is assigned to a value.
-func updChecksumDelay(delay func() *spdx.Checksum) updater {
+func updChecksumDelay(delay func(*Token) *spdx.Checksum) updater {
 	var f updater
 	return func(tok *Token) error {
 		if f == nil {
-			f = updChecksum(delay())
+			f = updChecksum(delay(tok))
 		}
 		return f(tok)
 	}
@@ -331,26 +331,32 @@ func parseLicenceSet(tok *Token) (spdx.AnyLicence, error) {
 
 	if conj {
 		tokens := licenceSetSplit(andSeprator, val)
-		res := make(spdx.ConjunctiveLicenceSet, 0, len(tokens))
+		res := spdx.NewConjunctiveSet(nil)
 		for _, t := range tokens {
 			lic, err := parseLicenceSet(&Token{Type: tok.Type, Meta: tok.Meta, Pair: Pair{Value: t}})
 			if err != nil {
 				return nil, err
 			}
-			res = append(res, lic)
+			if res.Meta == nil {
+				res.Meta = lic.M()
+			}
+			res.Members = append(res.Members, lic)
 		}
 		return res, nil
 	}
 
 	if disj {
 		tokens := licenceSetSplit(orSeparator, val)
-		res := make(spdx.DisjunctiveLicenceSet, 0, len(tokens))
+		res := spdx.NewDisjunctiveSet(nil)
 		for _, t := range tokens {
 			lic, err := parseLicenceSet(&Token{Type: tok.Type, Meta: tok.Meta, Pair: Pair{Value: t}})
 			if err != nil {
 				return nil, err
 			}
-			res = append(res, lic)
+			if res.Meta == nil {
+				res.Meta = lic.M()
+			}
+			res.Members = append(res.Members, lic)
 		}
 		return res, nil
 	}
@@ -432,9 +438,10 @@ func documentMap(doc *spdx.Document) *updaterMapping {
 	doc.CreationInfo = new(spdx.CreationInfo)
 	doc.CreationInfo.Creator = make([]spdx.ValueCreator, 0)
 
-	initCreationInfo := func() {
+	initCreationInfo := func(tok *Token) {
 		if doc.CreationInfo == nil {
 			doc.CreationInfo = new(spdx.CreationInfo)
+			doc.CreationInfo.Meta = tok.Meta
 		}
 	}
 
@@ -445,21 +452,22 @@ func documentMap(doc *spdx.Document) *updaterMapping {
 		"SPDXVersion":     upd(&doc.SpecVersion),
 		"DataLicense":     upd(&doc.DataLicence),
 		"DocumentComment": upd(&doc.Comment),
-		"Creator": updCreatorListDelay(func() *[]spdx.ValueCreator {
-			initCreationInfo()
+		"Creator": updCreatorListDelay(func(tok *Token) *[]spdx.ValueCreator {
+			initCreationInfo(tok)
 			if doc.CreationInfo.Creator == nil {
 				doc.CreationInfo.Creator = make([]spdx.ValueCreator, 0)
 			}
 			return &doc.CreationInfo.Creator
 		}),
-		"Created":            updDateDelay(func() *spdx.ValueDate { initCreationInfo(); return &doc.CreationInfo.Created }),
-		"CreatorComment":     updDelay(func() *spdx.ValueStr { initCreationInfo(); return &doc.CreationInfo.Comment }),
-		"LicenseListVersion": updDelay(func() *spdx.ValueStr { initCreationInfo(); return &doc.CreationInfo.LicenceListVersion }),
+		"Created":            updDateDelay(func(tok *Token) *spdx.ValueDate { initCreationInfo(tok); return &doc.CreationInfo.Created }),
+		"CreatorComment":     updDelay(func(tok *Token) *spdx.ValueStr { initCreationInfo(tok); return &doc.CreationInfo.Comment }),
+		"LicenseListVersion": updDelay(func(tok *Token) *spdx.ValueStr { initCreationInfo(tok); return &doc.CreationInfo.LicenceListVersion }),
 
 		// Package
 		"PackageName": func(tok *Token) error {
 			pkg := &spdx.Package{
 				Name: spdx.Str(tok.Value, tok.Meta),
+				Meta: tok.Meta,
 			}
 
 			if doc.Packages == nil {
@@ -475,15 +483,17 @@ func documentMap(doc *spdx.Document) *updaterMapping {
 				"PackageSupplier":         updCreator(&pkg.Supplier),
 				"PackageOriginator":       updCreator(&pkg.Originator),
 				"PackageDownloadLocation": upd(&pkg.DownloadLocation),
-				"PackageVerificationCode": updVerifCodeDelay(func() *spdx.VerificationCode {
+				"PackageVerificationCode": updVerifCodeDelay(func(tok *Token) *spdx.VerificationCode {
 					if pkg.VerificationCode == nil {
 						pkg.VerificationCode = new(spdx.VerificationCode)
+						pkg.VerificationCode.Meta = tok.Meta
 					}
 					return pkg.VerificationCode
 				}),
-				"PackageChecksum": updChecksumDelay(func() *spdx.Checksum {
+				"PackageChecksum": updChecksumDelay(func(tok *Token) *spdx.Checksum {
 					if pkg.Checksum == nil {
 						pkg.Checksum = new(spdx.Checksum)
+						pkg.Checksum.Meta = tok.Meta
 					}
 					return pkg.Checksum
 				}),
@@ -524,9 +534,10 @@ func documentMap(doc *spdx.Document) *updaterMapping {
 				"FileNotice":        upd(&file.Notice),
 				"FileContributor":   updList(&file.Contributor),
 				"FileDependency":    updFileNameList(&file.Dependency),
-				"FileChecksum": updChecksumDelay(func() *spdx.Checksum {
+				"FileChecksum": updChecksumDelay(func(tok *Token) *spdx.Checksum {
 					if file.Checksum == nil {
 						file.Checksum = new(spdx.Checksum)
+						file.Checksum.Meta = tok.Meta
 					}
 					return file.Checksum
 				}),

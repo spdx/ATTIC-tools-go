@@ -13,10 +13,16 @@ type File struct {
 	Dependency        []*File       // optional
 	Contributor       []ValueStr    // optional
 	Comment           ValueStr      //optional
+	*Meta
 }
+
+func (f *File) M() *Meta { return f.Meta }
 
 type ArtifactOf struct {
 	ProjectUri ValueStr
 	HomePage   ValueStr
 	Name       ValueStr
+	*Meta
 }
+
+func (artif *ArtifactOf) M() *Meta { return artif.Meta }

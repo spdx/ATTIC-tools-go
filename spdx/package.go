@@ -19,17 +19,26 @@ type Package struct {
 	Summary              ValueStr          // zero or one
 	Description          ValueStr          // zero or one
 	Files                []*File           // one or more
+	*Meta
 }
+
+func (pkg *Package) M() *Meta { return pkg.Meta }
 
 type VerificationCode struct {
 	Value         ValueStr
 	ExcludedFiles []ValueStr
+	*Meta
 }
+
+func (vc *VerificationCode) M() *Meta { return vc.Meta }
 
 type Checksum struct {
 	Algo, Value ValueStr
+	*Meta
 }
 
 func (c *Checksum) Equal(d *Checksum) bool {
 	return c.Algo.Val == d.Algo.Val && c.Value.Val == d.Value.Val
 }
+
+func (c *Checksum) M() *Meta { return c.Meta }

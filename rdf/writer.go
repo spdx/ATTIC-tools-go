@@ -405,7 +405,7 @@ func (f *Formatter) Licence(licence spdx.AnyLicence) (id goraptor.Term, err erro
 		if err = f.setType(id, "ConjunctiveLicenseSet"); err != nil {
 			return
 		}
-		for _, mem := range lic {
+		for _, mem := range lic.Members {
 			memberId, err := f.Licence(mem)
 			if err != nil {
 				return id, err
@@ -420,7 +420,7 @@ func (f *Formatter) Licence(licence spdx.AnyLicence) (id goraptor.Term, err erro
 		if err = f.setType(id, "DisjunctiveLicenseSet"); err != nil {
 			return
 		}
-		for _, mem := range lic {
+		for _, mem := range lic.Members {
 			memberId, err := f.Licence(mem)
 			if err != nil {
 				return id, err

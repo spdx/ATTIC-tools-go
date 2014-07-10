@@ -34,6 +34,10 @@ const (
 	msgUnknownType          = "Found type %s which is unknown."
 )
 
+type abstractLicenceSet interface {
+	Add(lic spdx.AnyLicence)
+}
+
 // Simple, one function call interface to parse a document
 func Parse(input io.Reader, format string) (*spdx.Document, error) {
 	parser := NewParser(input, format)
@@ -218,44 +222,45 @@ func (p *Parser) setType(node, t goraptor.Term, meta *spdx.Meta) (interface{}, e
 	// new builder by type
 	switch {
 	case t.Equals(typeDocument):
-		p.doc = new(spdx.Document)
+		p.doc = &spdx.Document{Meta: meta}
 		bldr = p.documentMap(p.doc)
 	case t.Equals(typeCreationInfo):
-		bldr = p.creationInfoMap(new(spdx.CreationInfo))
+		bldr = p.creationInfoMap(&spdx.CreationInfo{Meta: meta})
 	case t.Equals(typePackage):
-		bldr = p.packageMap(new(spdx.Package))
+		bldr = p.packageMap(&spdx.Package{Meta: meta})
 	case t.Equals(typeChecksum):
-		bldr = p.checksumMap(new(spdx.Checksum))
+		bldr = p.checksumMap(&spdx.Checksum{Meta: meta})
 	case t.Equals(typeVerificationCode):
-		bldr = p.verificationCodeMap(new(spdx.VerificationCode))
+		bldr = p.verificationCodeMap(&spdx.VerificationCode{Meta: meta})
 	case t.Equals(typeFile):
-		bldr = p.fileMap(new(spdx.File))
+		bldr = p.fileMap(&spdx.File{Meta: meta})
 	case t.Equals(typeReview):
-		bldr = p.reviewMap(new(spdx.Review))
+		bldr = p.reviewMap(&spdx.Review{Meta: meta})
 	case t.Equals(typeArtifactOf):
-		artif := new(spdx.ArtifactOf)
+		artif := &spdx.ArtifactOf{Meta: meta}
 		if artifUri, ok := node.(*goraptor.Uri); ok {
 			artif.ProjectUri.Val = termStr(artifUri)
 		}
 		bldr = p.artifactOfMap(artif)
 	case t.Equals(typeExtractedLicence):
-		bldr = p.extractedLicensingInfoMap(new(spdx.ExtractedLicence))
+		bldr = p.extractedLicensingInfoMap(&spdx.ExtractedLicence{Meta: meta})
 	case t.Equals(typeAnyLicence):
 		switch t := node.(type) {
 		case *goraptor.Uri: // licence in spdx licence list
-			bldr = p.licenceReferenceBuilder(node)
+			bldr = p.licenceReferenceBuilder(node, meta)
 		case *goraptor.Blank: // licence reference or abstract set
 			if strings.HasPrefix(strings.ToLower(termStr(t)), "licenseref") {
-				bldr = p.licenceReferenceBuilder(node)
+				bldr = p.licenceReferenceBuilder(node, meta)
 			} else {
 				licList := make([]spdx.AnyLicence, 0)
-				bldr = p.licenceSetMap(&licList)
+				licSet := &spdx.LicenceSet{Members: licList, Meta: meta}
+				bldr = p.licenceSetMap(licSet)
 			}
 		}
 	case t.Equals(typeConjunctiveSet):
-		bldr = p.conjunctiveSetBuilder()
+		bldr = p.conjunctiveSetBuilder(meta)
 	case t.Equals(typeDisjunctiveSet):
-		bldr = p.disjuntiveSetBuilder()
+		bldr = p.disjuntiveSetBuilder(meta)
 	default:
 		return nil, spdx.NewParseError(fmt.Sprintf(msgUnknownType, t), meta)
 	}
@@ -653,7 +658,7 @@ func (p *Parser) extractedLicensingInfoMap(lic *spdx.ExtractedLicence) *builder 
 	return bldr
 }
 
-func (p *Parser) licenceSetMap(set *[]spdx.AnyLicence) *builder {
+func (p *Parser) licenceSetMap(set abstractLicenceSet) *builder {
 	bldr := &builder{t: typeAbstractLicenceSet, ptr: set}
 	bldr.updaters = map[string]updater{
 		"member": func(obj goraptor.Term, meta *spdx.Meta) error {
@@ -661,19 +666,26 @@ func (p *Parser) licenceSetMap(set *[]spdx.AnyLicence) *builder {
 			if err != nil {
 				return err
 			}
-			*set = append(*set, lic)
+			set.Add(lic)
 			return nil
 		},
 		"ns:type": func(obj goraptor.Term, meta *spdx.Meta) error {
 			if !equalTypes(bldr.t, typeAbstractLicenceSet) {
 				return spdx.NewParseError(msgAlreadyDefined, meta)
 			}
+			tmpSet := set.(*spdx.LicenceSet)
+			goodMeta := tmpSet.Meta
+			if goodMeta == nil {
+				goodMeta = meta
+			}
 			if equalTypes(obj, typeConjunctiveSet) {
 				bldr.t = typeConjunctiveSet
-				*set = spdx.ConjunctiveLicenceSet(*set)
+				conj := spdx.NewConjunctiveSet(goodMeta, tmpSet.Members...)
+				set = &conj
 			} else if equalTypes(obj, typeDisjunctiveSet) {
 				bldr.t = typeDisjunctiveSet
-				*set = spdx.DisjunctiveLicenceSet(*set)
+				disj := spdx.NewDisjunctiveSet(goodMeta, tmpSet.Members...)
+				set = &disj
 			} else {
 				return spdx.NewParseError(fmt.Sprintf(msgIncompatibleTypes, "Licence Set", bldr.t, obj), meta)
 			}
@@ -683,27 +695,27 @@ func (p *Parser) licenceSetMap(set *[]spdx.AnyLicence) *builder {
 	return bldr
 }
 
-func (p *Parser) conjunctiveSetBuilder() *builder {
-	set := make([]spdx.AnyLicence, 0)
+func (p *Parser) conjunctiveSetBuilder(meta *spdx.Meta) *builder {
+	set := spdx.NewConjunctiveSet(meta, make([]spdx.AnyLicence, 0)...)
 	bldr := p.licenceSetMap(&set)
-	bldr.apply(blank("ns:type"), typeConjunctiveSet, nil)
+	bldr.t = typeConjunctiveSet
 	return bldr
 }
 
-func (p *Parser) disjuntiveSetBuilder() *builder {
-	set := make([]spdx.AnyLicence, 0)
+func (p *Parser) disjuntiveSetBuilder(meta *spdx.Meta) *builder {
+	set := spdx.NewDisjunctiveSet(meta, make([]spdx.AnyLicence, 0)...)
 	bldr := p.licenceSetMap(&set)
-	bldr.apply(blank("ns:type"), typeDisjunctiveSet, nil)
+	bldr.t = typeDisjunctiveSet
 	return bldr
 }
 
-func licenceReferenceTerm(node goraptor.Term) *spdx.Licence {
+func licenceReferenceTerm(node goraptor.Term, meta *spdx.Meta) *spdx.Licence {
 	str := strings.TrimPrefix(termStr(node), licenceUri)
-	lic := spdx.NewLicence(str, nil)
+	lic := spdx.NewLicence(str, meta)
 	return &lic
 }
 
-func (p *Parser) licenceReferenceBuilder(node goraptor.Term) *builder {
-	lic := licenceReferenceTerm(node)
+func (p *Parser) licenceReferenceBuilder(node goraptor.Term, meta *spdx.Meta) *builder {
+	lic := licenceReferenceTerm(node, meta)
 	return &builder{t: typeLicence, ptr: lic}
 }

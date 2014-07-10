@@ -12,11 +12,17 @@ type Document struct {
 	Files             []*File             // mandatory
 	Comment           ValueStr            // optional
 	Reviews           []*Review           // optional
+	*Meta
 }
+
+func (doc *Document) M() *Meta { return doc.Meta }
 
 type CreationInfo struct {
 	Creator            []ValueCreator // one or many
 	Created            ValueDate      // one
 	LicenceListVersion ValueStr       // zero or one
 	Comment            ValueStr       // zero or one
+	*Meta
 }
+
+func (ci *CreationInfo) M() *Meta { return ci.Meta }
