@@ -11,20 +11,20 @@ import (
 var (
 	uri_nstype = uri("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")
 
-	typeDocument               = prefix("SpdxDocument")
-	typeCreationInfo           = prefix("CreationInfo")
-	typePackage                = prefix("Package")
-	typeFile                   = prefix("File")
-	typeVerificationCode       = prefix("PackageVerificationCode")
-	typeChecksum               = prefix("Checksum")
-	typeArtifactOf             = prefix("doap:Project")
-	typeReview                 = prefix("Review")
-	typeExtractedLicence = prefix("ExtractedLicence")
+	typeDocument           = prefix("SpdxDocument")
+	typeCreationInfo       = prefix("CreationInfo")
+	typePackage            = prefix("Package")
+	typeFile               = prefix("File")
+	typeVerificationCode   = prefix("PackageVerificationCode")
+	typeChecksum           = prefix("Checksum")
+	typeArtifactOf         = prefix("doap:Project")
+	typeReview             = prefix("Review")
+	typeExtractedLicence   = prefix("ExtractedLicensingInfo")
 	typeAnyLicence         = prefix("AnyLicenseInfo")
-	typeConjunctiveSet         = prefix("ConjunctiveLicenseSet")
-	typeDisjunctiveSet         = prefix("DisjunctiveLicenseSet")
-	typeLicence       = prefix("License")
-	typeAbstractLicenceSet     = blank("abstractLicenceSet")
+	typeConjunctiveSet     = prefix("ConjunctiveLicenseSet")
+	typeDisjunctiveSet     = prefix("DisjunctiveLicenseSet")
+	typeLicence            = prefix("License")
+	typeAbstractLicenceSet = blank("abstractLicenceSet")
 )
 
 const (
@@ -398,7 +398,7 @@ func (p *Parser) documentMap(doc *spdx.Document) *builder {
 	bldr := &builder{t: typeDocument, ptr: doc}
 	bldr.updaters = map[string]updater{
 		"specVersion":  upd(&doc.SpecVersion),
-		"dataLicense":  updCutPrefix("http://spdx.org/licenses/", &doc.DataLicence),
+		"dataLicense":  updCutPrefix(licenceUri, &doc.DataLicence),
 		"rdfs:comment": upd(&doc.Comment),
 		"creationInfo": func(obj goraptor.Term, meta *spdx.Meta) error {
 			cri, err := p.reqCreationInfo(obj)
@@ -441,7 +441,7 @@ func (p *Parser) documentMap(doc *spdx.Document) *builder {
 			}
 			return nil
 		},
-		"hasExtractedLicence": func(obj goraptor.Term, meta *spdx.Meta) error {
+		"hasExtractedLicensingInfo": func(obj goraptor.Term, meta *spdx.Meta) error {
 			lic, err := p.reqExtractedLicence(obj)
 			if err != nil {
 				return err
@@ -698,7 +698,7 @@ func (p *Parser) disjuntiveSetBuilder() *builder {
 }
 
 func licenceReferenceTerm(node goraptor.Term) *spdx.Licence {
-	str := strings.TrimPrefix(termStr(node), "http://spdx.org/licenses/")
+	str := strings.TrimPrefix(termStr(node), licenceUri)
 	lic := spdx.NewLicence(str, nil)
 	return &lic
 }

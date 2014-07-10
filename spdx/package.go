@@ -11,9 +11,9 @@ type Package struct {
 	VerificationCode     *VerificationCode // mandatory, one
 	Checksum             *Checksum         // zero or one
 	SourceInfo           ValueStr          // zero or one
-	LicenceConcluded     AnyLicence    // one; NOASSERTION or NONE valid
-	LicenceInfoFromFiles []AnyLicence  // one or more; NOASSERTION or NONE valid; no sets allowed
-	LicenceDeclared      AnyLicence    // one
+	LicenceConcluded     AnyLicence        // one; NOASSERTION or NONE valid
+	LicenceInfoFromFiles []AnyLicence      // one or more; NOASSERTION or NONE valid; no sets allowed
+	LicenceDeclared      AnyLicence        // one
 	LicenceComments      ValueStr          // zero or one
 	CopyrightText        ValueStr          // one
 	Summary              ValueStr          // zero or one

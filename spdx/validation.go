@@ -612,7 +612,7 @@ func (v *Validator) AnyLicence(lic AnyLicence, allowSets bool, property string) 
 	switch t := lic.(type) {
 	case Licence:
 		if isLicIdRef(t.LicenceId()) {
-			v.LicenceRefId(t.LicenceId(), t.Id.M(), property)
+			v.LicenceRefId(t.LicenceId(), t.M(), property)
 			v.useLicence(t.LicenceId(), t.M())
 			return true
 		}
@@ -651,12 +651,6 @@ func (v *Validator) AnyLicence(lic AnyLicence, allowSets bool, property string) 
 		v.addErr("%s: Unknown Licence type.", m, property)
 		return false
 	}
-}
-
-// Returns whether the given ID is a Licence Reference ID (starts with LicenseRef-).
-// Does not check if the string after "LicenseRef-" satisfies the requirements of any SPDX version.
-func isLicIdRef(id string) bool {
-	return strings.HasPrefix(id, "LicenseRef-")
 }
 
 // Raise warning if invalid characters are used in LicenseRef ID. Returns `false` if a warnings is created, `true` otherwise.

@@ -4,14 +4,14 @@ const DATA_LICENCE_TAG = "CC0-1.0"
 const DATA_LICENCE_RDF = "http://spdx.org/licenses/CC0-1.0"
 
 type Document struct {
-	SpecVersion          ValueStr                  // one
-	DataLicence          ValueStr                  // one
-	CreationInfo         *CreationInfo             //
+	SpecVersion          ValueStr            // one
+	DataLicence          ValueStr            // one
+	CreationInfo         *CreationInfo       //
 	ExtractedLicenceInfo []*ExtractedLicence // optional
-	Packages             []*Package                // spdx1.2: one, spdx2: one or more
-	Files                []*File                   // mandatory
-	Comment              ValueStr                  // optional
-	Reviews              []*Review                 // optional
+	Packages             []*Package          // spdx1.2: one, spdx2: one or more
+	Files                []*File             // mandatory
+	Comment              ValueStr            // optional
+	Reviews              []*Review           // optional
 }
 
 type CreationInfo struct {

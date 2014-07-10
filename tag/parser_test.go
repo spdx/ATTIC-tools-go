@@ -874,11 +874,11 @@ func TestReviewer(t *testing.T) {
 
 func TestFileDependency(t *testing.T) {
 	input := []Pair{
-		Pair{"FileName", "file1.txt"},
-		Pair{"FileDependency", "file2.txt"},
-		Pair{"FileDependency", "file3.txt"},
-		Pair{"FileName", "file2.txt"},
-		Pair{"FileName", "file3.txt"},
+		{"FileName", "file1.txt"},
+		{"FileDependency", "file2.txt"},
+		{"FileDependency", "file3.txt"},
+		{"FileName", "file2.txt"},
+		{"FileName", "file3.txt"},
 	}
 
 	doc, err := Parse(l(input))
