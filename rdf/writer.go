@@ -167,7 +167,7 @@ func (f *Formatter) Document(doc *spdx.Document) (docId goraptor.Term, err error
 		return
 	}
 
-	if err = f.ExtrLicInfos(docId, "hasExtractedLicence", doc.ExtractedLicenceInfo); err != nil {
+	if err = f.ExtrLicInfos(docId, "hasExtractedLicence", doc.ExtractedLicences); err != nil {
 		return
 	}
 

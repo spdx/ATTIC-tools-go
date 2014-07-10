@@ -754,12 +754,12 @@ func TestDocLicenceId(t *testing.T) {
 		t.FailNow()
 	}
 
-	if len(doc.ExtractedLicenceInfo) != len(ids) {
-		t.Errorf("Wrong ExtractedLicenceInfo (len=%s): '%s'", len(doc.ExtractedLicenceInfo), doc.ExtractedLicenceInfo)
+	if len(doc.ExtractedLicences) != len(ids) {
+		t.Errorf("Wrong ExtractedLicences (len=%s): '%s'", len(doc.ExtractedLicences), doc.ExtractedLicences)
 		t.FailNow()
 	}
 
-	for i, extr := range doc.ExtractedLicenceInfo {
+	for i, extr := range doc.ExtractedLicences {
 		if extr.Id.Val != ids[i] {
 			t.Errorf("(#%d) Wrong ID: '%s' (expected '%s')", i, extr.Id, ids[i])
 		}

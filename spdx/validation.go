@@ -67,8 +67,9 @@ type Validator struct {
 	LicMinor int // Licence List Minor
 
 	// Licence references used/defined and where
-	licUsed    map[string]*Meta
-	licDefined map[string]*Meta
+	licUsed           map[string]*Meta
+	licDefined        map[string]*Meta
+	licencesValidated map[*ExtractedLicence]bool
 
 	// File references
 	files map[string]*File
@@ -239,8 +240,9 @@ func (v *Validator) Document(doc *Document) bool {
 		v.File(file)
 	}
 
-	for _, lic := range doc.ExtractedLicenceInfo {
+	for _, lic := range doc.ExtractedLicences {
 		v.ExtractedLicence(lic)
+		v.defineLicenceRef(lic.LicenceId(), lic.Id.M())
 	}
 
 	for _, rev := range doc.Reviews {
@@ -592,6 +594,25 @@ func isHex(val string) bool {
 	return b
 }
 
+// Adds `id` as a defined Licence for this validator. Creates a warning if the validator already has this Licence ID.
+func (v *Validator) defineLicenceRef(id string, m *Meta) {
+	if v.licDefined == nil {
+		v.licDefined = make(map[string]*Meta)
+		v.licDefined[id] = m
+		return
+	}
+	at, ok := v.licDefined[id]
+	if ok {
+		if at != nil {
+			v.addWarn("Licence %s already defined at lines %d to %d.", m, id, at.LineStart, at.LineEnd)
+		} else {
+			v.addWarn("Licence %s already defined.", m, id)
+		}
+	}
+	v.licDefined[id] = m
+}
+
+// Adds 'id' as a used Licence for this validator.
 func (v *Validator) useLicence(id string, m *Meta) {
 	if v.licUsed == nil {
 		v.licUsed = make(map[string]*Meta)
@@ -642,6 +663,7 @@ func (v *Validator) AnyLicence(lic AnyLicence, allowSets bool, property string) 
 		}
 		return r
 	case *ExtractedLicence:
+		v.useLicence(t.LicenceId(), t.M())
 		return v.ExtractedLicence(t)
 	default:
 		var m *Meta
@@ -671,26 +693,12 @@ func (v *Validator) LicenceRefId(id string, meta *Meta, property string) bool {
 	return false
 }
 
-// Adds `id` as a defined Licence for this validator. Creates a warning if the validator already has this Licence ID.
-func (v *Validator) defineLicenceRef(id string, m *Meta) {
-	if v.licDefined == nil {
-		v.licDefined = make(map[string]*Meta)
-		v.licDefined[id] = m
-		return
-	}
-	at, ok := v.licDefined[id]
-	if ok {
-		if at != nil {
-			v.addWarn("Licence %s already defined at lines %d to %d.", m, id, at.LineStart, at.LineEnd)
-		} else {
-			v.addWarn("Licence %s already defined.", m, id)
-		}
-	}
-	v.licDefined[id] = m
-}
-
 // Validate ExtractedLicence object
 func (v *Validator) ExtractedLicence(lic *ExtractedLicence) bool {
+	cache, ok := v.licencesValidated[lic]
+	if ok {
+		return cache
+	}
 	r := true
 	if !isLicIdRef(lic.Id.V()) {
 		r = false
@@ -698,7 +706,6 @@ func (v *Validator) ExtractedLicence(lic *ExtractedLicence) bool {
 	} else {
 		v.LicenceRefId(lic.Id.V(), lic.Id.M(), "Extracted Licence ID")
 	}
-	v.defineLicenceRef(lic.Id.V(), lic.Id.M())
 
 	if len(lic.Name) == 0 {
 		r = false
@@ -718,6 +725,9 @@ func (v *Validator) ExtractedLicence(lic *ExtractedLicence) bool {
 	for _, url := range lic.CrossReference {
 		r = v.Url(&url, false, false, "Extracted Licence Cross Reference") && r
 	}
-
+	if v.licencesValidated == nil {
+		v.licencesValidated = make(map[*ExtractedLicence]bool)
+	}
+	v.licencesValidated[lic] = r
 	return r
 }

@@ -446,10 +446,10 @@ func (p *Parser) documentMap(doc *spdx.Document) *builder {
 			if err != nil {
 				return err
 			}
-			if doc.ExtractedLicenceInfo == nil {
-				doc.ExtractedLicenceInfo = []*spdx.ExtractedLicence{lic}
+			if doc.ExtractedLicences == nil {
+				doc.ExtractedLicences = []*spdx.ExtractedLicence{lic}
 			} else {
-				doc.ExtractedLicenceInfo = append(doc.ExtractedLicenceInfo, lic)
+				doc.ExtractedLicences = append(doc.ExtractedLicences, lic)
 			}
 			return nil
 		},

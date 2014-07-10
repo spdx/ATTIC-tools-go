@@ -213,7 +213,7 @@ func (f *Formatter) Document(doc *spdx.Document) error {
 		return err
 	}
 
-	return f.ExtractedLicenceInfo(doc.ExtractedLicenceInfo)
+	return f.ExtractedLicences(doc.ExtractedLicences)
 }
 
 // Write the creation info part of a document
@@ -369,7 +369,7 @@ func (f *Formatter) Review(review *spdx.Review) error {
 }
 
 // Write all licences in the given slice
-func (f *Formatter) ExtractedLicenceInfo(lics []*spdx.ExtractedLicence) error {
+func (f *Formatter) ExtractedLicences(lics []*spdx.ExtractedLicence) error {
 	for _, lic := range lics {
 		if err := f.ExtrLicInfo(lic); err != nil {
 			return err
