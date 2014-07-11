@@ -993,8 +993,18 @@ func TestDocLicenceInvalidSet(t *testing.T) {
 	}
 	_, err := Parse(l(input))
 	if err.Error() != MsgEmptyLicence {
-		t.Errorf("Unexpected error '%s'.", err)
+		t.Errorf("(conjunctive) Unexpected error '%s'.", err)
 	}
+
+	input = []Pair{
+		{"PackageName", "some package"},
+		{"PackageLicenseDeclared", "a or ()"},
+	}
+	_, err = Parse(l(input))
+	if err.Error() != MsgEmptyLicence {
+		t.Errorf("(disjunctive) Unexpected error '%s'.", err)
+	}
+
 }
 
 func TestChecksumAlreadyDefined(t *testing.T) {
@@ -1006,6 +1016,99 @@ func TestChecksumAlreadyDefined(t *testing.T) {
 	_, err := Parse(l(input))
 	if err.Error() != MsgAlreadyDefined {
 		t.Errorf("Unexpected error '%s'.", err)
+	}
+}
+
+func TestEmptyDocumentElements(t *testing.T) {
+	input := []Pair{
+		{"SPDXVersion", "1.2"},
+	}
+	doc, err := Parse(l(input))
+	if err != nil {
+		t.Errorf("Unexpected error %s", err)
+	}
+
+	if doc.CreationInfo != nil {
+		t.Errorf("Document creation info not nil: %#v", doc.CreationInfo)
+	}
+
+	if doc.Packages != nil {
+		t.Errorf("Packages not nil: %#v", doc.Packages)
+	}
+
+	if doc.Files != nil {
+		t.Errorf("Files not nil: %#v", doc.Files)
+	}
+
+	if doc.Reviews != nil {
+		t.Errorf("Reviews are not nil: %#v", doc.Reviews)
+	}
+
+	if doc.ExtractedLicences != nil {
+		t.Errorf("ExtractedLicences are not nil: %#v", doc.ExtractedLicences)
+	}
+
+}
+
+func TestEmptyPackageElements(t *testing.T) {
+	input := []Pair{
+		{"PackageName", "test package"},
+	}
+
+	doc, err := Parse(l(input))
+	if err != nil {
+		t.Errorf("Unexpected error %s", err)
+	}
+
+	pkg := doc.Packages[0]
+
+	if pkg.Checksum != nil {
+		t.Errorf("Package checksum not nil: %#v", pkg.Checksum)
+	}
+
+	if pkg.VerificationCode != nil {
+		t.Errorf("Package VerificationCode not nil: %#v", pkg.VerificationCode)
+	}
+
+	if pkg.Files != nil {
+		t.Errorf("Package Files not nil: %#v", pkg.Files)
+	}
+
+	if pkg.LicenceInfoFromFiles != nil {
+		t.Errorf("licence info from files not nil: %#v", pkg.LicenceInfoFromFiles)
+	}
+}
+
+func TestEmptyFileElements(t *testing.T) {
+	input := []Pair{
+		{"FileName", "test file"},
+	}
+
+	doc, err := Parse(l(input))
+	if err != nil {
+		t.Errorf("Unexpected error %s", err)
+	}
+
+	f := doc.Files[0]
+
+	if f.Checksum != nil {
+		t.Errorf("File checksum not nil: %#v", f.Checksum)
+	}
+
+	if f.ArtifactOf != nil {
+		t.Errorf("ArtifactOf not nil: %#v", f.ArtifactOf)
+	}
+
+	if f.Dependency != nil {
+		t.Errorf("Dependency not nil: %#v", f.Dependency)
+	}
+
+	if f.Contributor != nil {
+		t.Errorf("File contributor not nil: %#v", f.Contributor)
+	}
+
+	if f.LicenceInfoInFile != nil {
+		t.Errorf("LiceceInfoInFile not nil %#v", f.LicenceInfoInFile)
 	}
 }
 

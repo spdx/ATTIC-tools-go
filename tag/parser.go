@@ -435,9 +435,6 @@ func mapMerge(dest *updaterMapping, src updaterMapping) {
 // Creates the mapping of a *spdx.Document in Tag format.
 func documentMap(doc *spdx.Document) *updaterMapping {
 
-	doc.CreationInfo = new(spdx.CreationInfo)
-	doc.CreationInfo.Creator = make([]spdx.ValueCreator, 0)
-
 	initCreationInfo := func(tok *Token) {
 		if doc.CreationInfo == nil {
 			doc.CreationInfo = new(spdx.CreationInfo)
@@ -513,9 +510,7 @@ func documentMap(doc *spdx.Document) *updaterMapping {
 		// File
 		"FileName": func(tok *Token) error {
 			file := &spdx.File{
-				Checksum:   new(spdx.Checksum),
-				Dependency: make([]*spdx.File, 0),
-				Name:       spdx.Str(tok.Value, tok.Meta),
+				Name: spdx.Str(tok.Value, tok.Meta),
 			}
 
 			if doc.Files == nil {
@@ -542,17 +537,13 @@ func documentMap(doc *spdx.Document) *updaterMapping {
 					return file.Checksum
 				}),
 				"ArtifactOfProjectName": func(tok *Token) error {
-					artif := new(spdx.ArtifactOf)
+					artif := &spdx.ArtifactOf{Meta: tok.Meta}
 					artif.Name = spdx.Str(tok.Value, tok.Meta)
 					mapMerge(&mapping, updaterMapping{
 						"ArtifactOfProjectHomePage": upd(&artif.HomePage),
 						"ArtifactOfProjectURI":      upd(&artif.ProjectUri),
 					})
-					if file.ArtifactOf == nil {
-						file.ArtifactOf = []*spdx.ArtifactOf{artif}
-					} else {
-						file.ArtifactOf = append(file.ArtifactOf, artif)
-					}
+					file.ArtifactOf = append(file.ArtifactOf, artif)
 					return nil
 				},
 			})
@@ -586,6 +577,7 @@ func documentMap(doc *spdx.Document) *updaterMapping {
 		"Reviewer": func(tok *Token) error {
 			rev := &spdx.Review{
 				Reviewer: spdx.NewValueCreator(tok.Value, tok.Meta),
+				Meta:     tok.Meta,
 			}
 
 			if doc.Reviews == nil {
