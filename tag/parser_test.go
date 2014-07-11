@@ -65,8 +65,14 @@ func (l *testLexer) Err() error    { return nil }
 func (l *testLexer) Line() int     { return 0 }
 func l(p []Pair) lexer             { return &testLexer{-1, p} }
 
-func tk(value string) *Token {
-	return &Token{Pair: Pair{Value: value}}
+// Create a token from a string or string and meta.
+// If a meta is given, it is used as the token's meta. Only the first meta given is used, others are ignored.
+func tk(value string, metas ...*spdx.Meta) *Token {
+	var meta *spdx.Meta
+	if len(metas) > 0 {
+		meta = metas[0]
+	}
+	return &Token{Pair: Pair{Value: value}, Meta: meta}
 }
 
 func sameLicence(a, b spdx.AnyLicence) bool {
@@ -114,14 +120,26 @@ func joinStrSlice(a []string, glue string) string {
 	return result
 }
 
-func TestUpd(t *testing.T) {
-	a := spdx.Str("", nil)
-	f := upd(&a)
-	f(tk("world"))
-	if a.Val != "world" {
-		t.Fail()
+func sameSpdx(t *testing.T, found, expected spdx.Value) {
+	if found.V() != expected.V() {
+		t.Errorf("Incorrect value. Found \"%s\" but expected \"%s\"", found.V(), expected.V())
+	}
+	if found.M() != expected.M() {
+		t.Errorf("Incorrect meta. Found %#v but expected %#v", found.M(), expected.M())
 	}
 }
+
+func TestUpd(t *testing.T) {
+	meta := spdx.NewMeta(3, 4)
+	a := spdx.Str("", nil)
+	f := upd(&a)
+	err := f(tk("world", meta))
+	if err != nil {
+		t.Errorf("Unexpected error %s", err)
+	}
+	sameSpdx(t, a, spdx.Str("world", meta))
+}
+
 func TestUpdFail(t *testing.T) {
 	a := spdx.Str("", nil)
 	f := upd(&a)
@@ -132,13 +150,178 @@ func TestUpdFail(t *testing.T) {
 	}
 }
 
+func TestUpdDelay(t *testing.T) {
+	called := false
+	val := spdx.Str("", nil)
+	delay := func(tok *Token) *spdx.ValueStr {
+		if called {
+			t.Error("UpdDelay - delay function called more than once")
+		}
+		called = true
+		return &val
+	}
+	f := updDelay(delay)
+	meta := spdx.NewMeta(3, 4)
+	err := f(tk("hello", meta))
+	if err != nil {
+		t.Errorf("Unexpected error %s", err)
+	}
+	if !called {
+		t.Errorf("Delay function not called.")
+	}
+	sameSpdx(t, val, spdx.Str("hello", meta))
+	err = f(tk("world"))
+	if err != nil && val.Val == "world" {
+		t.Error("No update should have happened.")
+	}
+	if err == nil {
+		t.Error("No error when there should be one.")
+	}
+	f(tk("third test"))
+}
+
 func TestUpdList(t *testing.T) {
 	arr := []spdx.ValueStr{spdx.Str("1", nil), spdx.Str("2", nil), spdx.Str("3", nil)}
 	f := updList(&arr)
-	f(tk("4"))
-	if len(arr) != 4 || arr[3].Val != "4" {
+	meta := spdx.NewMeta(5, 7)
+	err := f(tk("4", meta))
+	if err != nil {
+		t.Errorf("Unexpected error %s", err)
+	}
+	if len(arr) != 4 || arr[3].Val != "4" || arr[3].M() != meta {
 		t.Fail()
 	}
+}
+
+func TestUpdListDelay(t *testing.T) {
+	arr := make([]spdx.ValueStr, 0)
+	called := false
+	f := updListDelay(func(tok *Token) *[]spdx.ValueStr {
+		if called {
+			t.Error("Delay function called more than once.")
+		}
+		called = true
+		return &arr
+	})
+	f(tk("zero"))
+	if !called {
+		t.Error("Delay function not called.")
+	}
+	f(tk("one"))
+	f(tk("two"))
+}
+
+// Test upd*Creator
+// Testing the actual parsing of the 'creator' format should happen in the spdx package
+
+func TestUpdCreator(t *testing.T) {
+	meta := spdx.NewMeta(3, 4)
+	a := spdx.NewValueCreator("", nil)
+	f := updCreator(&a)
+	err := f(tk("Tool: spdx-go", meta))
+	if err != nil {
+		t.Errorf("Unexpected error %s", err)
+	}
+	sameSpdx(t, a, spdx.NewValueCreator("Tool: spdx-go", meta))
+	err = f(tk("Person: Mr. Tester", nil))
+	if err == nil || err.Error() != MsgAlreadyDefined {
+		t.Errorf("Incorrect error %+v", err)
+	}
+}
+
+func TestUpdCreatorDelay(t *testing.T) {
+	called := false
+	val := spdx.NewValueCreator("", nil)
+	f := updCreatorDelay(func(tok *Token) *spdx.ValueCreator {
+		if called {
+			t.Error("UpdDelay - delay function called more than once")
+		}
+		called = true
+		return &val
+	})
+	meta := spdx.NewMeta(3, 4)
+	err := f(tk("Tool: spdx-go", meta))
+	if err != nil {
+		t.Errorf("Unexpected error %+v", err)
+	}
+	if !called {
+		t.Errorf("Delay function not called.")
+	}
+	sameSpdx(t, val, spdx.NewValueCreator("Tool: spdx-go", meta))
+	err = f(tk("world"))
+	if err != nil && val.V() == "world" {
+		t.Error("No update should have happened.")
+	}
+	if err == nil {
+		t.Error("No error when there should be one.")
+	}
+	f(tk("third test"))
+}
+
+func TestUpdCreatorListDelay(t *testing.T) {
+	arr := make([]spdx.ValueCreator, 0)
+	called := false
+	f := updCreatorListDelay(func(tok *Token) *[]spdx.ValueCreator {
+		if called {
+			t.Error("Delay function called more than once.")
+		}
+		called = true
+		return &arr
+	})
+	f(tk("zero"))
+	if !called {
+		t.Error("Delay function not called.")
+	}
+	f(tk("one"))
+	f(tk("two"))
+}
+
+// Test upd*Date
+
+func TestUpdDate(t *testing.T) {
+	meta := spdx.NewMeta(3, 4)
+	a := spdx.NewValueDate("", nil)
+	f := updDate(&a)
+	date := "2010-02-03T00:00:00Z"
+	err := f(tk(date, meta))
+	if err != nil {
+		t.Errorf("Unexpected error %s", err)
+	}
+	sameSpdx(t, a, spdx.NewValueDate(date, meta))
+	err = f(tk("should not update", nil))
+	if err == nil || err.Error() != MsgAlreadyDefined {
+		t.Errorf("Incorrect error %+v", err)
+	}
+}
+
+func TestUpdDateDelay(t *testing.T) {
+	called := false
+	val := spdx.NewValueDate("", nil)
+	f := updDateDelay(func(tok *Token) *spdx.ValueDate {
+		if called {
+			t.Error("UpdDelay - delay function called more than once")
+		}
+		called = true
+		return &val
+	})
+	date := "2010-02-03T00:00:00Z"
+	meta := spdx.NewMeta(3, 4)
+	err := f(tk(date, meta))
+	if err != nil {
+		t.Errorf("Unexpected error %+v", err)
+	}
+	if !called {
+		t.Errorf("Delay function not called.")
+	}
+	sameSpdx(t, val, spdx.NewValueDate(date, meta))
+	err = f(tk("should not update"))
+	if err != nil && val.V() == "should not update" {
+		t.Error("No update should have happened.")
+	}
+	if err == nil {
+		t.Error("No error when there should be one.")
+	}
+	f(tk("third test"))
 }
 
 func TestVerifCodeNoExcludes(t *testing.T) {
