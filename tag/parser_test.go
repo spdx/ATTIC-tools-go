@@ -53,7 +53,7 @@ func sameValSlice(a, b []spdx.Value) bool {
 	return true
 }
 
-// Fake lexer for testing:
+// Fake lexer for testing, no meta
 type testLexer struct {
 	i     int
 	pairs []Pair
@@ -64,6 +64,28 @@ func (l *testLexer) Token() *Token { return &Token{TokenPair, l.pairs[l.i], nil}
 func (l *testLexer) Err() error    { return nil }
 func (l *testLexer) Line() int     { return 0 }
 func l(p []Pair) lexer             { return &testLexer{-1, p} }
+
+// Fake lexer for testing, with meta support
+type testLexerTok struct {
+	i      int
+	tokens []*Token
+	line   int
+}
+
+func (l *testLexerTok) Lex() bool {
+	l.i++
+	res := l.i < len(l.tokens)
+	if res {
+		if meta := l.tokens[l.i].Meta; meta != nil {
+			l.line = meta.LineStart
+		}
+	}
+	return res
+}
+func (l *testLexerTok) Token() *Token { l.tokens[l.i].Type = TokenPair; return l.tokens[l.i] }
+func (l *testLexerTok) Err() error    { return nil }
+func (l *testLexerTok) Line() int     { return l.line }
+func lt(toks []*Token) lexer          { return &testLexerTok{-1, toks, 0} }
 
 // Create a token from a string or string and meta.
 // If a meta is given, it is used as the token's meta. Only the first meta given is used, others are ignored.
@@ -107,17 +129,6 @@ func sameLicence(a, b spdx.AnyLicence) bool {
 		}
 		return false
 	}
-}
-
-func joinStrSlice(a []string, glue string) string {
-	if len(a) == 0 {
-		return ""
-	}
-	result := a[0]
-	for i := 1; i < len(a); i++ {
-		result += glue + a[i]
-	}
-	return result
 }
 
 func sameSpdx(t *testing.T, found, expected spdx.Value) {
@@ -960,6 +971,62 @@ func TestDocInvalidProperty(t *testing.T) {
 	_, err := Parse(l(input))
 	if err == nil {
 		t.Fail()
+	}
+}
+
+func TestElementsMeta(t *testing.T) {
+	elements := []Pair{
+		{"SPDXVersion", "1.2"},
+		{"Creator", "Person: tester"},
+		{"Reviewer", "Person: tester"},
+		{"PackageName", "test.pkg.1"},
+		{"PackageName", "test.pkg.2"},
+		{"PackageLicenseConcluded", "GPLv3 or GPLv2"},
+		{"PackageChecksum", "MD5: 432"},
+		{"PackageVerificationCode", "fdsa"},
+		{"FileName", "test.file.1"},
+		{"FileName", "test.file.2"},
+		{"LicenseInfoInFile", "GPLv2 and Apache2"},
+		{"FileChecksum", "SHA1: 432"},
+		{"ArtifactOfProjectName", "test.proj"},
+	}
+
+	metas := make([]*spdx.Meta, len(elements))
+	for i := range metas {
+		metas[i] = spdx.NewMetaL(i + 1)
+	}
+
+	input := make([]*Token, len(elements))
+	for i, pair := range elements {
+		input[i] = &Token{Pair: pair, Meta: metas[i]}
+	}
+
+	doc, err := Parse(lt(input))
+	if err != nil {
+		t.Errorf("Unexpected parse error %+v", err)
+		t.FailNow()
+	}
+
+	found := []*spdx.Meta{
+		doc.Meta,
+		doc.CreationInfo.Meta,
+		doc.Reviews[0].Meta,
+		doc.Packages[0].Meta,
+		doc.Packages[1].Meta,
+		doc.Packages[1].LicenceConcluded.M(),
+		doc.Packages[1].Checksum.Meta,
+		doc.Packages[1].VerificationCode.Meta,
+		doc.Files[0].Meta,
+		doc.Files[1].Meta,
+		doc.Files[1].LicenceInfoInFile[0].M(),
+		doc.Files[1].Checksum.Meta,
+		doc.Files[1].ArtifactOf[0].Meta,
+	}
+
+	for i, m := range metas {
+		if m != found[i] {
+			t.Errorf("Wrong meta for %d:%s. Expected %+v but found %+v", i, elements[i], m, found[i])
+		}
 	}
 }
 

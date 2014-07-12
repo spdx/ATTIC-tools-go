@@ -403,7 +403,7 @@ func anyLicence(lic *spdx.AnyLicence) updater {
 	}
 }
 
-// Update a []anyLicenceInfo pointer
+// Update a []AnyLicence pointer
 func anyLicenceList(licList *[]spdx.AnyLicence) updater {
 	return func(tok *Token) error {
 		l, err := parseLicenceString(tok)
@@ -511,6 +511,7 @@ func documentMap(doc *spdx.Document) *updaterMapping {
 		"FileName": func(tok *Token) error {
 			file := &spdx.File{
 				Name: spdx.Str(tok.Value, tok.Meta),
+				Meta: tok.Meta,
 			}
 
 			if doc.Files == nil {
@@ -629,6 +630,11 @@ func Parse(lex lexer) (*spdx.Document, error) {
 		_, err := applyMapping(token, mapping)
 		if err != nil {
 			return nil, err
+		}
+
+		// first token with non-nil meta is the document meta
+		if doc.Meta == nil {
+			doc.Meta = token.Meta
 		}
 	}
 
