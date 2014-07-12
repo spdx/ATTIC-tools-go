@@ -555,9 +555,8 @@ func documentMap(doc *spdx.Document) *updaterMapping {
 		// ExtractedLicence
 		"LicenseID": func(tok *Token) error {
 			lic := &spdx.ExtractedLicence{
-				Id:             spdx.Str(tok.Value, tok.Meta),
-				Name:           make([]spdx.ValueStr, 0),
-				CrossReference: make([]spdx.ValueStr, 0),
+				Id:   spdx.Str(tok.Value, tok.Meta),
+				Meta: tok.Meta,
 			}
 			mapMerge(&mapping, updaterMapping{
 				"ExtractedText":         upd(&lic.Text),
@@ -613,6 +612,25 @@ func applyMapping(tok *Token, mapping *updaterMapping) (ok bool, err error) {
 	return true, f(tok)
 }
 
+func updateLicenceReferences(lic *spdx.AnyLicence, index map[string]*spdx.ExtractedLicence) {
+	switch t := (*lic).(type) {
+	case spdx.Licence:
+		if t.IsReference() {
+			if ref, ok := index[t.LicenceId()]; ok {
+				*lic = ref
+			}
+		}
+	case spdx.DisjunctiveLicenceSet:
+		for i := range t.Members {
+			updateLicenceReferences(&t.Members[i], index)
+		}
+	case spdx.ConjunctiveLicenceSet:
+		for i := range t.Members {
+			updateLicenceReferences(&t.Members[i], index)
+		}
+	}
+}
+
 // Parse Tokens given by a lexer to a *spdx.Document.
 // Errors returned are either I/O errors returned by the io.Reader associated with the given lexer,
 // lexing errors (still have *ParseError type) or parse errors (type *ParseError).
@@ -642,16 +660,41 @@ func Parse(lex lexer) (*spdx.Document, error) {
 		return nil, lex.Err()
 	}
 
+	// licence references index
+	licenceMap := make(map[string]*spdx.ExtractedLicence)
+	for _, lic := range doc.ExtractedLicences {
+		licenceMap[lic.LicenceId()] = lic
+	}
+
 	// fix file dependency references
 	fileMap := make(map[string]*spdx.File)
 	for _, file := range doc.Files {
 		fileMap[file.Name.Val] = file
+		// fix file licences
+		if file.LicenceConcluded != nil {
+			updateLicenceReferences(&file.LicenceConcluded, licenceMap)
+		}
+		for i := range file.LicenceInfoInFile {
+			updateLicenceReferences(&file.LicenceInfoInFile[i], licenceMap)
+		}
 	}
 	for _, file := range doc.Files {
 		for i, dep := range file.Dependency {
 			if f := fileMap[dep.Name.Val]; f != nil {
 				file.Dependency[i] = f
 			}
+		}
+	}
+
+	for _, pkg := range doc.Packages {
+		if pkg.LicenceConcluded != nil {
+			updateLicenceReferences(&pkg.LicenceConcluded, licenceMap)
+		}
+		if pkg.LicenceDeclared != nil {
+			updateLicenceReferences(&pkg.LicenceDeclared, licenceMap)
+		}
+		for i := range pkg.LicenceInfoFromFiles {
+			updateLicenceReferences(&pkg.LicenceInfoFromFiles[i], licenceMap)
 		}
 	}
 

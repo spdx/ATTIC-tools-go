@@ -989,6 +989,7 @@ func TestElementsMeta(t *testing.T) {
 		{"LicenseInfoInFile", "GPLv2 and Apache2"},
 		{"FileChecksum", "SHA1: 432"},
 		{"ArtifactOfProjectName", "test.proj"},
+		{"LicenseID", "LicenseRef-1"},
 	}
 
 	metas := make([]*spdx.Meta, len(elements))
@@ -1021,12 +1022,49 @@ func TestElementsMeta(t *testing.T) {
 		doc.Files[1].LicenceInfoInFile[0].M(),
 		doc.Files[1].Checksum.Meta,
 		doc.Files[1].ArtifactOf[0].Meta,
+		doc.ExtractedLicences[0].Meta,
 	}
 
 	for i, m := range metas {
 		if m != found[i] {
 			t.Errorf("Wrong meta for %d:%s. Expected %+v but found %+v", i, elements[i], m, found[i])
 		}
+	}
+}
+
+func TestLicenceReferences(t *testing.T) {
+	input := []Pair{
+		{"PackageName", "test"},
+		{"PackageLicenseConcluded", "LicenseRef-1"},
+		{"PackageLicenseDeclared", "LicenseRef-2"},
+		{"PackageLicenseInfoFromFiles", "LicenseRef-1"},
+		{"PackageLicenseInfoFromFiles", "LicenseRef-2"},
+		{"LicenseID", "LicenseRef-1"},
+	}
+	doc, err := Parse(l(input))
+	if err != nil {
+		t.Errorf("Unexpected error %s", err)
+	}
+	pkg := doc.Packages[0]
+
+	ref, ok := pkg.LicenceConcluded.(*spdx.ExtractedLicence)
+	extracted := doc.ExtractedLicences[0]
+	if !ok || ref != extracted {
+		t.Errorf("Pointers do not match. extr %T %v and ref %T %v", extracted, extracted.LicenceId(), ref, ref)
+	}
+
+	if _, ok := pkg.LicenceDeclared.(spdx.Licence); !ok {
+		t.Errorf("Wrong reference. %T %s", pkg.LicenceDeclared, pkg.LicenceDeclared.LicenceId())
+	}
+
+	lff := pkg.LicenceInfoFromFiles[0]
+	ref, ok = lff.(*spdx.ExtractedLicence)
+	if !ok || ref != doc.ExtractedLicences[0] {
+		t.Errorf("Pointers do not match. extr %T %v and ref %T %v", extracted, extracted.LicenceId(), lff, lff.LicenceId())
+	}
+
+	if _, ok := pkg.LicenceInfoFromFiles[1].(spdx.Licence); !ok {
+		t.Errorf("Wrong reference. %T %s", pkg.LicenceInfoFromFiles[1], pkg.LicenceInfoFromFiles[1].LicenceId())
 	}
 }
 
