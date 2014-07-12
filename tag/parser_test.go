@@ -1039,6 +1039,8 @@ func TestLicenceReferences(t *testing.T) {
 		{"PackageLicenseDeclared", "LicenseRef-2"},
 		{"PackageLicenseInfoFromFiles", "LicenseRef-1"},
 		{"PackageLicenseInfoFromFiles", "LicenseRef-2"},
+		{"PackageLicenseInfoFromFiles", "(LicenseRef-1 and LicenseRef-2)"},
+		{"PackageLicenseInfoFromFiles", "(LicenseRef-2 or LicenseRef-1)"},
 		{"LicenseID", "LicenseRef-1"},
 	}
 	doc, err := Parse(l(input))
@@ -1065,6 +1067,16 @@ func TestLicenceReferences(t *testing.T) {
 
 	if _, ok := pkg.LicenceInfoFromFiles[1].(spdx.Licence); !ok {
 		t.Errorf("Wrong reference. %T %s", pkg.LicenceInfoFromFiles[1], pkg.LicenceInfoFromFiles[1].LicenceId())
+	}
+
+	conj := pkg.LicenceInfoFromFiles[2].(spdx.ConjunctiveLicenceSet)
+	if _, ok := conj.Members[0].(*spdx.ExtractedLicence); !ok {
+		t.Errorf("Conjunctive set not ok")
+	}
+
+	disj := pkg.LicenceInfoFromFiles[3].(spdx.DisjunctiveLicenceSet)
+	if _, ok := disj.Members[1].(*spdx.ExtractedLicence); !ok {
+		t.Errorf("Disjunctive set not ok")
 	}
 }
 
