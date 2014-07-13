@@ -8,6 +8,8 @@ import (
 	"unicode"
 )
 
+const commentLastWritten = "__comment"
+
 // spdx.Checksum representation as Tag string
 func cksumStr(cksum *spdx.Checksum) string {
 	if cksum == nil || (cksum.Algo.Val == "" && cksum.Value.Val == "") {
@@ -29,7 +31,7 @@ func verifCodeStr(verif *spdx.VerificationCode) string {
 
 // Count the number of *sep* at the beginning of *str*.
 func countLeft(str string, sep byte) (count int) {
-	for i := 0; i < len(str); i++ {
+	for i := range str {
 		if str[i] != sep {
 			return
 		}
@@ -63,10 +65,9 @@ func NewFormatter(f io.Writer) *Formatter {
 // Print newlines where appropriate.
 // Currently when
 // - a property is followed by a comment
-// - a property that creates a new domain comes after another property
-// (those are: FileName, PackageName, LicenseID)
+// - printing one of these properties: FileName, LicenseID, PackageName, Reviewer, ArtifactOfProjectName
 func (f *Formatter) spaces(now string) {
-	if f.lastWritten == "" || f.lastWritten == "__comment" {
+	if f.lastWritten == "" || f.lastWritten == commentLastWritten {
 		return
 	}
 
@@ -77,6 +78,10 @@ func (f *Formatter) spaces(now string) {
 			f.out.Write([]byte{'\n'})
 			return
 		}
+	}
+
+	if now == commentLastWritten {
+		f.out.Write([]byte{'\n'})
 	}
 }
 
@@ -96,23 +101,27 @@ func (f *Formatter) Token(tok *Token) error {
 	if tok == nil || (tok.Type == TokenPair && tok.Pair.Value == "") {
 		return nil
 	}
-	if tok.Type == TokenComment {
-		f.spaces("__comment")
-		hashes := countLeft(tok.Pair.Value, '#')
-		if hashes != len(tok.Pair.Value) && !unicode.IsSpace(rune(tok.Pair.Value[hashes])) {
-			tok.Pair.Value = tok.Pair.Value[:hashes] + " " + tok.Pair.Value[hashes+1:]
-		}
-
-		f.lastWritten = "__comment"
-		_, err := io.WriteString(f.out, "#"+tok.Pair.Value+"\n")
-		return err
-	}
-
-	if tok.Type != TokenPair {
+	switch tok.Type {
+	case TokenComment:
+		return f.Comment(tok.Pair.Value)
+	case TokenPair:
+		return f.Property(tok.Pair.Key, tok.Pair.Value)
+	default:
 		return errors.New("Unsupported token type.")
 	}
+}
 
-	return f.Property(tok.Pair.Key, tok.Pair.Value)
+func (f *Formatter) Comment(comment string) error {
+	f.spaces(commentLastWritten)
+
+	hashes := countLeft(comment, '#')
+	if hashes != len(comment) && !unicode.IsSpace(rune(comment[hashes])) {
+		comment = comment[:hashes] + " " + comment[hashes+1:]
+	}
+
+	f.lastWritten = commentLastWritten
+	_, err := io.WriteString(f.out, "#"+comment+"\n")
+	return err
 }
 
 // Write a property (tag: value)
