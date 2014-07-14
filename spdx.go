@@ -270,7 +270,7 @@ func validate() {
 		exitErr(err)
 	}
 
-	validator := new(spdx.Validator)
+	validator := spdx.NewValidator()
 	validator.Document(doc)
 
 	if *flagHTML {

@@ -67,14 +67,24 @@ type Validator struct {
 	LicMinor int // Licence List Minor
 
 	// Licence references used/defined and where
-	licUsed           map[string]*Meta
-	licDefined        map[string]*Meta
-	licencesValidated map[*ExtractedLicence]bool
+	licUsed    map[string]*Meta
+	licDefined map[string]*Meta
+
+	// Objects already validated
+	validated map[interface{}]bool
 
 	// File references
 	files map[string]*File
 
 	errs []*ValidationError
+}
+
+func NewValidator() *Validator {
+	return &Validator{
+		licUsed:    make(map[string]*Meta),
+		licDefined: make(map[string]*Meta),
+		validated:  make(map[interface{}]bool),
+	}
 }
 
 // Return all the errors and warnings that this validator has.
@@ -231,7 +241,7 @@ func (v *Validator) Document(doc *Document) bool {
 
 	// In SPDX 1.x, there must be one package per document
 	if v.Major == 1 && len(doc.Packages) > 1 {
-		v.addErr("A document cannot have more than one package in SPDX-1.x.", doc.Packages[1].Name.Meta)
+		v.addErr("A document cannot have more than one package in SPDX-1.x.", doc.Packages[1].Meta)
 	} else if v.Major == 1 && len(doc.Packages) == 0 {
 		v.addErr("A document must have one Package in SPDX-1.x.", nil)
 	}
@@ -390,6 +400,9 @@ func (v *Validator) Review(rev *Review) bool {
 
 // Validate a Package
 func (v *Validator) Package(pkg *Package) bool {
+	if cache, ok := v.validated[pkg]; ok {
+		return cache
+	}
 	r := v.MandatoryText(pkg.Name, false, false, "Package Name")
 	r = v.SingleLineErr(pkg.Name, "Package Name") && r
 
@@ -408,14 +421,14 @@ func (v *Validator) Package(pkg *Package) bool {
 	r = v.MandatoryText(&pkg.CopyrightText, true, true, "Package Copyright Text") && r
 
 	if pkg.LicenceConcluded == nil {
-		v.addErr("Package Licence Concluded cannot be empty.", pkg.Name.Meta)
+		v.addErr("Package Licence Concluded cannot be empty.", pkg.Meta)
 		r = false
 	} else {
 		r = v.AnyLicenceOptionals(pkg.LicenceConcluded, true, true, true, "Package Licence Concluded") && r
 	}
 
 	if pkg.LicenceDeclared == nil {
-		v.addErr("Package Licence Declared cannot be empty.", pkg.Name.Meta)
+		v.addErr("Package Licence Declared cannot be empty.", pkg.Meta)
 		r = false
 	} else {
 		r = v.AnyLicenceOptionals(pkg.LicenceDeclared, true, true, true, "Package Licence Declared") && r
@@ -423,7 +436,7 @@ func (v *Validator) Package(pkg *Package) bool {
 
 	for _, lic := range pkg.LicenceInfoFromFiles {
 		if lic == nil {
-			v.addErr("Package Licence Info from Files cannot be empty.", pkg.Name.Meta)
+			v.addErr("Package Licence Info from Files cannot be empty.", pkg.Meta)
 			r = false
 		} else {
 			r = v.AnyLicenceOptionals(lic, false, true, true, "Licence Info From File") && r
@@ -433,12 +446,15 @@ func (v *Validator) Package(pkg *Package) bool {
 	for _, file := range pkg.Files {
 		r = v.File(file) && r
 	}
-
+	v.validated[pkg] = r
 	return r
 }
 
 // Validate File
 func (v *Validator) File(f *File) bool {
+	if cache, ok := v.validated[f]; ok {
+		return cache
+	}
 	r := v.MandatoryText(&f.Name, false, false, "File Name")
 
 	// file indexing
@@ -450,10 +466,10 @@ func (v *Validator) File(f *File) bool {
 		if ok {
 			if f != _f {
 				// file name already defined
-				if m := _f.Name.Meta; m != nil {
-					v.addErr("File already defined at line %d.", f.Name.Meta, _f.Name.Meta.LineStart)
+				if m := _f.Meta; m != nil {
+					v.addErr("File already defined at line %d.", f.Meta, _f.Meta.LineStart)
 				} else {
-					v.addErr("File already defiend.", f.Name.Meta)
+					v.addErr("File already defiend.", f.Meta)
 				}
 				r = false
 			} else {
@@ -485,14 +501,14 @@ func (v *Validator) File(f *File) bool {
 	}
 	r = f.Checksum != nil && v.Checksum(f.Checksum) && r
 	if f.LicenceConcluded == nil {
-		v.addErr("File Licence Concluded cannot be empty.", f.Name.Meta)
+		v.addErr("File Licence Concluded cannot be empty.", f.Meta)
 		r = false
 	} else {
 		r = v.AnyLicenceOptionals(f.LicenceConcluded, true, true, true, "File Licence Concluded") && r
 	}
 	for _, lic := range f.LicenceInfoInFile {
 		if lic == nil {
-			v.addErr("Licence Info In File cannot be empty.", f.Name.Meta)
+			v.addErr("Licence Info In File cannot be empty.", f.Meta)
 			r = false
 		} else {
 			r = v.AnyLicenceOptionals(lic, false, true, true, "Licence Info in File") && r
@@ -515,27 +531,27 @@ func (v *Validator) File(f *File) bool {
 		r = v.ArtifactOf(artif) && r
 	}
 
+	v.validated[f] = r
 	return r
 }
 
 // ArtifactOf
 func (v *Validator) ArtifactOf(a *ArtifactOf) bool {
-
+	if a == nil {
+		v.addErr("No Artifact defined.", nil)
+		return false
+	}
+	if cache, ok := v.validated[a]; ok {
+		return cache
+	}
 	notEmpty := a.Name.Val != "" || a.ProjectUri.Val != "" || (a.HomePage.Val != "" && a.HomePage.Val != "UNKNOWN")
 	if !notEmpty {
-		m := a.Name.Meta
-		if m == nil && a.ProjectUri.Meta != nil {
-			m = a.ProjectUri.Meta
-		}
-		if m == nil && a.HomePage.Meta != nil {
-			m = a.HomePage.Meta
-		}
-		v.addErr("Artifact is empty.", m)
-		// it's empty, no point in continuing validation
+		v.addErr("Artifact is empty.", a.Meta)
 		return false
 	}
 	r := v.Url(&a.ProjectUri, false, false, "Artifact Project URI")
 	r = (a.HomePage.Val == "UNKNOWN" || v.Url(&a.HomePage, false, false, "Artifact Home Page")) && r
+	v.validated[a] = r
 	return r
 }
 
@@ -545,9 +561,12 @@ func (v *Validator) VerificationCode(vc *VerificationCode) bool {
 		v.addErr("Package Verification Code is mandatory.", nil)
 		return false
 	}
+	if cache, ok := v.validated[vc]; ok {
+		return cache
+	}
 	r := true
 	if len(vc.Value.V()) != 40 || !isHex(vc.Value.V()) {
-		v.addErr("Package Verification Code value must be exactly 40 lowercase hexadecimal digits.", vc.Value.Meta)
+		v.addErr("Package Verification Code value must be exactly 40 lowercase hexadecimal digits.", vc.Meta)
 		r = false
 	}
 
@@ -555,11 +574,15 @@ func (v *Validator) VerificationCode(vc *VerificationCode) bool {
 		r = v.MandatoryText(e, false, false, "Package Verification Code Excluded File") && r
 	}
 
+	v.validated[vc] = r
 	return r
 }
 
 // In spec verison SPDX-1.x the recommended algorithm is SHA1. If anything else is used, a warning is generated.
 func (v *Validator) Checksum(cksum *Checksum) bool {
+	if cache, ok := v.validated[cksum]; ok {
+		return cache
+	}
 	if !v.MandatoryText(cksum.Algo, false, false, "Checksum Algorithm") || !v.MandatoryText(cksum.Value, false, false, "Checksum Value") {
 		return false
 	}
@@ -577,14 +600,15 @@ func (v *Validator) Checksum(cksum *Checksum) bool {
 	}
 
 	if v.Major == 1 && cksum.Algo.V() != "SHA1" {
-		v.addWarn("The checksum algorithm recommeded for SPDX-1.x is SHA1 but now using %s.", cksum.Algo.Meta, cksum.Algo.V())
+		v.addWarn("The checksum algorithm recommeded for SPDX-1.x is SHA1 but now using %s.", cksum.Meta, cksum.Algo.V())
 	}
 
 	if l, ok := algos[cksum.Algo.V()]; ok && (len(cksum.Value.V()) != l || !isHex(cksum.Value.V())) {
-		v.addErr("Checksum value for algorithm %s must be hexadecimal of length %d.", cksum.Value.Meta, cksum.Algo.V(), l)
+		v.validated[cksum] = false
+		v.addErr("Checksum value for algorithm %s must be hexadecimal of length %d.", cksum.Meta, cksum.Algo.V(), l)
 		return false
 	}
-
+	v.validated[cksum] = true
 	return true
 }
 
@@ -695,8 +719,7 @@ func (v *Validator) LicenceRefId(id string, meta *Meta, property string) bool {
 
 // Validate ExtractedLicence object
 func (v *Validator) ExtractedLicence(lic *ExtractedLicence) bool {
-	cache, ok := v.licencesValidated[lic]
-	if ok {
+	if cache, ok := v.validated[lic]; ok {
 		return cache
 	}
 	r := true
@@ -709,12 +732,12 @@ func (v *Validator) ExtractedLicence(lic *ExtractedLicence) bool {
 
 	if len(lic.Name) == 0 {
 		r = false
-		v.addErr("Licences not in the SPDX Licence List must have at least one name defined.", lic.Id.M())
+		v.addErr("Licences not in the SPDX Licence List must have at least one name defined.", lic.M())
 	}
 
 	if len(lic.CrossReference) == 0 {
 		r = false
-		v.addErr("Licences not in the SPDX Licence List must have at least one reference URI.", lic.Id.M())
+		v.addErr("Licences not in the SPDX Licence List must have at least one reference URI.", lic.M())
 	}
 
 	for _, name := range lic.Name {
@@ -725,9 +748,9 @@ func (v *Validator) ExtractedLicence(lic *ExtractedLicence) bool {
 	for _, url := range lic.CrossReference {
 		r = v.Url(&url, false, false, "Extracted Licence Cross Reference") && r
 	}
-	if v.licencesValidated == nil {
-		v.licencesValidated = make(map[*ExtractedLicence]bool)
+	if v.validated == nil {
+		v.validated = make(map[interface{}]bool)
 	}
-	v.licencesValidated[lic] = r
+	v.validated[lic] = r
 	return r
 }

@@ -26,7 +26,7 @@ func TestInit(t *testing.T) {
 
 func TestSpecVersion(t *testing.T) {
 	val := Str("SPDX-1.2", nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.SpecVersion(&val)
 
 	if !validator.Ok() || validator.Major != 1 || validator.Minor != 2 {
@@ -36,7 +36,7 @@ func TestSpecVersion(t *testing.T) {
 
 func TestSpecVersionWarning(t *testing.T) {
 	val := Str("spdx-1.2", nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.SpecVersion(&val)
 
 	if !validator.HasWarnings() || validator.Major != 1 || validator.Minor != 2 {
@@ -44,7 +44,7 @@ func TestSpecVersionWarning(t *testing.T) {
 	}
 
 	val = Str("1.2", nil)
-	validator = new(Validator)
+	validator = NewValidator()
 	validator.SpecVersion(&val)
 
 	if !validator.HasWarnings() || validator.Major != 1 || validator.Minor != 2 {
@@ -52,7 +52,7 @@ func TestSpecVersionWarning(t *testing.T) {
 	}
 
 	val = Str("spdx1.2", nil)
-	validator = new(Validator)
+	validator = NewValidator()
 	validator.SpecVersion(&val)
 
 	if !validator.HasWarnings() || validator.Major != 1 || validator.Minor != 2 {
@@ -62,7 +62,7 @@ func TestSpecVersionWarning(t *testing.T) {
 
 func TestSpecVersionError(t *testing.T) {
 	val := Str("spdx-1", nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.SpecVersion(&val)
 
 	if !validator.HasErrors() {
@@ -73,7 +73,7 @@ func TestSpecVersionError(t *testing.T) {
 // Single line of text
 func TestSingleLineErrors(t *testing.T) {
 	val := Str("This is a multi-line\n value", nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.SingleLineErr(val, "err")
 	validator.SingleLineWarn(val, "warn")
 	if !validator.HasWarnings() {
@@ -86,7 +86,7 @@ func TestSingleLineErrors(t *testing.T) {
 
 func TestSingleLineOK(t *testing.T) {
 	val := Str("This is a single-line value.", nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.SingleLineErr(val, "err")
 	validator.SingleLineWarn(val, "warn")
 	if validator.HasWarnings() {
@@ -100,7 +100,7 @@ func TestSingleLineOK(t *testing.T) {
 // Mandatory text
 func TestMandatoryText(t *testing.T) {
 	val := Str("", nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.MandatoryText(val, false, false, "a")
 	if !validator.HasErrors() {
 		t.Error("Empty value shouldn't be permitted.")
@@ -109,7 +109,7 @@ func TestMandatoryText(t *testing.T) {
 
 func TestMandatoryTextErrNONE(t *testing.T) {
 	val := Str(NONE, nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.MandatoryText(val, false, false, "a")
 	if !validator.HasErrors() {
 		t.Error("NONE value shouldn't be permitted.")
@@ -118,7 +118,7 @@ func TestMandatoryTextErrNONE(t *testing.T) {
 
 func TestMandatoryTextErrNOASSERTION(t *testing.T) {
 	val := Str(NOASSERTION, nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.MandatoryText(val, false, false, "a")
 	if !validator.HasErrors() {
 		t.Error("NOASSERTION value shouldn't be permitted.")
@@ -127,7 +127,7 @@ func TestMandatoryTextErrNOASSERTION(t *testing.T) {
 
 func TestMandatoryTextErrNONEallowedNOASSERTION(t *testing.T) {
 	val := Str(NOASSERTION, nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.MandatoryText(val, false, true, "a")
 	if !validator.HasErrors() {
 		t.Error("NOASSERTION value shouldn't be permitted.")
@@ -136,7 +136,7 @@ func TestMandatoryTextErrNONEallowedNOASSERTION(t *testing.T) {
 
 func TestMandatoryTextNOASSERTION(t *testing.T) {
 	val := Str(NOASSERTION, nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.MandatoryText(val, true, false, "a")
 	if validator.HasErrors() {
 		t.Error("NOASSERTION value shouldn be permitted.")
@@ -146,7 +146,7 @@ func TestMandatoryTextNOASSERTION(t *testing.T) {
 // Test date
 func TestValueDateInvalid(t *testing.T) {
 	val := NewValueDate("not a valid format.", nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.Date(&val)
 	if !validator.HasErrors() {
 		t.Error("No error.")
@@ -155,7 +155,7 @@ func TestValueDateInvalid(t *testing.T) {
 
 func TestValueDate(t *testing.T) {
 	val := NewValueDate("2014-04-11T12:32:44Z", nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.Date(&val)
 	if validator.HasErrors() {
 		t.Error("Unexpected errors.")
@@ -166,7 +166,7 @@ func TestValueDate(t *testing.T) {
 
 func TestUrlInvalid(t *testing.T) {
 	val := Str("not an url, obviously", nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	if validator.Url(&val, false, false, "a") {
 		t.Error("No error.")
 	}
@@ -174,7 +174,7 @@ func TestUrlInvalid(t *testing.T) {
 
 func TestUrl(t *testing.T) {
 	val := Str("http://spdx.org/", nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	if !validator.Url(&val, false, false, "a") {
 		t.Fail()
 	}
@@ -183,7 +183,7 @@ func TestUrl(t *testing.T) {
 // Validate DateLicence
 func TestDataLicence(t *testing.T) {
 	val := Str("CC0-1.0", nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	if !validator.DataLicence(&val) {
 		t.Fail()
 	}
@@ -191,7 +191,7 @@ func TestDataLicence(t *testing.T) {
 
 func TestDataLicenceWarning(t *testing.T) {
 	val := Str("cc0-1.0", nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.DataLicence(&val)
 	if !validator.HasWarnings() {
 		t.Fail()
@@ -200,7 +200,7 @@ func TestDataLicenceWarning(t *testing.T) {
 
 func TestDataLicenceError(t *testing.T) {
 	val := Str("cc", nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	if validator.DataLicence(&val) {
 		t.Fail()
 	}
@@ -210,7 +210,7 @@ func TestDataLicenceError(t *testing.T) {
 
 func TestCreatorIncorrectSyntax(t *testing.T) {
 	val := NewValueCreator("Something Wrong", nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	if validator.Creator(&val, false, false, "Test", nil) {
 		t.Fail()
 	}
@@ -221,7 +221,7 @@ func TestCreatorIncorrectSyntax(t *testing.T) {
 
 func TestCreatorInvalidWhat(t *testing.T) {
 	val := NewValueCreator("Human: John", nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	if validator.Creator(&val, false, false, "Test", []string{"Tool", "Organization"}) {
 		t.Fail()
 	}
@@ -232,7 +232,7 @@ func TestCreatorInvalidWhat(t *testing.T) {
 
 func TestCreatorIncorrectCase(t *testing.T) {
 	val := NewValueCreator("TOOL: fdas", nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.Creator(&val, false, false, "Test", []string{"Tool", "Organization"})
 	if validator.HasErrors() {
 		t.Error("Should be a warning.")
@@ -244,7 +244,7 @@ func TestCreatorIncorrectCase(t *testing.T) {
 
 func TestCreatorNoEmail(t *testing.T) {
 	val := NewValueCreator("Tool: fdas (john@example.com)", nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.Creator(&val, false, false, "Test", []string{"Test", "Tool", "Organization"}, 0, 1)
 	if validator.HasErrors() {
 		t.Error("Should be a warning.")
@@ -256,7 +256,7 @@ func TestCreatorNoEmail(t *testing.T) {
 
 func TestCreatorOK(t *testing.T) {
 	val := NewValueCreator("Organization: fdas (contact@example.com)", nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	if !validator.Creator(&val, false, false, "Test", []string{"Test", "Tool", "Organization"}, 0, 1) {
 		t.Error("Should've returned true")
 	}
@@ -274,7 +274,7 @@ func TestChecksumOK(t *testing.T) {
 		Algo:  Str("SHA1", nil),
 		Value: Str("2fd4e1c67a2d28fced849ee1bb76e7391b93eb12", nil),
 	}
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.Major = 1
 	if !validator.Checksum(val) {
 		t.Error("Should return true.")
@@ -292,7 +292,7 @@ func TestChecksumWrongLength(t *testing.T) {
 		Algo:  Str("SHA1", nil),
 		Value: Str("2fd4e1c67a2d28fced849ee1bb76e7391b9", nil),
 	}
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.Major = 1
 
 	if validator.Checksum(val) {
@@ -311,7 +311,7 @@ func TestChecksumNotHex(t *testing.T) {
 		Algo:  Str("SHA1", nil),
 		Value: Str("2fd4e1c67a2d28fced849ee1bb76e7391b9_xb12", nil),
 	}
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.Major = 1
 
 	if validator.Checksum(val) {
@@ -330,7 +330,7 @@ func TestChecksumWarning(t *testing.T) {
 		Algo:  Str("MD5", nil),
 		Value: Str("2fd4e1c67a2d28fced849ee1bb76e739", nil),
 	}
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.Major = 1
 
 	if !validator.Checksum(val) {
@@ -349,7 +349,7 @@ func TestVerificationCodeOK(t *testing.T) {
 	val := &VerificationCode{
 		Value: Str("2fd4e1c67a2d28fced849ee1bb76e7391b93eb12", nil),
 	}
-	validator := new(Validator)
+	validator := NewValidator()
 	if !validator.VerificationCode(val) {
 		t.Error("Should return true.")
 	}
@@ -365,7 +365,7 @@ func TestVerificationCodeWrongLength(t *testing.T) {
 	val := &VerificationCode{
 		Value: Str("2fd4e1c67a2d28f", nil),
 	}
-	validator := new(Validator)
+	validator := NewValidator()
 	if validator.VerificationCode(val) {
 		t.Error("Should return false.")
 	}
@@ -381,7 +381,7 @@ func TestVerificationCodeNotHex(t *testing.T) {
 	val := &VerificationCode{
 		Value: Str("2fd4e1c67a2d28fced849ee1bb76x7391y93eb12", nil),
 	}
-	validator := new(Validator)
+	validator := NewValidator()
 	if validator.VerificationCode(val) {
 		t.Error("Should return false.")
 	}
@@ -398,7 +398,7 @@ func TestVerificationCodeEmptyExcludedFiles(t *testing.T) {
 		Value:         Str("2fd4e1c67a2d28fced849ee1bb76c7391393eb12", nil),
 		ExcludedFiles: []ValueStr{Str("this_is_fine.txt", nil), Str("", nil)},
 	}
-	validator := new(Validator)
+	validator := NewValidator()
 	if validator.VerificationCode(val) {
 		t.Error("Should return false.")
 	}
@@ -413,7 +413,7 @@ func TestVerificationCodeEmptyExcludedFiles(t *testing.T) {
 // Test Licence Reference ID
 func TestLicenceRefIdNonNumeric(t *testing.T) {
 	val := NewLicence("LicenseRef-Abc", nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.Major, validator.Minor = 1, 0
 	if validator.LicenceRefId(val.V(), val.M(), "") {
 		t.Error("Should return false.")
@@ -428,7 +428,7 @@ func TestLicenceRefIdNonNumeric(t *testing.T) {
 
 func TestLicenceRefIdNonNumericValid(t *testing.T) {
 	val := NewLicence("LicenseRef-Abc", nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.Major, validator.Minor = 1, 2
 	if !validator.LicenceRefId(val.V(), val.M(), "") {
 		t.Error("Should return true.")
@@ -443,7 +443,7 @@ func TestLicenceRefIdNonNumericValid(t *testing.T) {
 
 func TestLicenceRefIdInvalid(t *testing.T) {
 	val := NewLicence("LicenseRef-Abc_)f", nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.Major, validator.Minor = 1, 2
 	if validator.LicenceRefId(val.V(), val.M(), "") {
 		t.Error("Should return false.")
@@ -472,7 +472,7 @@ func TestIsLicenceRef(t *testing.T) {
 
 func TestLicence(t *testing.T) {
 	val := NewLicence("LicenseRef-Abc", nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.Major, validator.Minor = 1, 2
 	if !validator.AnyLicence(val, false, "") {
 		t.Error("Should return true.")
@@ -491,7 +491,7 @@ func TestLicence(t *testing.T) {
 
 func TestLicenceInList(t *testing.T) {
 	val := NewLicence("GPL-2.0", nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	if !validator.AnyLicence(val, false, "") {
 		t.Error("Should return true.")
 	}
@@ -505,7 +505,7 @@ func TestLicenceInList(t *testing.T) {
 
 func TestLicenceNotInList(t *testing.T) {
 	val := NewLicence("GPL", nil)
-	validator := new(Validator)
+	validator := NewValidator()
 	if validator.AnyLicence(val, false, "") {
 		t.Error("Should return false.")
 	}
@@ -520,12 +520,12 @@ func TestLicenceNotInList(t *testing.T) {
 // Test licence Sets
 func TestLicenceSetNotAllowed(t *testing.T) {
 	val := NewDisjunctiveSet(nil, NewLicence("LicenseRef-1", nil), NewLicence("LicenseRef-2", nil))
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.Major, validator.Minor = 1, 2
 	hv(t, validator, validator.AnyLicence(val, false, ""), false, true, false)
 
 	valc := NewConjunctiveSet(nil, NewLicence("LicenseRef-1", nil), NewLicence("LicenseRef-2", nil))
-	validator = new(Validator)
+	validator = NewValidator()
 	validator.Major, validator.Minor = 1, 2
 	hv(t, validator, validator.AnyLicence(valc, false, ""), false, true, false)
 
@@ -533,99 +533,99 @@ func TestLicenceSetNotAllowed(t *testing.T) {
 
 func TestLicenceSetNested(t *testing.T) {
 	val := NewDisjunctiveSet(nil, NewLicence("LicenseRef-1", nil), NewConjunctiveSet(nil, NewLicence("LicenseRef-2", nil)))
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.Major, validator.Minor = 1, 2
 	hv(t, validator, validator.AnyLicence(val, true, ""), true, false, false)
 }
 
 func TestLicenceSetNestedError(t *testing.T) {
 	val := NewDisjunctiveSet(nil, NewLicence("LicenseRef-1", nil), NewConjunctiveSet(nil, NewLicence("LicenseR", nil)))
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.Major, validator.Minor = 1, 2
 	hv(t, validator, validator.AnyLicence(val, true, ""), false, true, false)
 }
 
-// Extracted Licensing Info
-func TestExtrLicInfoOK(t *testing.T) {
+// ExtractedLicence
+func TestExtractedLicenceOK(t *testing.T) {
 	val := &ExtractedLicence{
 		Id:             Str("LicenseRef-34", nil),
 		Name:           []ValueStr{Str("Some uncommon licence", nil)},
 		Text:           Str("Hahaha.", nil),
 		CrossReference: []ValueStr{Str("http://example.org", nil)},
 	}
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.Major, validator.Minor = 1, 2
 	hv(t, validator, validator.ExtractedLicence(val), true, false, false)
 }
 
-func TestExtrLicInfoIdError(t *testing.T) {
+func TestExtractedLicenceError(t *testing.T) {
 	val := &ExtractedLicence{
 		Id:             Str("License", nil),
 		Name:           []ValueStr{Str("Some uncommon licence", nil)},
 		Text:           Str("Hahaha.", nil),
 		CrossReference: []ValueStr{Str("http://example.org", nil)},
 	}
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.Major, validator.Minor = 1, 2
 	hv(t, validator, validator.ExtractedLicence(val), false, true, false)
 }
 
-func TestExtrLicInfoIdWarning(t *testing.T) {
+func TestExtractedLicenceIdWarning(t *testing.T) {
 	val := &ExtractedLicence{
 		Id:             Str("LicenseRef-a", nil),
 		Name:           []ValueStr{Str("Some uncommon licence", nil)},
 		Text:           Str("Hahaha.", nil),
 		CrossReference: []ValueStr{Str("http://example.org", nil)},
 	}
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.Major, validator.Minor = 1, 0
 	hv(t, validator, validator.ExtractedLicence(val), true, false, true)
 }
 
-func TestExtrLicInfoNoNames(t *testing.T) {
+func TestExtractedLicenceNoNames(t *testing.T) {
 	val := &ExtractedLicence{
 		Id:             Str("LicenseRef-0", nil),
 		Name:           nil,
 		Text:           Str("Hahaha.", nil),
 		CrossReference: []ValueStr{Str("http://example.org", nil)},
 	}
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.Major, validator.Minor = 1, 2
 	hv(t, validator, validator.ExtractedLicence(val), false, true, false)
 }
 
-func TestExtrLicInfoEmptyName(t *testing.T) {
+func TestExtractedLicenceEmptyName(t *testing.T) {
 	val := &ExtractedLicence{
 		Id:             Str("LicenseRef-0", nil),
 		Name:           []ValueStr{Str("", nil), Str("something", nil)},
 		Text:           Str("Hahaha.", nil),
 		CrossReference: []ValueStr{Str("http://example.org", nil)},
 	}
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.Major, validator.Minor = 1, 2
 	hv(t, validator, validator.ExtractedLicence(val), false, true, false)
 }
 
-func TestExtrLicInfoNoCrossReference(t *testing.T) {
+func TestExtractedLicenceNoCrossReference(t *testing.T) {
 	val := &ExtractedLicence{
 		Id:             Str("LicenseRef-0", nil),
 		Name:           []ValueStr{Str("something", nil)},
 		Text:           Str("Hahaha.", nil),
 		CrossReference: nil,
 	}
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.Major, validator.Minor = 1, 2
 	hv(t, validator, validator.ExtractedLicence(val), false, true, false)
 }
 
-func TestExtrLicInfoInvalidCrossReference(t *testing.T) {
+func TestExtractedLicenceInvalidCrossReference(t *testing.T) {
 	val := &ExtractedLicence{
 		Id:             Str("LicenseRef-0", nil),
 		Name:           []ValueStr{Str("something", nil)},
 		Text:           Str("Hahaha.", nil),
 		CrossReference: []ValueStr{Str("http://spdx.org", nil), Str("wrong value", nil)},
 	}
-	validator := new(Validator)
+	validator := NewValidator()
 	validator.Major, validator.Minor = 1, 2
 	hv(t, validator, validator.ExtractedLicence(val), false, true, false)
 }
@@ -638,7 +638,7 @@ func TestReviewOK(t *testing.T) {
 		Date:     NewValueDate("2014-09-08T14:03:04Z", nil),
 	}
 
-	v := new(Validator)
+	v := NewValidator()
 	hv(t, v, v.Review(val), true, false, false)
 }
 
@@ -647,7 +647,7 @@ func TestReviewEmptyNameNoDate(t *testing.T) {
 		Reviewer: NewValueCreator("", nil),
 	}
 
-	v := new(Validator)
+	v := NewValidator()
 	hv(t, v, v.Review(val), true, false, false)
 }
 
@@ -657,14 +657,14 @@ func TestReviewWrongDate(t *testing.T) {
 		Date:     NewValueDate("hahaha", nil),
 	}
 
-	v := new(Validator)
+	v := NewValidator()
 	hv(t, v, v.Review(val), false, true, false)
 }
 
 // Test date
 func TestDate(t *testing.T) {
 	val := NewValueDate("hahaha", nil)
-	v := new(Validator)
+	v := NewValidator()
 	if v.Date(&val) {
 		t.Error("Should return an error")
 	}
@@ -678,7 +678,7 @@ func TestDate(t *testing.T) {
 
 // Test defineLicence
 func TestDefineLicence(t *testing.T) {
-	v := new(Validator)
+	v := NewValidator()
 	v.defineLicenceRef("lic1", nil)
 	if !v.Ok() {
 		t.Fail()
