@@ -111,12 +111,13 @@ func (f *Formatter) Token(tok *Token) error {
 	}
 }
 
+// Write a comment (# comment)
 func (f *Formatter) Comment(comment string) error {
 	f.spaces(commentLastWritten)
 
 	hashes := countLeft(comment, '#')
-	if hashes != len(comment) && !unicode.IsSpace(rune(comment[hashes])) {
-		comment = comment[:hashes] + " " + comment[hashes+1:]
+	if hashes == len(comment) || (hashes < len(comment) && !unicode.IsSpace(rune(comment[hashes]))) {
+		comment = comment[:hashes] + " " + comment[hashes:]
 	}
 
 	f.lastWritten = commentLastWritten
@@ -296,7 +297,7 @@ func (f *Formatter) Package(pkg *spdx.Package) error {
 	})
 }
 
-// Write all the files in []*spdx.File
+// Write all elements in files.
 func (f *Formatter) Files(files []*spdx.File) error {
 	for _, file := range files {
 		if err := f.File(file); err != nil {
@@ -377,10 +378,10 @@ func (f *Formatter) Review(review *spdx.Review) error {
 	})
 }
 
-// Write all licences in the given slice
+// Write all licences in lics
 func (f *Formatter) ExtractedLicences(lics []*spdx.ExtractedLicence) error {
 	for _, lic := range lics {
-		if err := f.ExtrLicInfo(lic); err != nil {
+		if err := f.ExtractedLicence(lic); err != nil {
 			return err
 		}
 	}
@@ -388,7 +389,7 @@ func (f *Formatter) ExtractedLicences(lics []*spdx.ExtractedLicence) error {
 }
 
 // Write the given *ExtractedLicence
-func (f *Formatter) ExtrLicInfo(lic *spdx.ExtractedLicence) error {
+func (f *Formatter) ExtractedLicence(lic *spdx.ExtractedLicence) error {
 	if lic == nil {
 		return nil
 	}
