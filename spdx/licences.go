@@ -2,14 +2,21 @@ package spdx
 
 import "strings"
 
+// Every licence struct implements this interface.
 type AnyLicence interface {
 	Value
 	LicenceId() string
 }
 
+// Represents a licence in the SPDX Licence list, a licence reference that
+// couldn't be changed to it's corresponding ExtractedLicence pointer or
+// one of the NONE or NOASSERTION constants.
 type Licence struct{ ValueStr }
 
-func (l Licence) LicenceId() string    { return l.V() }
+// Get the licence ID.
+func (l Licence) LicenceId() string { return l.V() }
+
+// Compare two licences ignoring their metadata.
 func (l Licence) Equal(b Licence) bool { return l.ValueStr.Equal(b.ValueStr) }
 
 // Returns whether the licence is a reference or a is supposed to be in the SPDX Licence List.
@@ -29,20 +36,23 @@ func NewLicence(id string, m *Meta) Licence {
 	return Licence{Str(id, m)}
 }
 
+// Represents an Extracted Licence.
 type ExtractedLicence struct {
 	Id             ValueStr
-	Name           []ValueStr // conditional. one required if the licence is not in the SPDX Licence List
+	Name           []ValueStr
 	Text           ValueStr
-	CrossReference []ValueStr //optional
-	Comment        ValueStr   //optional
+	CrossReference []ValueStr
+	Comment        ValueStr
 	*Meta
 }
 
+// Returns the licence ID.
 func (l *ExtractedLicence) LicenceId() string { return l.Id.V() }
 func (l *ExtractedLicence) V() string         { return l.LicenceId() }
 func (l *ExtractedLicence) M() *Meta          { return l.Meta }
 
-// Abstract licence set representation
+// Abstract licence set representation. Both ConjunctiveLicenceSet and
+// DisjunctiveLicenceSet are aliases for LicenceSet.
 type LicenceSet struct {
 	Members []AnyLicence
 	*Meta
@@ -56,9 +66,11 @@ type ConjunctiveLicenceSet LicenceSet
 func NewConjunctiveSet(meta *Meta, lics ...AnyLicence) ConjunctiveLicenceSet {
 	return ConjunctiveLicenceSet{lics, meta}
 }
-func (c ConjunctiveLicenceSet) LicenceId() string   { return join(c.Members, " and ") }
-func (c ConjunctiveLicenceSet) V() string           { return c.LicenceId() }
-func (c ConjunctiveLicenceSet) M() *Meta            { return c.Meta }
+func (c ConjunctiveLicenceSet) LicenceId() string { return join(c.Members, " and ") }
+func (c ConjunctiveLicenceSet) V() string         { return c.LicenceId() }
+func (c ConjunctiveLicenceSet) M() *Meta          { return c.Meta }
+
+// Add a licence to the set.
 func (c *ConjunctiveLicenceSet) Add(lic AnyLicence) { c.Members = append(c.Members, lic) }
 
 // DisjunctiveLicenceSet
@@ -67,9 +79,11 @@ type DisjunctiveLicenceSet LicenceSet
 func NewDisjunctiveSet(meta *Meta, lics ...AnyLicence) DisjunctiveLicenceSet {
 	return DisjunctiveLicenceSet{lics, meta}
 }
-func (c DisjunctiveLicenceSet) LicenceId() string   { return join(c.Members, " or ") }
-func (c DisjunctiveLicenceSet) V() string           { return c.LicenceId() }
-func (c DisjunctiveLicenceSet) M() *Meta            { return c.Meta }
+func (c DisjunctiveLicenceSet) LicenceId() string { return join(c.Members, " or ") }
+func (c DisjunctiveLicenceSet) V() string         { return c.LicenceId() }
+func (c DisjunctiveLicenceSet) M() *Meta          { return c.Meta }
+
+// Add a licence to the set.
 func (c *DisjunctiveLicenceSet) Add(lic AnyLicence) { c.Members = append(c.Members, lic) }
 
 // Useful functions for working with licences

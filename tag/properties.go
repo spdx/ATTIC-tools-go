@@ -86,7 +86,8 @@ func IsValidPropertyInsensitive(prop string) (bool, string) {
 	return ok, correct
 }
 
-// Returns whether the property given is defined as a multiline property by the SPDX Specification.
+// Returns whether the property given is defined as a multiline property by the
+// SPDX Specification.
 func isMultiline(property string) bool {
 	_, ok := multilineProperties[property]
 	return ok

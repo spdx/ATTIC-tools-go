@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+// RDF element types in URI format. (RDF classes).
 var (
 	uri_nstype = uri("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")
 
@@ -27,6 +28,7 @@ var (
 	typeAbstractLicenceSet = blank("abstractLicenceSet")
 )
 
+// Common RDF parser error messages.
 const (
 	msgIncompatibleTypes    = "%s is already set to be type %s and cannot be changed to type %s."
 	msgPropertyNotSupported = "Property %s is not supported for %s."
@@ -34,6 +36,7 @@ const (
 	msgUnknownType          = "Found type %s which is unknown."
 )
 
+// Abstract licence set interface.
 type abstractLicenceSet interface {
 	Add(lic spdx.AnyLicence)
 }
@@ -146,6 +149,10 @@ type bufferEntry struct {
 	*spdx.Meta
 }
 
+// RDF Parser. Use a RDF Parser to parse SPDX RDF files to SPDX documents.
+// It uses the goraptor library to parse the RDF syntaxes.
+//
+// Always use the `NewParser()` method to create a new parser.
 type Parser struct {
 	rdfparser *goraptor.Parser
 	input     io.Reader
@@ -202,6 +209,7 @@ func (p *Parser) Free() {
 	p.doc = nil
 }
 
+// Set the type of node to t.
 func (p *Parser) setType(node, t goraptor.Term, meta *spdx.Meta) (interface{}, error) {
 	nodeStr := termStr(node)
 	bldr, ok := p.index[nodeStr]
@@ -279,6 +287,7 @@ func (p *Parser) setType(node, t goraptor.Term, meta *spdx.Meta) (interface{}, e
 	return bldr.ptr, nil
 }
 
+// Process a SPDX Truple.
 func (p *Parser) processTruple(stm *goraptor.Statement, meta *spdx.Meta) error {
 	node := termStr(stm.Subject)
 	if stm.Predicate.Equals(uri_nstype) {
@@ -329,6 +338,13 @@ func compatibleTypes(found, need goraptor.Term) bool {
 	return false
 }
 
+// Request that a SPDX Element has a specific type. If it does not have, a
+// parse error is returned. If `node` is not parsed yet, it is created and set
+// to be of type `t`.
+//
+// If the node is found and the types match, this method returns a pointer to
+// that element, but of type interface{} and a nil error. To get a more specific
+// element, use one of the other req* functions (reqDocument, reqFile, etc.).
 func (p *Parser) reqType(node, t goraptor.Term) (interface{}, error) {
 	bldr, ok := p.index[termStr(node)]
 	if ok {
@@ -399,6 +415,7 @@ func (p *Parser) reqArtifactOf(node goraptor.Term) (*spdx.ArtifactOf, error) {
 	return obj.(*spdx.ArtifactOf), err
 }
 
+// Returns a *builder for doc.
 func (p *Parser) documentMap(doc *spdx.Document) *builder {
 	bldr := &builder{t: typeDocument, ptr: doc}
 	bldr.updaters = map[string]updater{
@@ -463,6 +480,7 @@ func (p *Parser) documentMap(doc *spdx.Document) *builder {
 	return bldr
 }
 
+// Returns a builder for cri.
 func (p *Parser) creationInfoMap(cri *spdx.CreationInfo) *builder {
 	bldr := &builder{t: typeCreationInfo, ptr: cri}
 	bldr.updaters = map[string]updater{
@@ -474,6 +492,7 @@ func (p *Parser) creationInfoMap(cri *spdx.CreationInfo) *builder {
 	return bldr
 }
 
+// Returns a builder for rev.
 func (p *Parser) reviewMap(rev *spdx.Review) *builder {
 	bldr := &builder{t: typeReview, ptr: rev}
 	bldr.updaters = map[string]updater{
@@ -482,9 +501,9 @@ func (p *Parser) reviewMap(rev *spdx.Review) *builder {
 		"reviewDate":   updDate(&rev.Date),
 	}
 	return bldr
-
 }
 
+// Returns a builder for pkg.
 func (p *Parser) packageMap(pkg *spdx.Package) *builder {
 	bldr := &builder{t: typePackage, ptr: pkg}
 	bldr.updaters = map[string]updater{
@@ -548,6 +567,7 @@ func (p *Parser) packageMap(pkg *spdx.Package) *builder {
 	return bldr
 }
 
+// Returns a builder for cksum.
 func (p *Parser) checksumMap(cksum *spdx.Checksum) *builder {
 	bldr := &builder{t: typeChecksum, ptr: cksum}
 	algoSet := false
@@ -568,6 +588,7 @@ func (p *Parser) checksumMap(cksum *spdx.Checksum) *builder {
 	return bldr
 }
 
+// Returns a builder for vc.
 func (p *Parser) verificationCodeMap(vc *spdx.VerificationCode) *builder {
 	bldr := &builder{t: typeVerificationCode, ptr: vc}
 	bldr.updaters = map[string]updater{
@@ -577,6 +598,7 @@ func (p *Parser) verificationCodeMap(vc *spdx.VerificationCode) *builder {
 	return bldr
 }
 
+// Returns a builder for file.
 func (p *Parser) fileMap(file *spdx.File) *builder {
 	bldr := &builder{t: typeFile, ptr: file}
 	bldr.updaters = map[string]updater{
@@ -637,6 +659,7 @@ func (p *Parser) fileMap(file *spdx.File) *builder {
 	return bldr
 }
 
+// Returns a builder for artif.
 func (p *Parser) artifactOfMap(artif *spdx.ArtifactOf) *builder {
 	bldr := &builder{t: typeArtifactOf, ptr: artif}
 	bldr.updaters = map[string]updater{
@@ -646,6 +669,7 @@ func (p *Parser) artifactOfMap(artif *spdx.ArtifactOf) *builder {
 	return bldr
 }
 
+// Returns a builder for lic.
 func (p *Parser) extractedLicensingInfoMap(lic *spdx.ExtractedLicence) *builder {
 	bldr := &builder{t: typeExtractedLicence, ptr: lic}
 	bldr.updaters = map[string]updater{
@@ -658,6 +682,7 @@ func (p *Parser) extractedLicensingInfoMap(lic *spdx.ExtractedLicence) *builder 
 	return bldr
 }
 
+// Returns a builder for set.
 func (p *Parser) licenceSetMap(set abstractLicenceSet) *builder {
 	bldr := &builder{t: typeAbstractLicenceSet, ptr: set}
 	bldr.updaters = map[string]updater{
@@ -695,6 +720,7 @@ func (p *Parser) licenceSetMap(set abstractLicenceSet) *builder {
 	return bldr
 }
 
+// Returns a builder for a new ConjunctiveLicenceSet.
 func (p *Parser) conjunctiveSetBuilder(meta *spdx.Meta) *builder {
 	set := spdx.NewConjunctiveSet(meta, make([]spdx.AnyLicence, 0)...)
 	bldr := p.licenceSetMap(&set)
@@ -702,6 +728,7 @@ func (p *Parser) conjunctiveSetBuilder(meta *spdx.Meta) *builder {
 	return bldr
 }
 
+// Returns a builder for a new DisjunctiveLicenceSet.
 func (p *Parser) disjuntiveSetBuilder(meta *spdx.Meta) *builder {
 	set := spdx.NewDisjunctiveSet(meta, make([]spdx.AnyLicence, 0)...)
 	bldr := p.licenceSetMap(&set)
@@ -709,12 +736,14 @@ func (p *Parser) disjuntiveSetBuilder(meta *spdx.Meta) *builder {
 	return bldr
 }
 
+// Creates a new Licence object, using `node` as the value.
 func licenceReferenceTerm(node goraptor.Term, meta *spdx.Meta) *spdx.Licence {
 	str := strings.TrimPrefix(termStr(node), licenceUri)
 	lic := spdx.NewLicence(str, meta)
 	return &lic
 }
 
+// Creates a builder for a new Licence, using `node` as the value.
 func (p *Parser) licenceReferenceBuilder(node goraptor.Term, meta *spdx.Meta) *builder {
 	lic := licenceReferenceTerm(node, meta)
 	return &builder{t: typeLicence, ptr: lic}

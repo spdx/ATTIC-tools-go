@@ -5,6 +5,7 @@ import "testing"
 
 import "github.com/vladvelici/spdx-go/spdx"
 
+// Checks whether a and b have the same elements.
 func sameDoc(a, b []Pair) bool {
 	if len(a) != len(b) {
 		return false

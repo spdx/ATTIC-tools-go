@@ -24,11 +24,13 @@ const (
 	Fmt_nquads       = "nquads"        // for N-Quads
 )
 
+// Useful RDF URIs
 const (
 	baseUri    = "http://spdx.org/rdf/terms#"
 	licenceUri = "http://spdx.org/licenses/"
 )
 
+// Useful helper pair struct.
 type pair struct {
 	key, val string
 }

@@ -1,3 +1,127 @@
+/*
+spdx-go is a tool for pretty-printing, converting and validating SPDX files.
+Formats supported by this tool are RDF (all RDF syntaxes supported by the raptor
+library) and Tag. For a full list of formats, see `-help`.
+
+Basic usage
+===========
+
+The basic usage of this tool is the following:
+
+    spdx-go <flags> <input file>
+
+One action flag must be specified. Those are:
+
+		-v						# validation
+		-c <format>		# conversion
+		-p						# pretty-printing (formatting)
+		-help					# print the help message and quit
+		-version			# print the tool version and quit
+
+For a list of all flags and usage, see `-help`.
+
+Input and output
+----------------
+
+The input, if no input file specified, is read from standard input. and input
+format (using flag `-i <format>`) must be specified in this case.
+
+Output is, by default, on standard output. The flag `-o <file>` can be used to
+specify an output file.
+
+Flag `-w` can be used to overwrite the input file, useful for pretty-printing:
+
+    spdx-go -p -w example.tag
+
+The flag -w creates a temporary file and tries to change the innode of the input
+file to the temporary file and then delete the temporary file. If that fails, it
+hard copies the temporary file over the input file.
+
+SPDX File formats
+-----------------
+
+With every command in this tool, the flag -f <format> makes the parser to use
+<format> as the input format. For a list of all valid formats, see `-help`.
+
+The format "rdf" is a special format. For output, it means "xmlrdf-abbrev"; for
+input, it means attempt to guess the RDF syntax in the input file (uses raptor's
+"guess" parser).
+
+Pretty-print (format) SPDX file
+===============================
+
+Use the `-p` flag to pretty-print a SPDX document. Pretty-printing does not
+parse the input document into a `spdx.Document` struct but only tokenizes the
+input format and pretty-prints the tokens.
+
+This means that invalid SPDX documents may be printed.
+
+A known limitation is the fact that comments in any RDF syntax are dismissed.
+The same limitation does not apply to the Tag format, where comments are printed
+and formatted.
+
+Example:
+
+		# the -w flag is optional and overwrites the input file
+		spdx-go -p -w example.tag
+
+Convert between formats
+=======================
+
+Use the `-c <format>` flag to convert to and from supported SPDX formats.
+
+Example:
+
+		# conver example.tag to example.rdf
+    spdx-go -c rdf -o example.rdf example.tag
+
+Validate SPDX file
+==================
+
+SPDX files in any formats are parsed to `spdx.Document` and thus validated to
+the SPDX Specification. Use the `-v` flag to validate documents. Example:
+
+		spdx-go -v example.tag
+		spdx-go -v example.rd
+
+HTML output validation
+----------------------
+
+To better visualise the validation errors and warnings, HTML output is supported
+by this tool. The `-html` flag used in conjunction with the `-v` flag creates a
+HTML file that contains the input file and all the validation errors represented
+nicely in the page.
+
+If no output file is specified, a temporary file is created and opened in a
+(default) browser window. If there is an output file specified (`-o <file>`),
+the HTML is written to that file instead and no browser window opened.
+
+Example:
+
+		spdx-go -v -html example.html
+
+Updating licence list
+---------------------
+
+The spdx-go tool assumes that a file named `licence-list.txt` exists. However,
+this file is not included in the repository but it is quite simple to generate:
+
+		./update-list.sh
+
+The file only contains one licence ID per line. The script generates the most
+up-to-date file from the SPDX Licence List git repository. This git repository
+has a submodule in `spdx/licence-list` which points to the official SPDX Licence
+List repository. For how it works, see the documentation for the `spdx` package.
+
+spdx-tools-go
+=============
+
+This tool also serves as an example usage of the SPDX Go Parsing Library,
+which can be found at:
+
+    Official repository:    http://git.spdx.org/spdx-tools-go.git
+    GitHub mirror:          http://github.com/vladvelici/spdx-go
+*/
 package main
 
 import (
@@ -40,6 +164,8 @@ One (and only one) action flag must be specified. Those are:
     -c <format> for convert
     -v for validate
     -p for pretty-print
+		-help
+		-version
 
 A list of the flags supported by this tool:
 `
@@ -50,6 +176,7 @@ const (
 	formatAuto = "auto"
 )
 
+// A list of all formats supported by the tool.
 var formatList = []string{
 	formatRdf,
 	formatTag,
@@ -67,6 +194,7 @@ var formatList = []string{
 	rdf.Fmt_nquads,
 }
 
+// Flags supported by this tool.
 var (
 	flagConvert       = flag.String("c", "-", "Set action to convert. Convert input file to the specified format.")
 	flagValidate      = flag.Bool("v", false, "Set action to validate.")
@@ -81,12 +209,14 @@ var (
 )
 
 var (
-	input  = os.Stdin
-	output = os.Stdout
+	input  = os.Stdin  // input *os.File
+	output = os.Stdout // output *os.File
 )
 
+// Simple xor function.
 func xor(a, b bool) bool { return a != b }
 
+// Exits the program and prints err in an appropriate format.
 func exitErr(err error) {
 	switch e := err.(type) {
 	default:
@@ -99,6 +229,7 @@ func exitErr(err error) {
 	}
 }
 
+// Program entry point. Flag processing, validation and delegation to one of the actions.
 func main() {
 	flag.Parse()
 	log.SetFlags(0)
@@ -181,6 +312,9 @@ func main() {
 	}
 }
 
+// Checks whether `val` is a valid input format.
+// If `allowAuto` is set to `false`, the format `"auto" (constant `formatAuto`)
+// will be considered invalid.
 func validFormat(val string, allowAuto bool) bool {
 	if val == formatRdf || val == formatTag || (val == formatAuto && allowAuto) {
 		return true
@@ -229,6 +363,7 @@ func detectFormat() string {
 	return ""
 }
 
+// Convert between SPDX formats action.
 func convert() {
 	var doc *spdx.Document
 	var err error
@@ -255,6 +390,7 @@ func convert() {
 	}
 }
 
+// Validate action, text outout.
 func validate() {
 	var doc *spdx.Document
 	var err error
@@ -309,6 +445,8 @@ func validate() {
 
 }
 
+// Represents a line in the input file, used for rendering the
+// HTML validation template.
 type line struct {
 	Number    int
 	Classname string
@@ -316,6 +454,9 @@ type line struct {
 	Errors    []*spdx.ValidationError
 }
 
+// The main struct used while rendering the HTML
+// validation template. Keeps all the information
+// shown on the page.
 type summary struct {
 	Lines        []*line
 	FileName     string
@@ -324,6 +465,7 @@ type summary struct {
 	OtherErrors  []*spdx.ValidationError
 }
 
+// Validate and output HTML.
 func validateHtml(doc *spdx.Document, validator *spdx.Validator) {
 	sum := new(summary)
 	sum.FileName = input.Name()
@@ -420,6 +562,7 @@ func startBrowser(url string) bool {
 	return cmd.Start() == nil
 }
 
+// Format action.
 func format() {
 	if *flagInputFormat == formatTag {
 		f := tag.NewFormatter(output)
@@ -437,6 +580,7 @@ func format() {
 	}
 }
 
+// Print help message.
 func help() {
 	printVersion()
 
@@ -446,6 +590,7 @@ func help() {
 	flag.PrintDefaults()
 }
 
+// Print tool version and supported SPDX versions.
 func printVersion() {
 	versions := make([]string, len(spdx.SpecVersions))
 	for i, ver := range spdx.SpecVersions {

@@ -22,8 +22,10 @@ const (
 // supported specification versions
 var SpecVersions = [][2]int{{1, 2}}
 
+// Regex for the Creator format: `What: Who (email)`
 var CreatorRegex = regexp.MustCompile("^([^:]*):([^\\(]*)(\\((.*)\\))?$")
 
+// SPDX value constants
 const (
 	NOASSERTION = "NOASSERTION"
 	NONE        = "NONE"
@@ -42,6 +44,7 @@ type ValueStr struct {
 	Meta *Meta
 }
 
+// Create a new ValueStr form v and m.
 func Str(v string, m *Meta) ValueStr     { return ValueStr{v, m} }
 func (v ValueStr) V() string             { return v.Val }
 func (v ValueStr) M() *Meta              { return v.Meta }
@@ -73,11 +76,23 @@ type ValueCreator struct {
 	*Meta
 }
 
-func (c ValueCreator) V() string     { return c.val }
-func (c ValueCreator) M() *Meta      { return c.Meta }
-func (c ValueCreator) What() string  { return c.what }
-func (c ValueCreator) Name() string  { return c.name }
+// Get the original value of this ValueCreator
+func (c ValueCreator) V() string { return c.val }
+
+// Get the metadata associated with this ValueCreator
+func (c ValueCreator) M() *Meta { return c.Meta }
+
+// Get the `what` part from the format `what: name (email)`.
+func (c ValueCreator) What() string { return c.what }
+
+// Get the `name` part from the format `what: name (email)`
+func (c ValueCreator) Name() string { return c.name }
+
+// Get the `email` part from the format `what: name (email)`
 func (c ValueCreator) Email() string { return c.email }
+
+// Set the value of this ValueCreator. It parses the format `what: name (email)`
+// and populates the relevant fields.
 func (c *ValueCreator) SetValue(v string) {
 	c.val = v
 	match := CreatorRegex.FindStringSubmatch(v)
@@ -87,6 +102,8 @@ func (c *ValueCreator) SetValue(v string) {
 		c.email = strings.TrimSpace(match[4])
 	}
 }
+
+// Create and populate a new ValueCreator.
 func NewValueCreator(val string, m *Meta) ValueCreator {
 	vc := ValueCreator{Meta: m}
 	(&vc).SetValue(val)
@@ -94,16 +111,24 @@ func NewValueCreator(val string, m *Meta) ValueCreator {
 }
 
 // Store Dates of format YYYY-MM-DDThh:mm:ssZ.
-// If the time is in the correct format, it is available parsed into a *time.Time by calling Time().
+// If the time is in the correct format, it is available parsed into a
+// *time.Time by calling Time().
 type ValueDate struct {
 	val  string
 	time *time.Time
 	*Meta
 }
 
-func (d ValueDate) V() string        { return d.val }
-func (d ValueDate) M() *Meta         { return d.Meta }
+// Get the original value of this ValueDate.
+func (d ValueDate) V() string { return d.val }
+
+// Get the metadata of this ValueDate.
+func (d ValueDate) M() *Meta { return d.Meta }
+
+// Get the *time.Time pointer parsed form the value.
 func (d ValueDate) Time() *time.Time { return d.time }
+
+// Set the value of this ValueDate and parse the date format.
 func (d *ValueDate) SetValue(v string) {
 	d.val = v
 	t, err := time.Parse(time.RFC3339, v)
@@ -111,6 +136,8 @@ func (d *ValueDate) SetValue(v string) {
 		d.time = &t
 	}
 }
+
+// Create and populate a new ValueDate.
 func NewValueDate(val string, m *Meta) ValueDate {
 	vd := ValueDate{Meta: m}
 	(&vd).SetValue(val)
@@ -122,15 +149,17 @@ type Meta struct {
 	LineStart, LineEnd int
 }
 
+// Create a new Meta with both lineStart and lineEnd set to line.
 func NewMetaL(line int) *Meta {
 	return &Meta{line, line}
 }
 
+// Create a new Meta with the given start and end lines.
 func NewMeta(start, end int) *Meta {
 	return &Meta{start, end}
 }
 
-// strings.Join for ValueStr type
+// strings.Join for ValueStr type.
 func Join(a []ValueStr, sep string) string {
 	if len(a) == 0 {
 		return ""
@@ -159,6 +188,7 @@ type ParseError struct {
 	*Meta
 }
 
+// Return the error message.
 func (e *ParseError) Error() string {
 	return e.msg
 }

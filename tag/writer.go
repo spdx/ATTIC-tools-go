@@ -50,8 +50,8 @@ func fileInList(file *spdx.File, list []*spdx.File) bool {
 	return false
 }
 
-// Formatter is the pretty-printer for Tag format. It is aware of what has been printed previously
-// in order to leave nice newlines.
+// Formatter is the pretty-printer for Tag format. It is aware of what has been
+// printed previously in order to leave nice newlines.
 type Formatter struct {
 	lastWritten string
 	out         io.Writer
@@ -63,9 +63,11 @@ func NewFormatter(f io.Writer) *Formatter {
 }
 
 // Print newlines where appropriate.
-// Currently when
+//
+// Currently when:
 // - a property is followed by a comment
-// - printing one of these properties: FileName, LicenseID, PackageName, Reviewer, ArtifactOfProjectName
+// - printing one of these properties: FileName, LicenseID, PackageName,
+//   Reviewer, ArtifactOfProjectName
 func (f *Formatter) spaces(now string) {
 	if f.lastWritten == "" || f.lastWritten == commentLastWritten {
 		return
@@ -85,7 +87,7 @@ func (f *Formatter) spaces(now string) {
 	}
 }
 
-// Read all tokens from a lexer and pretty-print them
+// Read all tokens from a lexer and pretty-print them.
 func (f *Formatter) Lexer(lex lexer) error {
 	for lex.Lex() {
 		err := f.Token(lex.Token())
@@ -96,7 +98,7 @@ func (f *Formatter) Lexer(lex lexer) error {
 	return lex.Err()
 }
 
-// Write a Token
+// Write a Token.
 func (f *Formatter) Token(tok *Token) error {
 	if tok == nil || (tok.Type == TokenPair && tok.Pair.Value == "") {
 		return nil
@@ -111,7 +113,7 @@ func (f *Formatter) Token(tok *Token) error {
 	}
 }
 
-// Write a comment (# comment)
+// Write a comment (# comment).
 func (f *Formatter) Comment(comment string) error {
 	f.spaces(commentLastWritten)
 
@@ -125,7 +127,7 @@ func (f *Formatter) Comment(comment string) error {
 	return err
 }
 
-// Write a property (tag: value)
+// Write a property (tag: value).
 func (f *Formatter) Property(tag, value string) error {
 	if value == "" {
 		return nil
@@ -141,7 +143,7 @@ func (f *Formatter) Property(tag, value string) error {
 	return err
 }
 
-// Write a list of properties
+// Write a list of properties.
 func (f *Formatter) Properties(props []Pair) error {
 	for _, p := range props {
 		if err := f.Property(p.Key, p.Value); err != nil {
@@ -151,7 +153,8 @@ func (f *Formatter) Properties(props []Pair) error {
 	return nil
 }
 
-// Write a property with multiple values
+// Write a property with multiple values. The same tag is printed for each
+// non-empty value found in `values`.
 func (f *Formatter) PropertySlice(tag string, values []spdx.ValueStr) error {
 	for _, val := range values {
 		if err := f.Property(tag, val.Val); err != nil {
@@ -161,7 +164,8 @@ func (f *Formatter) PropertySlice(tag string, values []spdx.ValueStr) error {
 	return nil
 }
 
-// Write a ValueCreator slice
+// Write a ValueCreator slice. The same tag is printed for each non-empty value
+// found in `values`.
 func (f *Formatter) CreatorSlice(tag string, values []spdx.ValueCreator) error {
 	for _, val := range values {
 		if err := f.Property(tag, val.V()); err != nil {
@@ -171,7 +175,8 @@ func (f *Formatter) CreatorSlice(tag string, values []spdx.ValueCreator) error {
 	return nil
 }
 
-// Write a list of licences
+// Write a list of licences. The same tag is printed for each non-empty value
+// found in `values`.
 func (f *Formatter) PropertyLicenceSlice(tag string, values []spdx.AnyLicence) error {
 	for _, lic := range values {
 		if err := f.Property(tag, lic.LicenceId()); err != nil {
@@ -181,7 +186,7 @@ func (f *Formatter) PropertyLicenceSlice(tag string, values []spdx.AnyLicence) e
 	return nil
 }
 
-// Write a spdx.Document, incuding all its contents
+// Write `doc` incuding all its nested elements.
 func (f *Formatter) Document(doc *spdx.Document) error {
 	if doc == nil {
 		return nil
@@ -226,7 +231,7 @@ func (f *Formatter) Document(doc *spdx.Document) error {
 	return f.ExtractedLicences(doc.ExtractedLicences)
 }
 
-// Write the creation info part of a document
+// Write `ci` the creation info part of a document.
 func (f *Formatter) CreationInfo(ci *spdx.CreationInfo) error {
 	if ci == nil {
 		return nil
@@ -243,7 +248,7 @@ func (f *Formatter) CreationInfo(ci *spdx.CreationInfo) error {
 	})
 }
 
-// Write all the Packages in the []*spdx.Package
+// Write all the Packages in pkgs.
 func (f *Formatter) Packages(pkgs []*spdx.Package) error {
 	for _, pkg := range pkgs {
 		if err := f.Package(pkg); err != nil {
@@ -253,7 +258,7 @@ func (f *Formatter) Packages(pkgs []*spdx.Package) error {
 	return nil
 }
 
-// Write a *spdx.Package
+// Write `pkg` and all its nested elements.
 func (f *Formatter) Package(pkg *spdx.Package) error {
 	if pkg == nil {
 		return nil
@@ -297,7 +302,7 @@ func (f *Formatter) Package(pkg *spdx.Package) error {
 	})
 }
 
-// Write all elements in files.
+// Write all elements in `files`.
 func (f *Formatter) Files(files []*spdx.File) error {
 	for _, file := range files {
 		if err := f.File(file); err != nil {
@@ -307,7 +312,7 @@ func (f *Formatter) Files(files []*spdx.File) error {
 	return nil
 }
 
-// Write a *spdx.File
+// Write `file` and all its nested elements.
 func (f *Formatter) File(file *spdx.File) error {
 	if file == nil {
 		return nil
@@ -355,7 +360,7 @@ func (f *Formatter) File(file *spdx.File) error {
 	return nil
 }
 
-// Write all the reviews in the given []*spdx.Review
+// Write all the reviews in `reviews`.
 func (f *Formatter) Reviews(reviews []*spdx.Review) error {
 	for _, review := range reviews {
 		if err := f.Review(review); err != nil {
@@ -365,7 +370,7 @@ func (f *Formatter) Reviews(reviews []*spdx.Review) error {
 	return nil
 }
 
-// Write a *spdx.Review
+// Write the *spdx.Review `rev`.
 func (f *Formatter) Review(review *spdx.Review) error {
 	if review == nil {
 		return nil
@@ -378,7 +383,7 @@ func (f *Formatter) Review(review *spdx.Review) error {
 	})
 }
 
-// Write all licences in lics
+// Write all licences in `lics`.
 func (f *Formatter) ExtractedLicences(lics []*spdx.ExtractedLicence) error {
 	for _, lic := range lics {
 		if err := f.ExtractedLicence(lic); err != nil {
@@ -388,7 +393,7 @@ func (f *Formatter) ExtractedLicences(lics []*spdx.ExtractedLicence) error {
 	return nil
 }
 
-// Write the given *ExtractedLicence
+// Write the ExtractedLicence `lic`.
 func (f *Formatter) ExtractedLicence(lic *spdx.ExtractedLicence) error {
 	if lic == nil {
 		return nil

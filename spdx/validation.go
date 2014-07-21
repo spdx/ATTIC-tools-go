@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// Error types.
 const (
 	ValidWarning = iota
 	ValidError   = iota
@@ -30,7 +31,10 @@ func (err *ValidationError) Error() string {
 	return prefix + err.msg
 }
 
-func NewVError(msg string, m *Meta) *ValidationError   { return &ValidationError{msg, ValidError, m} }
+// Creates a new validation error.
+func NewVError(msg string, m *Meta) *ValidationError { return &ValidationError{msg, ValidError, m} }
+
+// Creates a new validation warning.
 func NewVWarning(msg string, m *Meta) *ValidationError { return &ValidationError{msg, ValidWarning, m} }
 
 // Check if val matches any of the items in correct. Return whether they have the same
@@ -49,17 +53,21 @@ func correctCaseMatch(val string, correct []string) (caseSensitive bool, index i
 	return false, -1
 }
 
-// A Validator is used to validate SPDX Documents and subsets of documents. A Validator can be created
-// with `new(spdx.Validator)`.
+// A Validator is used to validate SPDX Documents and subsets of documents. A
+// Validator must be created using the `NewValidator()` function.
 //
-// Unless the whole document is validated (using `Validator.Document()`), the SPDX Version should be set by either:
-// - Validating the SpecVersion property of a document by calling `Validator.SpecVersion()`
+// Unless the whole document is validated (using `Validator.Document()`), the
+// SPDX Version should be set by either:
+// - Validating the SpecVersion property of a document by calling
+// `Validator.SpecVersion()`
 // - or manually setting the values for `Validator.Major` and `Validator.Minor`.
 //
-// As a convention for validator methods (such as `Validator.Document`, `Validator.Creator`),
-// the return value should be `false` if there were errors added to the validator - warnings do not count.
-// The return value should be `true` if there are no errors added (warnings are allowed). If warnings are added, the return value
-// should still be `true`. If a validator method behaves differently, it will be clearly documented.
+// As a convention for validator methods (such as `Validator.Document`,
+// `Validator.Creator`), the return value should be `false` if there were errors
+// added to the validator; warnings do not count. The return value should be
+// `true` if there are no errors added (warnings are allowed). If warnings are
+// added, the return value should still be `true`. If a validator method behaves
+// differently, it will be clearly documented.
 type Validator struct {
 	Major    int // Version major
 	Minor    int // Verison Minor
@@ -76,9 +84,11 @@ type Validator struct {
 	// File references
 	files map[string]*File
 
+	// Validator errors
 	errs []*ValidationError
 }
 
+// Creates a new Validator struct.
 func NewValidator() *Validator {
 	return &Validator{
 		licUsed:    make(map[string]*Meta),
@@ -200,7 +210,9 @@ func (v *Validator) Url(val *ValueStr, noassert, none bool, property string) boo
 	return true
 }
 
-// Validate a *Document
+// Validate a *Document. After validating doc, it checks whether all licence
+// references are in place (all "LicenceRef-" type licences used inside the
+// document and its nested elements are defined in doc.ExtractedLicences).
 func (v *Validator) Document(doc *Document) bool {
 	if v.SpecVersion(&doc.SpecVersion) {
 		v.VersionSupported(doc.SpecVersion.Meta)
@@ -264,8 +276,9 @@ func (v *Validator) Document(doc *Document) bool {
 	return v.HasErrors()
 }
 
-// Checks if all the licences referenced in the SPDX Document (and indexed by the Validator) are
-// used and defined.
+// Checks if all the licences referenced in the SPDX Document (and indexed by
+// the Validator) are used and defined.
+//
 // Licence References used but not defined generate errors.
 // Licence References defined but not used generate warnings.
 func (v *Validator) LicReferences() bool {
@@ -535,7 +548,7 @@ func (v *Validator) File(f *File) bool {
 	return r
 }
 
-// ArtifactOf
+// Validate ArtifactOf.
 func (v *Validator) ArtifactOf(a *ArtifactOf) bool {
 	if a == nil {
 		v.addErr("No Artifact defined.", nil)
@@ -644,6 +657,7 @@ func (v *Validator) useLicence(id string, m *Meta) {
 	v.licUsed[id] = m
 }
 
+// Validates an AnyLicence object, treating NONE and NOASSERTION.
 func (v *Validator) AnyLicenceOptionals(lic AnyLicence, allowSets, none, noassert bool, property string) bool {
 	t, ok := lic.(Licence)
 	if ok && ((none && t.V() == NONE) || (noassert && t.V() == NOASSERTION)) {
@@ -699,7 +713,8 @@ func (v *Validator) AnyLicence(lic AnyLicence, allowSets bool, property string) 
 	}
 }
 
-// Raise warning if invalid characters are used in LicenseRef ID. Returns `false` if a warnings is created, `true` otherwise.
+// Raise warning if invalid characters are used in LicenseRef ID.
+// Returns `false` if a warnings is created, `true` otherwise.
 func (v *Validator) LicenceRefId(id string, meta *Meta, property string) bool {
 	validChars := "a-z A-Z 0-9 + - ."
 	var ok bool

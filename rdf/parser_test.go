@@ -1,7 +1,5 @@
 package rdf
 
-import ()
-
 import "testing"
 
 // Test goraptor term to string
