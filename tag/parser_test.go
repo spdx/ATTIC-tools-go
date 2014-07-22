@@ -97,40 +97,6 @@ func tk(value string, metas ...*spdx.Meta) *Token {
 	return &Token{Pair: Pair{Value: value}, Meta: meta}
 }
 
-func sameLicence(a, b spdx.AnyLicence) bool {
-	switch ta := a.(type) {
-	default:
-		return false
-	case spdx.Licence:
-		if tb, ok := b.(spdx.Licence); ok && ta.Equal(tb) {
-			return true
-		}
-		return false
-	case spdx.DisjunctiveLicenceSet:
-		if tb, ok := b.(spdx.DisjunctiveLicenceSet); ok && len(ta.Members) == len(tb.Members) {
-			for i, lica := range ta.Members {
-				licb := tb.Members[i]
-				if !sameLicence(lica, licb) {
-					return false
-				}
-			}
-			return true
-		}
-		return false
-	case spdx.ConjunctiveLicenceSet:
-		if tb, ok := b.(spdx.ConjunctiveLicenceSet); ok && len(ta.Members) == len(tb.Members) {
-			for i, lica := range ta.Members {
-				licb := tb.Members[i]
-				if !sameLicence(lica, licb) {
-					return false
-				}
-			}
-			return true
-		}
-		return false
-	}
-}
-
 func sameSpdx(t *testing.T, found, expected spdx.Value) {
 	if found.V() != expected.V() {
 		t.Errorf("Incorrect value. Found \"%s\" but expected \"%s\"", found.V(), expected.V())
@@ -568,7 +534,7 @@ func TestParseLicenceSetOr(t *testing.T) {
 		t.Errorf("Unexpected error: %s", err)
 	}
 
-	if !sameLicence(output, expected) {
+	if !spdx.SameLicence(output, expected) {
 		t.Errorf("\nExpected: %T : %s\nbut found %T : %s\n", expected, expected, output, output)
 	}
 }
@@ -581,7 +547,7 @@ func TestParseLicenceSetAnd(t *testing.T) {
 		t.Errorf("Unexpected error: %s", err)
 	}
 
-	if !sameLicence(output, expected) {
+	if !spdx.SameLicence(output, expected) {
 		t.Errorf("\nExpected: %T : %s\nbut found %T : %s\n", expected, expected, output, output)
 	}
 }
@@ -603,7 +569,7 @@ func TestParseLicenceSetNested(t *testing.T) {
 		t.Errorf("Unexpected error: %s", err)
 	}
 
-	if !sameLicence(output, expected) {
+	if !spdx.SameLicence(output, expected) {
 		t.Errorf("\nExpected: %T : %s\nbut found %T : %s\n", expected, expected, output, output)
 	}
 }
@@ -618,7 +584,7 @@ func TestParseLicenceSetSingleValue(t *testing.T) {
 		t.Errorf("Unexpected error: %s", err)
 	}
 
-	if !sameLicence(output, expected) {
+	if !spdx.SameLicence(output, expected) {
 		t.Errorf("\nExpected: %T : %s\nbut found %T : %s\n", expected, expected, output, output)
 	}
 }

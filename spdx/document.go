@@ -21,6 +21,53 @@ type Document struct {
 // Return the document metadata.
 func (doc *Document) M() *Meta { return doc.Meta }
 
+// Checks if this document is equal to `other`. Ignores metadata. Slices
+// elements (ExtractedLicences, Packages, Files and Reviews) must appear
+// in the same order for this method to return true.
+func (doc *Document) Equal(other *Document) bool {
+	if doc == other {
+		return true
+	}
+	if doc == nil || other == nil {
+		return false
+	}
+	eq := doc.SpecVersion.Val == other.SpecVersion.Val &&
+		doc.DataLicence.Val == other.DataLicence.Val &&
+		doc.CreationInfo.Equal(other.CreationInfo) &&
+		len(doc.ExtractedLicences) == len(other.ExtractedLicences) &&
+		len(doc.Packages) == len(other.Packages) &&
+		len(doc.Files) == len(other.Files) &&
+		len(doc.Reviews) == len(other.Reviews) &&
+		doc.Comment.Val == other.Comment.Val
+
+	if !eq {
+		return false
+	}
+
+	for i, lic := range doc.ExtractedLicences {
+		if !lic.Equal(other.ExtractedLicences[i]) {
+			return false
+		}
+	}
+	for i, pkg := range doc.Packages {
+		if !pkg.Equal(other.Packages[i]) {
+			return false
+		}
+	}
+	for i, file := range doc.Files {
+		if !file.Equal(other.Files[i]) {
+			return false
+		}
+	}
+	for i, rev := range doc.Reviews {
+		if !rev.Equal(other.Reviews[i]) {
+			return false
+		}
+	}
+
+	return true
+}
+
 // Represents the Creation Info part of a document
 type CreationInfo struct {
 	Creator            []ValueCreator // Creator of the document
@@ -32,3 +79,24 @@ type CreationInfo struct {
 
 // Returns the creation info metadata.
 func (ci *CreationInfo) M() *Meta { return ci.Meta }
+
+// Checks if this CreationInfo is equal to `other`. Ignores metadata.
+func (ci *CreationInfo) Equal(other *CreationInfo) bool {
+	if ci == other {
+		return true
+	}
+	if ci == nil || other == nil {
+		return false
+	}
+	if len(ci.Creator) != len(other.Creator) {
+		return false
+	}
+	for i, cr := range ci.Creator {
+		if cr.V() != other.Creator[i].V() {
+			return false
+		}
+	}
+	return ci.Created.V() == other.Created.V() &&
+		ci.LicenceListVersion.Val == other.LicenceListVersion.Val &&
+		ci.Comment.Val == other.Comment.Val
+}

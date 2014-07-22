@@ -51,6 +51,36 @@ func (l *ExtractedLicence) LicenceId() string { return l.Id.V() }
 func (l *ExtractedLicence) V() string         { return l.LicenceId() }
 func (l *ExtractedLicence) M() *Meta          { return l.Meta }
 
+// Checks if this ExtractedLicence is equal to `other`. Ignores metadata.
+// Slice elements must be in the same order for this function to return true.
+func (l *ExtractedLicence) Equal(other *ExtractedLicence) bool {
+	if l == other {
+		return true
+	}
+	if l == nil || other == nil {
+		return false
+	}
+	eq := l.Id.Val == other.Id.Val &&
+		len(l.Name) == len(other.Name) &&
+		l.Text.Val == other.Text.Val &&
+		len(l.CrossReference) == len(other.CrossReference) &&
+		l.Comment.Val == other.Comment.Val
+	if !eq {
+		return false
+	}
+	for i, v := range l.Name {
+		if v.Val != other.Name[i].Val {
+			return false
+		}
+	}
+	for i, v := range l.CrossReference {
+		if v.Val != other.CrossReference[i].Val {
+			return false
+		}
+	}
+	return true
+}
+
 // Abstract licence set representation. Both ConjunctiveLicenceSet and
 // DisjunctiveLicenceSet are aliases for LicenceSet.
 type LicenceSet struct {
@@ -107,4 +137,53 @@ func join(list []AnyLicence, separator string) string {
 // It is case-insensitive.
 func isLicIdRef(id string) bool {
 	return strings.HasPrefix(strings.ToLower(id), "licenseref-")
+}
+
+// Compares two licences. Returns `true` if `a` and `b` are the same,
+// returns `false` otherwise. In case of licence sets, it recursively
+// applies this function on each element. The licences in sets must be
+// in the same order for this function to return true. Ignores metadata.
+func SameLicence(a, b AnyLicence) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	switch ta := a.(type) {
+	default:
+		return false
+	case Licence:
+		if tb, ok := b.(Licence); ok && ta.Equal(tb) {
+			return true
+		}
+		return false
+	case DisjunctiveLicenceSet:
+		if tb, ok := b.(DisjunctiveLicenceSet); ok && len(ta.Members) == len(tb.Members) {
+			for i, lica := range ta.Members {
+				licb := tb.Members[i]
+				if !SameLicence(lica, licb) {
+					return false
+				}
+			}
+			return true
+		}
+		return false
+	case ConjunctiveLicenceSet:
+		if tb, ok := b.(ConjunctiveLicenceSet); ok && len(ta.Members) == len(tb.Members) {
+			for i, lica := range ta.Members {
+				licb := tb.Members[i]
+				if !SameLicence(lica, licb) {
+					return false
+				}
+			}
+			return true
+		}
+		return false
+	case *ExtractedLicence:
+		if tb, ok := b.(*ExtractedLicence); ok && ta.Equal(tb) {
+			return true
+		}
+		return false
+	}
 }
