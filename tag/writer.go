@@ -193,7 +193,7 @@ func (f *Formatter) Document(doc *spdx.Document) error {
 	}
 
 	err := f.Properties([]Pair{
-		{"SpecVersion", doc.SpecVersion.Val},
+		{"SPDXVersion", doc.SpecVersion.Val},
 		{"DataLicense", doc.DataLicence.Val},
 		{"DocumentComment", doc.Comment.Val},
 	})
