@@ -213,6 +213,20 @@ func (v *Validator) Url(val *ValueStr, noassert, none bool, property string) boo
 // Validate a *Document. After validating doc, it checks whether all licence
 // references are in place (all "LicenceRef-" type licences used inside the
 // document and its nested elements are defined in doc.ExtractedLicences).
+//
+// This method adds the following errors, if found:
+// - SPDX Version format is not valid
+// - SPDX Version in the document is not currently supported by this tool
+// - No valid document creator
+// - ExtractedLicence (a licence with ID starting with "LicenceRef") used
+//   but not defined within the parsed SPDX file
+// - all errors added by the nested elements
+//
+// This method adds the following warnings, if found:
+// - SPDX Version format is lowercase or does not start with "SPDX-"
+// - ExtractedLicence defined in this SPDX file but not used in any of the
+//   nested elements of this document.
+// - all warnings added by nested elements.
 func (v *Validator) Document(doc *Document) bool {
 	if v.SpecVersion(&doc.SpecVersion) {
 		v.VersionSupported(doc.SpecVersion.Meta)
@@ -322,7 +336,8 @@ func (v *Validator) SpecVersion(val *ValueStr) bool {
 	return false
 }
 
-// Check if the version this validator has is currently supported by this library.
+// Check if the SPDX version this validator has is currently supported by this
+// library and adds an error if it is not.
 // Please keep SpecVersions updated in spdx/base.go.
 func (v *Validator) VersionSupported(m *Meta) bool {
 	ver := [2]int{v.Major, v.Minor}
@@ -411,7 +426,24 @@ func (v *Validator) Review(rev *Review) bool {
 	return v.Date(&rev.Date) && r
 }
 
-// Validate a Package
+// Validate a Package.
+//
+// Adds the following errors, if found:
+// - Package name is empty or on multiple lines.
+// - Package version is on multiple lines.
+// - Package File Name is on multiple lines.
+// - Package Supplier or Package Originator are not in a valid "creator" format:
+//      What: Name (Email)
+//   Valid options for "What" are: "Person" and "Organization".
+// - Package download location is not a valid URL
+// - Invalid Package Verification Code
+// - Invalid Package Checksum
+// - Package home page is not a valid URL
+// - No licence concluded defined
+// - No licence declared defined
+// - Empty licence info from files
+// - Wrong values for any of the licences
+// - all errors from the nested files
 func (v *Validator) Package(pkg *Package) bool {
 	if cache, ok := v.validated[pkg]; ok {
 		return cache
@@ -463,7 +495,28 @@ func (v *Validator) Package(pkg *Package) bool {
 	return r
 }
 
-// Validate File
+// Validate File.
+//
+// Adds the following errors, if found:
+// - Empty file name
+// - Same file defined twice (indexed by name)
+// - File name spans on multiple lines
+// - Invalid file type for the SPDX Version used
+// - Invalid checksum (and errors added by file checksum validation)
+// - Empty file contributor
+// - File contributor spans on multiple lines
+// - Empty copyright text
+// - Errors from nested ArtifactOf elements
+// - Errors from nested licence elements
+// - Empty licence concluded or licence info in file
+// - Errors from validating the file dependencies
+//
+// Adds the following warnings, if found:
+// - Valid file type, but in incorrect case (eg. "binary", not "BINARY")
+// - Warnings added by file checksum validation.
+// - Warnings from nested licence elements.
+// - Warnings from nested ArtifactOf elements.
+// - Warnings from validating file dependencies
 func (v *Validator) File(f *File) bool {
 	if cache, ok := v.validated[f]; ok {
 		return cache
@@ -549,6 +602,11 @@ func (v *Validator) File(f *File) bool {
 }
 
 // Validate ArtifactOf.
+//
+// Adds an error if:
+// - The artifact is empty (nil pointer or empty values)
+// - ProjectUri is not a valid URI
+// - HomePage is neither UNKNOWN or a valid URL
 func (v *Validator) ArtifactOf(a *ArtifactOf) bool {
 	if a == nil {
 		v.addErr("No Artifact defined.", nil)
@@ -569,6 +627,10 @@ func (v *Validator) ArtifactOf(a *ArtifactOf) bool {
 }
 
 // Package Verification Code validation
+//
+// Adds an error if:
+// - the value is not exactly 40 hexadecimal digits
+// - any of the ExcludedFiles slice elements is empty
 func (v *Validator) VerificationCode(vc *VerificationCode) bool {
 	if vc == nil {
 		v.addErr("Package Verification Code is mandatory.", nil)
@@ -591,7 +653,11 @@ func (v *Validator) VerificationCode(vc *VerificationCode) bool {
 	return r
 }
 
-// In spec verison SPDX-1.x the recommended algorithm is SHA1. If anything else is used, a warning is generated.
+// In spec verison SPDX-1.x the recommended algorithm is SHA1. If other algorithm is used, a warning is generated.
+//
+// Adds an error if:
+// - Algorithm or Value are empty
+// - For common algorithms, if the vlaue has the incorrect length
 func (v *Validator) Checksum(cksum *Checksum) bool {
 	if cache, ok := v.validated[cksum]; ok {
 		return cache
@@ -666,7 +732,14 @@ func (v *Validator) AnyLicenceOptionals(lic AnyLicence, allowSets, none, noasser
 	return v.AnyLicence(lic, allowSets, property)
 }
 
-// Licences
+// Licences.
+//
+// Adds errors if:
+// - Licence found and the ID is neither in the SPDX Licence List or a valid "LicenceRef-" ID.
+// - Licence Set found but not sets are allowed.
+// - Unknown licence type is found (something else than Licence, ExtractedLicence,
+//   DisjunctiveLicenceSet or ConjunctiveLicenceSet).
+// - any validation errors from validating ExtractedLicence, if the case
 func (v *Validator) AnyLicence(lic AnyLicence, allowSets bool, property string) bool {
 	switch t := lic.(type) {
 	case Licence:
@@ -733,6 +806,13 @@ func (v *Validator) LicenceRefId(id string, meta *Meta, property string) bool {
 }
 
 // Validate ExtractedLicence object
+//
+// Adds errors if:
+// - ID is not a valid Licence Reference format ("LicenseRef-...")
+// - No names are defined
+// - No Cross-References (reference URIs) are defined.
+// - Any of the names is empty or spans on multiple lines.
+// - Any of the Cross-References is not a valid URI.
 func (v *Validator) ExtractedLicence(lic *ExtractedLicence) bool {
 	if cache, ok := v.validated[lic]; ok {
 		return cache
