@@ -89,6 +89,7 @@ type LicenceSet struct {
 }
 
 func (s *LicenceSet) Add(lic AnyLicence) { s.Members = append(s.Members, lic) }
+func (s *LicenceSet) M() *Meta           { return s.Meta }
 
 // DisjunctiveLicenceSet
 type ConjunctiveLicenceSet LicenceSet

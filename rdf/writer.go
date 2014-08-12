@@ -41,7 +41,8 @@ func Write(output *os.File, doc *spdx.Document) error {
 	return err
 }
 
-// Writes a SPDX Document to raptor format. format must be one of the format constants (Fmt_*)
+// Writes a SPDX Document to raptor format. format must be one of the format
+// constants (Fmt_*)
 func WriteFromat(output *os.File, doc *spdx.Document, format string) error {
 	if format == "rdf" {
 		format = Fmt_rdfxmlAbbrev
@@ -116,7 +117,8 @@ func (f *Formatter) addPairs(to goraptor.Term, pairs ...pair) error {
 	return nil
 }
 
-// Using the SPDX baseUri, add one literal. Does not write anything and returns nil if the value is empty.
+// Using the SPDX baseUri, add one literal. Does not write anything and returns
+// nil if the value is empty.
 func (f *Formatter) addLiteral(to goraptor.Term, key, value string) error {
 	if value == "" {
 		return nil
@@ -567,7 +569,8 @@ func (f *Formatter) File(file *spdx.File) (id goraptor.Term, err error) {
 	return
 }
 
-// Closes the stream and frees the serializer. Always call after writing using the Formatter.
+// Closes the stream and frees the serializer. Always call after writing using
+// the Formatter.
 func (f *Formatter) Close() {
 	f.serializer.EndStream()
 	f.serializer.Free()

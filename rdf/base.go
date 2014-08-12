@@ -7,8 +7,9 @@ import (
 
 // Constants representing RDF formats supported by raptor.
 //
-// One of the accepted formats not in this constants is "rdf". When parsing, "rdf" means using raptor's "guess" parser.
-// When writing, it means using Fmt_rdfxmlAbbrev.
+// One of the accepted formats not in this constants is "rdf". When parsing,
+// "rdf" means using raptor's "guess" parser. When writing, it means using
+// Fmt_rdfxmlAbbrev.
 const (
 	Fmt_ntriples     = "ntriples"      // for N-Triples
 	Fmt_turtle       = "turtle"        // for Turtle Terse RDF Triple Language
@@ -30,13 +31,23 @@ const (
 	licenceUri = "http://spdx.org/licenses/"
 )
 
+// Common RDF prefixes used in SPDX RDF Representations
+var rdfPrefixes = map[string]string{
+	"ns:":   "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+	"doap:": "http://usefulinc.com/ns/doap#",
+	"rdfs:": "http://www.w3.org/2000/01/rdf-schema#",
+	"spdx:": baseUri,
+	"":      baseUri,
+}
+
 // Useful helper pair struct.
 type pair struct {
 	key, val string
 }
 
-// Checks if `fmt` is one of the raptor supported formats (has the value of one of the Fmt_* constants).
-// The special "rdf" value is considered invalid by this function.
+// Checks if `fmt` is one of the raptor supported formats (has the value of one
+// of the Fmt_* constants). The special "rdf" value is considered invalid by
+// this function.
 func FormatOk(fmt string) bool {
 	fmts := []string{
 		Fmt_ntriples,
@@ -66,43 +77,29 @@ func prefix(k string) *goraptor.Uri {
 	var pref string
 	rest := k
 	if i := strings.Index(k, ":"); i >= 0 {
-		pref = k[:i]
+		pref = k[:i+1]
 		rest = k[i+1:]
 	}
-
-	switch pref {
-	default:
-		pref = baseUri
-	case "ns":
-		pref = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-	case "doap":
-		pref = "http://usefulinc.com/ns/doap#"
-	case "rdfs":
-		pref = "http://www.w3.org/2000/01/rdf-schema#"
+	if long, ok := rdfPrefixes[pref]; ok {
+		pref = long
 	}
-
 	uri := goraptor.Uri(pref + rest)
 	return &uri
 }
 
-// change the RDF prefixes to their short forms.
+// Change the RDF prefixes to their short forms.
 func shortPrefix(t goraptor.Term) string {
 	str := termStr(t)
-	prefixes := []pair{
-		{"ns:", "http://www.w3.org/1999/02/22-rdf-syntax-ns#"},
-		{"doap:", "http://usefulinc.com/ns/doap#"},
-		{"rdfs:", "http://www.w3.org/2000/01/rdf-schema#"},
-		{"", baseUri},
-	}
-	for _, p := range prefixes {
-		if strings.HasPrefix(str, p.val) {
-			return strings.Replace(str, p.val, p.key, 1)
+	for short, long := range rdfPrefixes {
+		if strings.HasPrefix(str, long) {
+			return strings.Replace(str, long, short, 1)
 		}
 	}
 	return str
 }
 
-// goraptor.Term to string
+// goraptor.Term to string. Returns empty string if the term given is not one of
+// the following types: *goraptor.Uri, *goraptor.Blank or *goraptor.Literal.
 func termStr(term goraptor.Term) string {
 	switch t := term.(type) {
 	case *goraptor.Uri:

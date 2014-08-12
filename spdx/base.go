@@ -66,8 +66,8 @@ func (v ValueBool) V() string {
 }
 
 // Store data similar to document creator or package spplier or originator.
-// If data stored using SetValue() is of the form `what: name (email)`, where `(email)` is optional,
-// the `what`, `name` and `email` fields get populated.
+// If data stored using SetValue() is of the form `what: name (email)`, where
+// `(email)` is optional, the `what`, `name` and `email` fields get populated.
 type ValueCreator struct {
 	val   string
 	what  string

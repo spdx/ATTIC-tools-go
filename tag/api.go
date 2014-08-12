@@ -26,7 +26,8 @@ func CaseSensitive(ci bool) { caseSensitive = ci }
 // Get the current option for Lexer.IgnoreCase used by Build().
 func GetCaseSensitive() bool { return caseSensitive }
 
-// Lex a io.Reader and Parse it to a *spdx.Document. If there is an error, it is of type *ParseError.
+// Lex a io.Reader and Parse it to a *spdx.Document. If there is an error, it is
+// of type *ParseError.
 func Build(f io.Reader) (*spdx.Document, error) {
 	lexer := NewLexer(f)
 	lexer.IgnoreComments = true

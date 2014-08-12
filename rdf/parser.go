@@ -210,6 +210,9 @@ func (p *Parser) Free() {
 }
 
 // Set the type of node to t.
+// If the node does not exist, a builder of the required type is created and the buffered
+// statements will be applied in fifo order.
+// If the node exists and the types are not compatible, a ParseError is returned.
 func (p *Parser) setType(node, t goraptor.Term, meta *spdx.Meta) (interface{}, error) {
 	nodeStr := termStr(node)
 	bldr, ok := p.index[nodeStr]
@@ -248,6 +251,7 @@ func (p *Parser) setType(node, t goraptor.Term, meta *spdx.Meta) (interface{}, e
 		artif := &spdx.ArtifactOf{Meta: meta}
 		if artifUri, ok := node.(*goraptor.Uri); ok {
 			artif.ProjectUri.Val = termStr(artifUri)
+			artif.ProjectUri.Meta = meta
 		}
 		bldr = p.artifactOfMap(artif)
 	case t.Equals(typeExtractedLicence):
@@ -260,11 +264,19 @@ func (p *Parser) setType(node, t goraptor.Term, meta *spdx.Meta) (interface{}, e
 			if strings.HasPrefix(strings.ToLower(termStr(t)), "licenseref") {
 				bldr = p.licenceReferenceBuilder(node, meta)
 			} else {
-				licList := make([]spdx.AnyLicence, 0)
-				licSet := &spdx.LicenceSet{Members: licList, Meta: meta}
-				bldr = p.licenceSetMap(licSet)
+				bldr = p.licenceSetMap(&spdx.LicenceSet{
+					Members: make([]spdx.AnyLicence, 0),
+					Meta:    meta,
+				})
 			}
 		}
+	case t.Equals(typeLicence):
+		bldr = p.licenceReferenceBuilder(node, meta)
+	case t.Equals(typeAbstractLicenceSet):
+		bldr = p.licenceSetMap(&spdx.LicenceSet{
+			Members: make([]spdx.AnyLicence, 0),
+			Meta:    meta,
+		})
 	case t.Equals(typeConjunctiveSet):
 		bldr = p.conjunctiveSetBuilder(meta)
 	case t.Equals(typeDisjunctiveSet):
@@ -325,9 +337,9 @@ func equalTypes(found goraptor.Term, need ...goraptor.Term) bool {
 
 // Checks if found is the same as need.
 //
-// If need is any of typeLicence, typeLicence, typeDisjunctiveSet,
-// typeConjunctiveSet and typeExtractedLicence and found is AnyLicence, it
-// is permitted and the function returns true.
+// If need is any of typeLicence, typeDisjunctiveSet, typeConjunctiveSet
+// and typeExtractedLicence and found is AnyLicence, it  is permitted and
+// the function returns true.
 func compatibleTypes(found, need goraptor.Term) bool {
 	if equalTypes(found, need) {
 		return true

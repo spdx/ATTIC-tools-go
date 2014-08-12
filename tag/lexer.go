@@ -379,7 +379,8 @@ func lexToken(f io.Reader) ([]*Token, error) {
 	return p, nil
 }
 
-// Returns the number of bytes that are (part of) unicode whitespace characters at the beginning of the given []byte and the number of lines these include.
+// Returns the number of bytes that are (part of) unicode whitespace characters
+// at the beginning of the given []byte and the number of lines these include.
 func countSpacesNl(data []byte) (spaces int, lines int) {
 	width, start := 0, 0
 	for ; start < len(data); start += width {
@@ -395,7 +396,8 @@ func countSpacesNl(data []byte) (spaces int, lines int) {
 	return start, lines
 }
 
-// Returns the number of bytes that are (part of) unicode whitespace characters at the beginning of the given []byte.
+// Returns the number of bytes that are (part of) unicode whitespace characters
+// at the beginning of the given []byte.
 func countSpaces(data []byte) int {
 	width, start := 0, 0
 	for ; start < len(data); start += width {
