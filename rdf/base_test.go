@@ -32,6 +32,7 @@ func TestShortPrefix(t *testing.T) {
 	tests := map[string]string{
 		"ns:something": "http://www.w3.org/1999/02/22-rdf-syntax-ns#something",
 		"ns:":          "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+		"":             baseUri,
 	}
 	for short, long := range tests {
 		res := shortPrefix(uri(long))

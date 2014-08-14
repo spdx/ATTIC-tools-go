@@ -31,12 +31,11 @@ const (
 	licenceUri = "http://spdx.org/licenses/"
 )
 
-// Common RDF prefixes used in SPDX RDF Representations
+// Common RDF prefixes used in SPDX RDF Representations.
 var rdfPrefixes = map[string]string{
 	"ns:":   "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
 	"doap:": "http://usefulinc.com/ns/doap#",
 	"rdfs:": "http://www.w3.org/2000/01/rdf-schema#",
-	"spdx:": baseUri,
 	"":      baseUri,
 }
 

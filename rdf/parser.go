@@ -322,10 +322,9 @@ func (p *Parser) processTruple(stm *goraptor.Statement, meta *spdx.Meta) error {
 	return nil
 }
 
-// Parser.req* functions are supposded to get the node from either the index or the buffer,
-// check if it's the required type and return a pointer to the relevant spdx.* object.
-
-// Checks if found is any of the need types.
+// Checks if found is any of the need types. Note: a type term of type
+// goraptor.Uri is not the same type as one of type goraptor.Blank; same
+// applies for other combinations.
 func equalTypes(found goraptor.Term, need ...goraptor.Term) bool {
 	for _, b := range need {
 		if found == b || found.Equals(b) {
@@ -357,6 +356,9 @@ func compatibleTypes(found, need goraptor.Term) bool {
 // If the node is found and the types match, this method returns a pointer to
 // that element, but of type interface{} and a nil error. To get a more specific
 // element, use one of the other req* functions (reqDocument, reqFile, etc.).
+//
+// Parser.req* functions are supposed to get the node from either the index check,
+// if it's the required type and return a pointer to the relevant spdx.* object.
 func (p *Parser) reqType(node, t goraptor.Term) (interface{}, error) {
 	bldr, ok := p.index[termStr(node)]
 	if ok {
@@ -419,7 +421,7 @@ func (p *Parser) reqAnyLicence(node goraptor.Term) (spdx.AnyLicence, error) {
 	case *spdx.ExtractedLicence:
 		return lic, nil
 	default:
-		return nil, fmt.Errorf("Unexpected error, fix rdf parser. %s || %#v", node, obj)
+		return nil, fmt.Errorf("Unexpected error, an element of type AnyLicence cannot be casted to any licence type. %s || %#v", node, obj)
 	}
 }
 func (p *Parser) reqArtifactOf(node goraptor.Term) (*spdx.ArtifactOf, error) {
@@ -444,11 +446,7 @@ func (p *Parser) documentMap(doc *spdx.Document) *builder {
 			if err != nil {
 				return err
 			}
-			if doc.Packages == nil {
-				doc.Packages = []*spdx.Package{pkg}
-			} else {
-				doc.Packages = append(doc.Packages, pkg)
-			}
+			doc.Packages = append(doc.Packages, pkg)
 			return nil
 		},
 		"referencesFile": func(obj goraptor.Term, meta *spdx.Meta) error {
@@ -456,11 +454,7 @@ func (p *Parser) documentMap(doc *spdx.Document) *builder {
 			if err != nil {
 				return err
 			}
-			if doc.Files == nil {
-				doc.Files = []*spdx.File{file}
-			} else {
-				doc.Files = append(doc.Files, file)
-			}
+			doc.Files = append(doc.Files, file)
 			return nil
 		},
 		"reviewed": func(obj goraptor.Term, meta *spdx.Meta) error {
@@ -468,11 +462,7 @@ func (p *Parser) documentMap(doc *spdx.Document) *builder {
 			if err != nil {
 				return err
 			}
-			if doc.Reviews == nil {
-				doc.Reviews = []*spdx.Review{rev}
-			} else {
-				doc.Reviews = append(doc.Reviews, rev)
-			}
+			doc.Reviews = append(doc.Reviews, rev)
 			return nil
 		},
 		"hasExtractedLicensingInfo": func(obj goraptor.Term, meta *spdx.Meta) error {
@@ -480,11 +470,7 @@ func (p *Parser) documentMap(doc *spdx.Document) *builder {
 			if err != nil {
 				return err
 			}
-			if doc.ExtractedLicences == nil {
-				doc.ExtractedLicences = []*spdx.ExtractedLicence{lic}
-			} else {
-				doc.ExtractedLicences = append(doc.ExtractedLicences, lic)
-			}
+			doc.ExtractedLicences = append(doc.ExtractedLicences, lic)
 			return nil
 		},
 	}
@@ -547,11 +533,7 @@ func (p *Parser) packageMap(pkg *spdx.Package) *builder {
 			if err != nil {
 				return err
 			}
-			if pkg.LicenceInfoFromFiles == nil {
-				pkg.LicenceInfoFromFiles = []spdx.AnyLicence{lic}
-			} else {
-				pkg.LicenceInfoFromFiles = append(pkg.LicenceInfoFromFiles, lic)
-			}
+			pkg.LicenceInfoFromFiles = append(pkg.LicenceInfoFromFiles, lic)
 			return nil
 		},
 		"licenseDeclared": func(obj goraptor.Term, meta *spdx.Meta) error {
@@ -568,11 +550,7 @@ func (p *Parser) packageMap(pkg *spdx.Package) *builder {
 			if err != nil {
 				return err
 			}
-			if pkg.Files == nil {
-				pkg.Files = []*spdx.File{file}
-			} else {
-				pkg.Files = append(pkg.Files, file)
-			}
+			pkg.Files = append(pkg.Files, file)
 			return nil
 		},
 	}
@@ -634,11 +612,7 @@ func (p *Parser) fileMap(file *spdx.File) *builder {
 			if err != nil {
 				return err
 			}
-			if file.LicenceInfoInFile == nil {
-				file.LicenceInfoInFile = []spdx.AnyLicence{lic}
-			} else {
-				file.LicenceInfoInFile = append(file.LicenceInfoInFile, lic)
-			}
+			file.LicenceInfoInFile = append(file.LicenceInfoInFile, lic)
 			return nil
 		},
 		"licenseComments": upd(&file.LicenceComments),
@@ -648,11 +622,7 @@ func (p *Parser) fileMap(file *spdx.File) *builder {
 			if err != nil {
 				return err
 			}
-			if file.Dependency == nil {
-				file.Dependency = []*spdx.File{f}
-			} else {
-				file.Dependency = append(file.Dependency, f)
-			}
+			file.Dependency = append(file.Dependency, f)
 			return nil
 		},
 		"artifactOf": func(obj goraptor.Term, meta *spdx.Meta) error {
@@ -660,11 +630,7 @@ func (p *Parser) fileMap(file *spdx.File) *builder {
 			if err != nil {
 				return err
 			}
-			if file.ArtifactOf == nil {
-				file.ArtifactOf = []*spdx.ArtifactOf{artif}
-			} else {
-				file.ArtifactOf = append(file.ArtifactOf, artif)
-			}
+			file.ArtifactOf = append(file.ArtifactOf, artif)
 			return nil
 		},
 	}
@@ -719,10 +685,12 @@ func (p *Parser) licenceSetMap(set abstractLicenceSet) *builder {
 				bldr.t = typeConjunctiveSet
 				conj := spdx.NewConjunctiveSet(goodMeta, tmpSet.Members...)
 				set = &conj
+				bldr.ptr = &conj
 			} else if equalTypes(obj, typeDisjunctiveSet) {
 				bldr.t = typeDisjunctiveSet
 				disj := spdx.NewDisjunctiveSet(goodMeta, tmpSet.Members...)
 				set = &disj
+				bldr.ptr = &disj
 			} else {
 				return spdx.NewParseError(fmt.Sprintf(msgIncompatibleTypes, "Licence Set", bldr.t, obj), meta)
 			}

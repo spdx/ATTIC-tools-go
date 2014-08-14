@@ -273,37 +273,19 @@ func TestSetType(t *testing.T) {
 		t.Errorf("Existing builder returned an error (%s) or a nil builder: %+v", err, bld)
 	}
 
-	// create a fake builder
-	fakeVal := "initial"
-	fakeBuilder := &builder{
-		ptr: &fakeVal,
-		t:   typeDocument, // the type is ignored anyway
+	// unknown type
+	if _, err := parser.setType(blank("some_unused_name"), blank("this_type_is_unknown"), nil); err == nil {
+		t.Error("Unknown type didn't return an error.")
 	}
-	fakeBuilder.updaters = map[string]updater{
-		"ns:type": func(term goraptor.Term, meta *spdx.Meta) error {
-			if str := termStr(term); str != "error" {
-				*(fakeBuilder.ptr.(*string)) = termStr(term)
-				return nil
-			} else {
-				return errors.New("Error")
-			}
-		},
-	}
-	parser.index["fakebldr"] = fakeBuilder
+}
 
-	// test applying ns:type
-	_, err := parser.setType(blank("fakebldr"), typePackage, nil)
-	if err != nil {
-		t.Errorf("Unexpected error while applying ns:type: %s", err)
-	}
-	if fakeVal != termStr(typePackage) {
-		t.Errorf("Value didn't change. Found %#v but expected %#v", fakeVal, termStr(typePackage))
-	}
-	if bldr, err := parser.setType(blank("falekbldr"), uri("error"), nil); err == nil || bldr != nil {
-		t.Errorf("Nil error (%s) or non-nil builder (%+v)", err, bldr)
+// On Uri node, ArtifactOf.ProjectUri must be updated to node's value.
+func TestSetTypeArtifactOfUri(t *testing.T) {
+	parser := &Parser{
+		index:  make(map[string]*builder),
+		buffer: make(map[string][]bufferEntry),
 	}
 
-	// on Uri node, ArtifactOf.ProjectUri must be updated to node's value
 	artifNode := uri("http://spdx.org")
 	meta := spdx.NewMeta(3, 4)
 	bldr, err := parser.setType(artifNode, typeArtifactOf, meta)
@@ -325,8 +307,15 @@ func TestSetType(t *testing.T) {
 			t.Errorf("Incorrect meta for ArtifactOfProjectUri: %+v (expected %+v)", artif.ProjectUri.Meta, meta)
 		}
 	}
+}
 
-	// AnyLicence varieties
+// Special cases when setting the type to AnyLicence.
+func TestSetTypeAnyLicence(t *testing.T) {
+	parser := &Parser{
+		index:  make(map[string]*builder),
+		buffer: make(map[string][]bufferEntry),
+	}
+
 	terms := []goraptor.Term{blank("AnyLicenceToSet"), blank("LicenseRef-test"), uri("AnyLicenceInList")}
 	typeSlice := []goraptor.Term{typeAbstractLicenceSet, typeLicence, typeLicence}
 	for i, term := range terms {
@@ -354,10 +343,483 @@ func TestSetType(t *testing.T) {
 			t.Errorf("Builder %#v not indexed in parser.", termStr(term))
 		}
 	}
+}
 
-	// unknown type
-	if _, err := parser.setType(blank("some_unused_name"), blank("this_type_is_unknown"), nil); err == nil {
-		t.Error("Unknown type didn't return an error.")
+func TestSetTypeNsType(t *testing.T) {
+	parser := &Parser{
+		index:  make(map[string]*builder),
+		buffer: make(map[string][]bufferEntry),
+	}
+	// create a fake builder
+	fakeVal := "initial"
+	fakeBuilder := &builder{
+		ptr: &fakeVal,
+		t:   typeDocument, // this type is ignored in this use case
+	}
+	fakeBuilder.updaters = map[string]updater{
+		"ns:type": func(term goraptor.Term, meta *spdx.Meta) error {
+			if str := termStr(term); str != "error" {
+				*(fakeBuilder.ptr.(*string)) = termStr(term)
+				return nil
+			} else {
+				return errors.New("Error")
+			}
+		},
+	}
+	parser.index["fakebldr"] = fakeBuilder
+
+	// test applying ns:type
+	_, err := parser.setType(blank("fakebldr"), typePackage, nil)
+	if err != nil {
+		t.Errorf("Unexpected error while applying ns:type: %s", err)
+	}
+	if fakeVal != termStr(typePackage) {
+		t.Errorf("Value didn't change. Found %#v but expected %#v", fakeVal, termStr(typePackage))
+	}
+	if bldr, err := parser.setType(blank("falekbldr"), uri("error"), nil); err == nil || bldr != nil {
+		t.Errorf("Nil error (%s) or non-nil builder (%+v)", err, bldr)
+	}
+}
+
+func TestSetTypeApplyBuffer(t *testing.T) {
+	parser := &Parser{
+		index:  make(map[string]*builder),
+		buffer: make(map[string][]bufferEntry),
+	}
+	k := "document"
+	stm := &goraptor.Statement{
+		Subject:   blank(k),
+		Predicate: prefix("specVersion"),
+		Object:    literal("SPDX-1.2"),
+	}
+	meta := spdx.NewMetaL(1)
+	parser.buffer[k] = []bufferEntry{{stm, meta}}
+	bldr, err := parser.setType(blank(k), typeDocument, nil)
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err)
+		t.FailNow()
 	}
 
+	if doc, ok := bldr.(*spdx.Document); ok {
+		if doc.SpecVersion.Val != "SPDX-1.2" {
+			t.Errorf("Buffer was not run correctly. Found value %#v but expected \"SPDX-1.2\".", doc.SpecVersion.Val)
+		}
+		if doc.SpecVersion.Meta != meta {
+			t.Errorf("Incorrect meta for buffered value. Found %+v but expected %+v.", doc.SpecVersion.Meta, meta)
+		}
+	} else {
+		t.Errorf("Type was incorrecty set.")
+	}
+}
+
+func TestDocumentMap(t *testing.T) {
+	parser := &Parser{
+		index:  make(map[string]*builder),
+		buffer: make(map[string][]bufferEntry),
+	}
+
+	doc := new(spdx.Document)
+	builder := parser.documentMap(doc)
+
+	statements := map[string]string{
+		"specVersion":               "SPDX-test-1.2",
+		"dataLicense":               "CC-0.1",
+		"rdfs:comment":              "test comment",
+		"creationInfo":              "ci_node",
+		"describesPackage":          "pkg_node",
+		"referencesFile":            "file_node",
+		"reviewed":                  "review_node",
+		"hasExtractedLicensingInfo": "extractedLicence_node",
+	}
+
+	fakes := map[string]goraptor.Term{
+		"ci_node":               typeCreationInfo,
+		"pkg_node":              typePackage,
+		"file_node":             typeFile,
+		"review_node":           typeReview,
+		"extractedLicence_node": typeExtractedLicence,
+	}
+
+	for k, t := range fakes {
+		parser.setType(blank(k), t, nil)
+	}
+
+	for k, v := range statements {
+		err := builder.apply(blank(k), blank(v), nil)
+		if err != nil {
+			t.Errorf("Applying %s. Unexpected error: %s", k, err)
+		}
+	}
+
+	testValues := map[string]string{
+		"specVersion":  doc.SpecVersion.Val,
+		"dataLicense":  doc.DataLicence.Val,
+		"rdfs:comment": doc.Comment.Val,
+	}
+
+	for k, res := range testValues {
+		expected := statements[k]
+		if res != expected {
+			t.Errorf("Wrong %s. Found %#v (expected #%v)", k, res, expected)
+		}
+	}
+
+	if doc.CreationInfo == nil {
+		t.Error("No CreationInfo found.")
+	}
+	if len(doc.Packages) == 0 {
+		t.Error("No packages.")
+	}
+	if len(doc.Files) == 0 {
+		t.Error("No files.")
+	}
+	if len(doc.Reviews) == 0 {
+		t.Error("No Reviews")
+	}
+	if len(doc.ExtractedLicences) == 0 {
+		t.Error("No Extracted Licences")
+	}
+}
+
+func TestCreationInfoMap(t *testing.T) {
+	parser := &Parser{
+		index:  make(map[string]*builder),
+		buffer: make(map[string][]bufferEntry),
+	}
+
+	ci := new(spdx.CreationInfo)
+	builder := parser.creationInfoMap(ci)
+
+	statements := map[string]string{
+		"creator":            "Person: Testaculous",
+		"rdfs:comment":       "test comment",
+		"created":            "2014-01-01T09:40:57Z",
+		"licenseListVersion": "11",
+	}
+
+	for k, v := range statements {
+		err := builder.apply(blank(k), blank(v), nil)
+		if err != nil {
+			t.Errorf("Applying %s. Unexpected error: %s", k, err)
+		}
+	}
+
+	testValues := map[string]string{
+		"creator":            ci.Creator[0].V(),
+		"rdfs:comment":       ci.Comment.V(),
+		"created":            ci.Created.V(),
+		"licenseListVersion": ci.LicenceListVersion.V(),
+	}
+
+	for k, res := range testValues {
+		expected := statements[k]
+		if res != expected {
+			t.Errorf("Wrong %s. Found %#v (expected #%v)", k, res, expected)
+		}
+	}
+}
+
+func TestPackageMap(t *testing.T) {
+	parser := &Parser{
+		index:  make(map[string]*builder),
+		buffer: make(map[string][]bufferEntry),
+	}
+
+	pkg := new(spdx.Package)
+	builder := parser.packageMap(pkg)
+
+	statements := map[string]string{
+		"name":                    "pkg-test",
+		"versionInfo":             "pkg-test-v1",
+		"packageFileName":         "pkg-test-file.zip",
+		"supplier":                "Person: Testaculous",
+		"originator":              "spdx.org",
+		"downloadLocation":        "http://spdx.org/",
+		"packageVerificationCode": "verif_node",
+		"checksum":                "cksum_node",
+		"doap:homepage":           "http://spdx.org/",
+		"sourceInfo":              "some src info",
+		"licenseConcluded":        "lic_concluded_node",
+		"licenseInfoFromFiles":    "lic_info_from_file_node",
+		"licenseDeclared":         "lic_declared_node",
+		"licenseComments":         "some licence comments",
+		"copyrightText":           "some copyright text",
+		"summary":                 "this package is awesome",
+		"description":             "this is the most awesome package ever",
+		"hasFile":                 "file_node",
+	}
+
+	fakes := map[string]goraptor.Term{
+		"verif_node":              typeVerificationCode,
+		"cksum_node":              typeChecksum,
+		"lic_concluded_node":      typeLicence,
+		"lic_info_from_file_node": typeLicence,
+		"lic_declared_node":       typeLicence,
+		"file_node":               typeFile,
+	}
+
+	for k, t := range fakes {
+		parser.setType(blank(k), t, nil)
+	}
+
+	for k, v := range statements {
+		err := builder.apply(blank(k), blank(v), nil)
+		if err != nil {
+			t.Errorf("Applying %s. Unexpected error: %s", k, err)
+		}
+	}
+
+	testValues := map[string]string{
+		"name":             pkg.Name.Val,
+		"versionInfo":      pkg.Version.Val,
+		"packageFileName":  pkg.FileName.Val,
+		"supplier":         pkg.Supplier.V(),
+		"originator":       pkg.Originator.V(),
+		"downloadLocation": pkg.DownloadLocation.Val,
+		"doap:homepage":    pkg.HomePage.Val,
+		"sourceInfo":       pkg.SourceInfo.Val,
+		"licenseComments":  pkg.LicenceComments.Val,
+		"copyrightText":    pkg.CopyrightText.Val,
+		"summary":          pkg.Summary.Val,
+		"description":      pkg.Description.Val,
+	}
+
+	for k, res := range testValues {
+		expected := statements[k]
+		if res != expected {
+			t.Errorf("Wrong %s. Found %#v (expected #%v)", k, res, expected)
+		}
+	}
+
+	if pkg.VerificationCode == nil {
+		t.Error("No verification code.")
+	}
+	if pkg.Checksum == nil {
+		t.Error("No checksum.")
+	}
+	if pkg.LicenceDeclared == nil {
+		t.Error("No licence declared.")
+	}
+	if pkg.LicenceConcluded == nil {
+		t.Error("No licence concluded.")
+	}
+	if len(pkg.LicenceInfoFromFiles) == 0 {
+		t.Error("No licence info from files.")
+	}
+	if len(pkg.Files) == 0 {
+		t.Error("No files.")
+	}
+}
+
+func TestFileMap(t *testing.T) {
+	parser := &Parser{
+		index:  make(map[string]*builder),
+		buffer: make(map[string][]bufferEntry),
+	}
+
+	file := new(spdx.File)
+	builder := parser.fileMap(file)
+
+	statements := map[string]string{
+		"fileName":          "parser_test.go",
+		"rdfs:comment":      "some test comment",
+		"fileType":          "SOURCE",
+		"checksum":          "cksum_node",
+		"copyrightText":     "some copyright text",
+		"noticeText":        "some notice text",
+		"licenseConcluded":  "lic_concluded_node",
+		"licenseInfoInFile": "lic_info_in_file_node",
+		"licenseComments":   "some licence comments",
+		"fileContributor":   "Person: Testaculous",
+		"fileDependency":    "file_node",
+		"artifactOf":        "artif_node",
+	}
+
+	fakes := map[string]goraptor.Term{
+		"cksum_node":            typeChecksum,
+		"lic_concluded_node":    typeDisjunctiveSet,
+		"lic_info_in_file_node": typeConjunctiveSet,
+		"file_node":             typeFile,
+		"artif_node":            typeArtifactOf,
+	}
+
+	for k, t := range fakes {
+		parser.setType(blank(k), t, nil)
+	}
+
+	for k, v := range statements {
+		err := builder.apply(blank(k), blank(v), nil)
+		if err != nil {
+			t.Errorf("Applying %s. Unexpected error: %s", k, err)
+		}
+	}
+
+	testValues := map[string]string{
+		"fileName":        file.Name.Val,
+		"rdfs:comment":    file.Comment.Val,
+		"fileType":        file.Type.Val,
+		"copyrightText":   file.CopyrightText.Val,
+		"noticeText":      file.Notice.Val,
+		"licenseComments": file.LicenceComments.Val,
+		"fileContributor": file.Contributor[0].V(),
+	}
+
+	for k, res := range testValues {
+		expected := statements[k]
+		if res != expected {
+			t.Errorf("Wrong %s. Found %#v (expected #%v)", k, res, expected)
+		}
+	}
+
+	if file.Checksum == nil {
+		t.Error("No checksum.")
+	}
+	if file.LicenceConcluded == nil {
+		t.Error("No licence concluded.")
+	}
+	if len(file.LicenceInfoInFile) == 0 {
+		t.Error("No licence info in file.")
+	}
+	if len(file.Dependency) == 0 {
+		t.Error("No dependecies.")
+	}
+}
+
+func TestChecksumMap(t *testing.T) {
+	parser := &Parser{
+		index:  make(map[string]*builder),
+		buffer: make(map[string][]bufferEntry),
+	}
+
+	cksum := new(spdx.Checksum)
+	builder := parser.checksumMap(cksum)
+
+	statements := map[string]string{
+		"algorithm":     "http://spdx.org/rdf/terms#checksumAlgorithm_sha1",
+		"checksumValue": "somedummyvalue",
+	}
+
+	for k, v := range statements {
+		err := builder.apply(blank(k), blank(v), nil)
+		if err != nil {
+			t.Errorf("Applying %s. Unexpected error: %s", k, err)
+		}
+	}
+
+	if cksum.Algo.Val != "SHA1" {
+		t.Errorf("Wrong algorithm. Expected \"SHA1\" but found %#v", cksum.Algo.Val)
+	}
+	if cksum.Value.Val != statements["checksumValue"] {
+		t.Errorf("Wrong value. Expected %#v but found %#v", statements["checksumValue"], cksum.Algo.Val)
+	}
+
+}
+
+func TestLicenceSetMap(t *testing.T) {
+	parser := &Parser{
+		index:  make(map[string]*builder),
+		buffer: make(map[string][]bufferEntry),
+	}
+
+	set := new(spdx.LicenceSet)
+	builder := parser.licenceSetMap(set)
+
+	parser.index["testnode"] = builder
+
+	statements := []pair{
+		{"member", "lic1"},
+		{"member", "lic2"},
+		{"ns:type", termStr(typeConjunctiveSet)},
+	}
+
+	fakes := map[string]goraptor.Term{
+		"lic1": typeLicence,
+		"lic2": typeLicence,
+	}
+
+	for k, t := range fakes {
+		parser.setType(blank(k), t, nil)
+	}
+
+	for _, pair := range statements {
+		err := builder.apply(blank(pair.key), uri(pair.val), nil)
+		if err != nil {
+			t.Errorf("Applying %s. Unexpected error: %s", pair.key, err)
+		}
+	}
+
+	if len(set.Members) != 2 {
+		t.Errorf("Wrong licence set members. Found: %#v", set.Members)
+	}
+
+	newSet, err := parser.reqAnyLicence(blank("testnode"))
+	if err != nil {
+		t.Errorf("Couldn't get AnyLicence: %s", err)
+	}
+	if _, ok := newSet.(spdx.ConjunctiveLicenceSet); !ok {
+		t.Errorf("Set is of the wrong type or type didn't change. %#v", newSet)
+	}
+}
+
+func TestProcessTruple(t *testing.T) {
+	parser := &Parser{
+		index:  make(map[string]*builder),
+		buffer: make(map[string][]bufferEntry),
+	}
+
+	statements := []*goraptor.Statement{
+		{
+			Subject:   blank("document"),
+			Predicate: prefix("ns:type"),
+			Object:    typeDocument,
+		},
+		{
+			Subject:   blank("document"),
+			Predicate: uri("specVersion"),
+			Object:    literal("SPDX-1.2"),
+		},
+		{
+			Subject:   blank("pkg"),
+			Predicate: uri("packageFileName"),
+			Object:    literal("pkgfile.zip"),
+		},
+		{
+			Subject:   blank("pkg"),
+			Predicate: prefix("ns:type"),
+			Object:    typePackage,
+		},
+	}
+
+	for i, stm := range statements {
+		err := parser.processTruple(stm, spdx.NewMetaL(i+1))
+		if err != nil {
+			t.Errorf("Unexpected error while processing %#v: %s", *stm, err)
+		}
+	}
+
+	doc, err := parser.reqDocument(blank("document"))
+	if err != nil {
+		t.Errorf("Unexpected error while getting document: %s", err)
+		t.FailNow()
+	}
+	if doc.Meta.LineStart != 1 {
+		t.Errorf("Wrong meta linestart at document. Found %d (expected %d)", doc.Meta.LineStart, 1)
+	}
+	sv := spdx.Str("SPDX-1.2", spdx.NewMetaL(2))
+	if doc.SpecVersion.Val != sv.Val && doc.SpecVersion.Meta.LineStart == sv.Meta.LineStart {
+		t.Errorf("Wrong SpecVersion. Found %#v (expected %#v)", doc.SpecVersion, sv)
+	}
+
+	pkg, err := parser.reqPackage(blank("pkg"))
+	if err != nil {
+		t.Errorf("Unexpected error while getting package: %s", err)
+		t.FailNow()
+	}
+	if pkg.Meta.LineStart != 4 {
+		t.Errorf("Wrong meta linestart at package. Found %d (expected %d)", pkg.Meta.LineStart, 4)
+	}
+	pkgFile := spdx.Str("pkgfile.zip", spdx.NewMetaL(3))
+	if pkg.FileName.Val != pkgFile.Val && pkg.FileName.Meta.LineStart == pkgFile.Meta.LineStart {
+		t.Errorf("Wrong SpecVersion. Found %#v (expected %#v)", pkg.FileName, pkgFile)
+	}
 }
