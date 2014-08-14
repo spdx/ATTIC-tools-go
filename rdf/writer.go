@@ -153,6 +153,10 @@ func (f *Formatter) Document(doc *spdx.Document) (docId goraptor.Term, err error
 		return docId, err
 	}
 
+	if err = f.ExtrLicInfos(docId, "hasExtractedLicence", doc.ExtractedLicences); err != nil {
+		return
+	}
+
 	if err = f.addLiteral(docId, "rdfs:comment", doc.Comment.Val); err != nil {
 		return
 	}
@@ -166,10 +170,6 @@ func (f *Formatter) Document(doc *spdx.Document) (docId goraptor.Term, err error
 	}
 
 	if err = f.Files(docId, "referencesFile", doc.Files); err != nil {
-		return
-	}
-
-	if err = f.ExtrLicInfos(docId, "hasExtractedLicence", doc.ExtractedLicences); err != nil {
 		return
 	}
 
@@ -432,8 +432,10 @@ func (f *Formatter) Licence(licence spdx.AnyLicence) (id goraptor.Term, err erro
 			}
 		}
 		return id, nil
+	case *spdx.ExtractedLicence:
+		return f.ExtrLicInfo(lic)
 	}
-	return nil, nil
+	return nil, errors.New("Licence type not processed. Please report this error along with the SPDX file you were processing.")
 }
 
 // Write a slice of ExtractedLicence
@@ -456,7 +458,7 @@ func (f *Formatter) ExtrLicInfos(parent goraptor.Term, element string, lics []*s
 // Write an ExtractedLicence
 func (f *Formatter) ExtrLicInfo(lic *spdx.ExtractedLicence) (id goraptor.Term, err error) {
 	id = blank(lic.LicenceId())
-	if id == blank("") {
+	if lic.LicenceId() == "" {
 		id = f.newId("lic")
 	}
 
