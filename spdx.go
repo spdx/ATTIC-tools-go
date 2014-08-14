@@ -164,8 +164,8 @@ One (and only one) action flag must be specified. Those are:
     -c <format> for convert
     -v for validate
     -p for pretty-print
-		-help
-		-version
+    -help
+	-version
 
 A list of the flags supported by this tool:
 `
