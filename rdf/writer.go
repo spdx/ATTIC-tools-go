@@ -9,7 +9,8 @@ import (
 	"strings"
 )
 
-// Writes the input to the specified RDF format
+// Writes the input to the specified RDF format. Does not parse the RDF file into a
+// spdx.Document struct and only converts between RDF formats using goraptor.
 func WriteRdf(input *os.File, output *os.File, formatIn, formatOut string) error {
 	if formatIn == "rdf" {
 		formatIn = "guess"
@@ -43,7 +44,7 @@ func Write(output *os.File, doc *spdx.Document) error {
 
 // Writes a SPDX Document to raptor format. format must be one of the format
 // constants (Fmt_*)
-func WriteFromat(output *os.File, doc *spdx.Document, format string) error {
+func WriteFormat(output *os.File, doc *spdx.Document, format string) error {
 	if format == "rdf" {
 		format = Fmt_rdfxmlAbbrev
 	} else if !FormatOk(format) {
@@ -89,8 +90,8 @@ func (f *Formatter) newId(prefix string) *goraptor.Blank {
 }
 
 // Sets the type t to node
-func (f *Formatter) setType(node goraptor.Term, t string) error {
-	return f.add(node, prefix("ns:type"), prefix(t))
+func (f *Formatter) setType(node, t goraptor.Term) error {
+	return f.add(node, prefix("ns:type"), t)
 }
 
 // Add `key`=`value` at object `to`.
@@ -128,10 +129,13 @@ func (f *Formatter) addLiteral(to goraptor.Term, key, value string) error {
 
 // Write a document.
 func (f *Formatter) Document(doc *spdx.Document) (docId goraptor.Term, err error) {
-	_docId := goraptor.Blank("doc")
-	docId = &_docId
+	if doc == nil {
+		return nil, errors.New("Cannot print nil document.")
+	}
 
-	if err = f.setType(docId, "SpdxDocument"); err != nil {
+	docId = blank("doc")
+
+	if err = f.setType(docId, typeDocument); err != nil {
 		return
 	}
 
@@ -153,7 +157,7 @@ func (f *Formatter) Document(doc *spdx.Document) (docId goraptor.Term, err error
 		return docId, err
 	}
 
-	if err = f.ExtrLicInfos(docId, "hasExtractedLicence", doc.ExtractedLicences); err != nil {
+	if err = f.ExtrLicInfos(docId, "hasExtractedLicensingInfo", doc.ExtractedLicences); err != nil {
 		return
 	}
 
@@ -180,7 +184,7 @@ func (f *Formatter) Document(doc *spdx.Document) (docId goraptor.Term, err error
 func (f *Formatter) CreationInfo(cr *spdx.CreationInfo) (id goraptor.Term, err error) {
 	id = f.newId("cri")
 
-	if err = f.setType(id, "CreationInfo"); err != nil {
+	if err = f.setType(id, typeCreationInfo); err != nil {
 		return
 	}
 
@@ -227,7 +231,7 @@ func (f *Formatter) Reviews(parent goraptor.Term, element string, rs []*spdx.Rev
 func (f *Formatter) Review(r *spdx.Review) (id goraptor.Term, err error) {
 	id = f.newId("rev")
 
-	if err = f.setType(id, "Review"); err != nil {
+	if err = f.setType(id, typeReview); err != nil {
 		return
 	}
 
@@ -261,7 +265,7 @@ func (f *Formatter) Packages(parent goraptor.Term, element string, pkgs []*spdx.
 func (f *Formatter) Package(pkg *spdx.Package) (id goraptor.Term, err error) {
 	id = f.newId("pkg")
 
-	if err = f.setType(id, "Package"); err != nil {
+	if err = f.setType(id, typePackage); err != nil {
 		return
 	}
 
@@ -331,7 +335,7 @@ func (f *Formatter) Package(pkg *spdx.Package) (id goraptor.Term, err error) {
 func (f *Formatter) VerificationCode(vc *spdx.VerificationCode) (id goraptor.Term, err error) {
 	id = f.newId("vc")
 
-	if err = f.setType(id, "PackageVerificationCode"); err != nil {
+	if err = f.setType(id, typeVerificationCode); err != nil {
 		return
 	}
 
@@ -354,7 +358,7 @@ func (f *Formatter) VerificationCode(vc *spdx.VerificationCode) (id goraptor.Ter
 func (f *Formatter) Checksum(cksum *spdx.Checksum) (id goraptor.Term, err error) {
 	id = f.newId("cksum")
 
-	if err = f.setType(id, "Checksum"); err != nil {
+	if err = f.setType(id, typeChecksum); err != nil {
 		return
 	}
 
@@ -398,13 +402,13 @@ func (f *Formatter) Licence(licence spdx.AnyLicence) (id goraptor.Term, err erro
 	switch lic := licence.(type) {
 	case spdx.Licence:
 		val := lic.LicenceId()
-		if spdx.CheckLicence(val) {
+		if !lic.IsReference() {
 			return uri(licenceUri + val), nil
 		}
 		return blank(val), nil
 	case spdx.ConjunctiveLicenceSet:
 		id = f.newId("lic")
-		if err = f.setType(id, "ConjunctiveLicenseSet"); err != nil {
+		if err = f.setType(id, typeConjunctiveSet); err != nil {
 			return
 		}
 		for _, mem := range lic.Members {
@@ -419,7 +423,7 @@ func (f *Formatter) Licence(licence spdx.AnyLicence) (id goraptor.Term, err erro
 		return id, nil
 	case spdx.DisjunctiveLicenceSet:
 		id = f.newId("lic")
-		if err = f.setType(id, "DisjunctiveLicenseSet"); err != nil {
+		if err = f.setType(id, typeDisjunctiveSet); err != nil {
 			return
 		}
 		for _, mem := range lic.Members {
@@ -459,10 +463,10 @@ func (f *Formatter) ExtrLicInfos(parent goraptor.Term, element string, lics []*s
 func (f *Formatter) ExtrLicInfo(lic *spdx.ExtractedLicence) (id goraptor.Term, err error) {
 	id = blank(lic.LicenceId())
 	if lic.LicenceId() == "" {
-		id = f.newId("lic")
+		id = f.newId("LicenseRef-spdxGoGenId")
 	}
 
-	if err = f.setType(id, "ExtractedLicence"); err != nil {
+	if err = f.setType(id, typeExtractedLicence); err != nil {
 		return
 	}
 
@@ -521,7 +525,7 @@ func (f *Formatter) File(file *spdx.File) (id goraptor.Term, err error) {
 	id = f.newId("file")
 	f.fileIds[file.Name.Val] = id
 
-	if err = f.setType(id, "File"); err != nil {
+	if err = f.setType(id, typeFile); err != nil {
 		return
 	}
 

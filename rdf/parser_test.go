@@ -317,7 +317,7 @@ func TestSetTypeAnyLicence(t *testing.T) {
 	}
 
 	terms := []goraptor.Term{blank("AnyLicenceToSet"), blank("LicenseRef-test"), uri("AnyLicenceInList")}
-	typeSlice := []goraptor.Term{typeAbstractLicenceSet, typeLicence, typeLicence}
+	typeSlice := []goraptor.Term{typeAbstractLicenceSet, typeExtractedLicence, typeLicence}
 	for i, term := range terms {
 		meta := spdx.NewMeta(i, i+1)
 		bldr, err := parser.setType(term, typeAnyLicence, meta)
@@ -821,5 +821,58 @@ func TestProcessTruple(t *testing.T) {
 	pkgFile := spdx.Str("pkgfile.zip", spdx.NewMetaL(3))
 	if pkg.FileName.Val != pkgFile.Val && pkg.FileName.Meta.LineStart == pkgFile.Meta.LineStart {
 		t.Errorf("Wrong SpecVersion. Found %#v (expected %#v)", pkg.FileName, pkgFile)
+	}
+}
+
+func TestReqType(t *testing.T) {
+	parser := &Parser{
+		index:  make(map[string]*builder),
+		buffer: make(map[string][]bufferEntry),
+	}
+
+	parser.index["wrong"] = parser.packageMap(new(spdx.Package))
+
+	interf, err := parser.reqType(blank("wrong"), typeDocument)
+	if err == nil {
+		t.Errorf("Found %T: %#v", interf, interf)
+	}
+
+	doc, err := parser.reqDocument(blank("wrong"))
+	if err == nil {
+		t.Errorf("Found %T: %#v", doc, doc)
+	}
+}
+
+func TestReqTypeParse(t *testing.T) {
+	parser := &Parser{
+		index:  make(map[string]*builder),
+		buffer: make(map[string][]bufferEntry),
+	}
+
+	nodeName := "wrong"
+
+	statements := []*goraptor.Statement{
+		{
+			Subject:   blank(nodeName),
+			Predicate: prefix("ns:type"),
+			Object:    typePackage,
+		},
+	}
+
+	for i, stm := range statements {
+		err := parser.processTruple(stm, spdx.NewMetaL(i+1))
+		if err != nil {
+			t.Errorf("Unexpected error while processing %#v: %s", *stm, err)
+		}
+	}
+
+	interf, err := parser.reqType(blank(nodeName), typeExtractedLicence)
+	if err == nil {
+		t.Errorf("Found %T: %#v", interf, interf)
+	}
+
+	lic, err := parser.reqExtractedLicence(blank(nodeName))
+	if err == nil {
+		t.Errorf("Found %T: %#v", lic, err)
 	}
 }

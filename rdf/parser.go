@@ -131,9 +131,12 @@ type builder struct {
 func (b *builder) apply(pred, obj goraptor.Term, meta *spdx.Meta) error {
 	property := shortPrefix(pred)
 	f, ok := b.updaters[property]
+	//	fmt.Println("inside apply - before doing anything")
 	if !ok {
+		//		fmt.Println("inside apply - will throw error")
 		return spdx.NewParseError(fmt.Sprintf(msgPropertyNotSupported, property, b.t), meta)
 	}
+	//	fmt.Println("inside apply - will call function soon")
 	return f(obj, meta)
 }
 
@@ -180,25 +183,19 @@ func NewParser(input io.Reader, format string) *Parser {
 func (p *Parser) Parse() (*spdx.Document, error) {
 	ch := p.rdfparser.Parse(p.input, baseUri)
 	locCh := p.rdfparser.LocatorChan()
-	defer func() {
-		// consume the channel if there's anything left.
-		for _ = range ch {
-			<-locCh
-		}
-	}()
 	var err error
 	for statement := range ch {
 		locator := <-locCh
 		meta := spdx.NewMetaL(locator.Line)
+		//		fmt.Println("before processTruple")
 		if err = p.processTruple(statement, meta); err != nil {
 			break
 		}
+		//		fmt.Println("after processTruple")
 	}
-	for {
-		_, ok := <-ch
-		if !ok {
-			break
-		}
+	// Consume input channel in case of error. Otherwise goraptor will keep the goroutine busy.
+	for _ = range ch {
+		<-locCh
 	}
 	return p.doc, err
 }
@@ -214,6 +211,7 @@ func (p *Parser) Free() {
 // statements will be applied in fifo order.
 // If the node exists and the types are not compatible, a ParseError is returned.
 func (p *Parser) setType(node, t goraptor.Term, meta *spdx.Meta) (interface{}, error) {
+	//	fmt.Println("set type ", node, " to ", t)
 	nodeStr := termStr(node)
 	bldr, ok := p.index[nodeStr]
 	if ok {
@@ -261,8 +259,9 @@ func (p *Parser) setType(node, t goraptor.Term, meta *spdx.Meta) (interface{}, e
 		case *goraptor.Uri: // licence in spdx licence list
 			bldr = p.licenceReferenceBuilder(node, meta)
 		case *goraptor.Blank: // licence reference or abstract set
+			//			fmt.Printf("%+v z1", t)
 			if strings.HasPrefix(strings.ToLower(termStr(t)), "licenseref") {
-				bldr = p.licenceReferenceBuilder(node, meta)
+				bldr = p.extractedLicensingInfoMap(&spdx.ExtractedLicence{Meta: meta})
 			} else {
 				bldr = p.licenceSetMap(&spdx.LicenceSet{
 					Members: make([]spdx.AnyLicence, 0),
@@ -290,10 +289,12 @@ func (p *Parser) setType(node, t goraptor.Term, meta *spdx.Meta) (interface{}, e
 	// run buffer
 	buf := p.buffer[nodeStr]
 	for _, stm := range buf {
+		//fmt.Printf("Set buffer: Stm %+v\n", stm)
 		if err := bldr.apply(stm.Predicate, stm.Object, stm.Meta); err != nil {
 			return nil, err
 		}
 	}
+	//fmt.Println("done.")
 	delete(p.buffer, nodeStr)
 
 	return bldr.ptr, nil
@@ -372,34 +373,58 @@ func (p *Parser) reqType(node, t goraptor.Term) (interface{}, error) {
 
 func (p *Parser) reqDocument(node goraptor.Term) (*spdx.Document, error) {
 	obj, err := p.reqType(node, typeDocument)
+	if err != nil {
+		return nil, err
+	}
 	return obj.(*spdx.Document), err
 }
 func (p *Parser) reqCreationInfo(node goraptor.Term) (*spdx.CreationInfo, error) {
 	obj, err := p.reqType(node, typeCreationInfo)
+	if err != nil {
+		return nil, err
+	}
 	return obj.(*spdx.CreationInfo), err
 }
 func (p *Parser) reqPackage(node goraptor.Term) (*spdx.Package, error) {
 	obj, err := p.reqType(node, typePackage)
+	if err != nil {
+		return nil, err
+	}
 	return obj.(*spdx.Package), err
 }
 func (p *Parser) reqFile(node goraptor.Term) (*spdx.File, error) {
 	obj, err := p.reqType(node, typeFile)
+	if err != nil {
+		return nil, err
+	}
 	return obj.(*spdx.File), err
 }
 func (p *Parser) reqVerificationCode(node goraptor.Term) (*spdx.VerificationCode, error) {
 	obj, err := p.reqType(node, typeVerificationCode)
+	if err != nil {
+		return nil, err
+	}
 	return obj.(*spdx.VerificationCode), err
 }
 func (p *Parser) reqChecksum(node goraptor.Term) (*spdx.Checksum, error) {
 	obj, err := p.reqType(node, typeChecksum)
+	if err != nil {
+		return nil, err
+	}
 	return obj.(*spdx.Checksum), err
 }
 func (p *Parser) reqReview(node goraptor.Term) (*spdx.Review, error) {
 	obj, err := p.reqType(node, typeReview)
+	if err != nil {
+		return nil, err
+	}
 	return obj.(*spdx.Review), err
 }
 func (p *Parser) reqExtractedLicence(node goraptor.Term) (*spdx.ExtractedLicence, error) {
 	obj, err := p.reqType(node, typeExtractedLicence)
+	if err != nil {
+		return nil, err
+	}
 	return obj.(*spdx.ExtractedLicence), err
 }
 func (p *Parser) reqAnyLicence(node goraptor.Term) (spdx.AnyLicence, error) {
@@ -426,6 +451,9 @@ func (p *Parser) reqAnyLicence(node goraptor.Term) (spdx.AnyLicence, error) {
 }
 func (p *Parser) reqArtifactOf(node goraptor.Term) (*spdx.ArtifactOf, error) {
 	obj, err := p.reqType(node, typeArtifactOf)
+	if err != nil {
+		return nil, err
+	}
 	return obj.(*spdx.ArtifactOf), err
 }
 
@@ -466,7 +494,9 @@ func (p *Parser) documentMap(doc *spdx.Document) *builder {
 			return nil
 		},
 		"hasExtractedLicensingInfo": func(obj goraptor.Term, meta *spdx.Meta) error {
+			//			fmt.Println("inside func hasExtractedLicensingInfo")
 			lic, err := p.reqExtractedLicence(obj)
+			//			fmt.Println("got the thing")
 			if err != nil {
 				return err
 			}

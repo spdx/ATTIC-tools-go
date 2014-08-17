@@ -133,11 +133,11 @@ func join(list []AnyLicence, separator string) string {
 	return res
 }
 
-// Returns whether the given ID is a Licence Reference ID (starts with LicenseRef-).
-// Does not check if the string after "LicenseRef-" satisfies the requirements of any SPDX version.
+// Returns whether the given ID is a Licence Reference ID (starts with LicenseRef).
+// Does not check if the string after "LicenseRef" satisfies the requirements of any SPDX version.
 // It is case-insensitive.
 func isLicIdRef(id string) bool {
-	return strings.HasPrefix(strings.ToLower(id), "licenseref-")
+	return strings.HasPrefix(strings.ToLower(id), "licenseref")
 }
 
 // Compares two licences. Returns `true` if `a` and `b` are the same,

@@ -382,7 +382,7 @@ func convert() {
 	if *flagConvert == formatTag {
 		err = tag.Write(output, doc)
 	} else {
-		err = rdf.WriteFromat(output, doc, *flagConvert)
+		err = rdf.WriteFormat(output, doc, *flagConvert)
 	}
 
 	if err != nil {

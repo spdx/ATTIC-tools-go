@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rdf:RDF xmlns:doap="http://usefulinc.com/ns/doap#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+   xmlns="http://spdx.org/rdf/terms#"
+   xml:base="http://spdx.org/rdf/terms#">
+  <ExtractedLicensingInfo rdf:nodeID="LicenseRef-1">
+    <extractedText>/*
+ * (c) Copyright 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009 Hewlett-Packard Development Company, LP
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. The name of the author may not be used to endorse or promote products
+ *    derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */</extractedText>
+    <licenseId>LicenseRef-1</licenseId>
+    <rdf:type rdf:resource="#ExtractedLicensingInfo"/>
+  </ExtractedLicensingInfo>
+  <ExtractedLicensingInfo rdf:nodeID="LicenseRef-2">
+    <extractedText>This package includes the GRDDL parser developed by Hewlett Packard under the following license:
+</extractedText>
+    <licenseId>LicenseRef-2</licenseId>
+    <rdf:type rdf:resource="#ExtractedLicensingInfo"/>
+  </ExtractedLicensingInfo>
+  <ExtractedLicensingInfo rdf:nodeID="LicenseRef-3">
+    <extractedText>The CyberNeko Software License, Version 1.0
+
+ 
+(C) Copyright 2002-2005, Andy Clark.  All rights reserved.
+ 
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer. 
+
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in
+   the documentation and/or other materials provided with the
+   distribution.
+
+3. The end-user documentation included with the redistribution,
+   if any, must include the following acknowledgment:  
+     "This product includes software developed by Andy Clark."
+   Alternately, this acknowledgment may appear in the software itself,
+   if and wherever such third-party acknowledgments normally appear.
+
+4. The names "CyberNeko" and "NekoHTML" must not be used to endorse
+   or promote products derived from this software without prior 
+   written permission. For written permission, please contact 
+   andyc@cyberneko.net.
+
+5. Products derived from this software may not be called "CyberNeko",
+   nor may "CyberNeko" appear in their name, without prior written
+   permission of the author.
+
+THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR OTHER CONTRIBUTORS
+BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, 
+OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT 
+OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR 
+BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
+OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, 
+EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</extractedText>
+    <licenseId>LicenseRef-3</licenseId>
+    <name>CyberNeko License</name>
+    <rdf:type rdf:resource="#ExtractedLicensingInfo"/>
+    <rdfs:comment>This is tye CyperNeko License</rdfs:comment>
+    <rdfs:seeAlso>http://people.apache.org/~andyc/neko/LICENSE, http://justasample.url.com</rdfs:seeAlso>
+  </ExtractedLicensingInfo>
+  <ExtractedLicensingInfo rdf:nodeID="LicenseRef-4">
+    <extractedText>/*
+ * (c) Copyright 2009 University of Bristol
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. The name of the author may not be used to endorse or promote products
+ *    derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */</extractedText>
+    <licenseId>LicenseRef-4</licenseId>
+    <rdf:type rdf:resource="#ExtractedLicensingInfo"/>
+  </ExtractedLicensingInfo>
+  <SpdxDocument>
+    <creationInfo>
+      <CreationInfo>
+        <created>2010-02-03T00:00:00Z</created>
+        <creator>Organization: Source Auditor Inc.</creator>
+        <creator>Person: Gary O'Neall</creator>
+        <creator>Tool: SourceAuditor-V1.2</creator>
+        <rdfs:comment>This is an example of an SPDX spreadsheet format</rdfs:comment>
+      </CreationInfo>
+    </creationInfo>
+    <dataLicense rdf:resource="../licenses/CC0-1.0"/>
+    <describesPackage>
+      <Package>
+        <checksum>
+          <Checksum>
+            <algorithm rdf:resource="#checksumAlgorithm_sha1"/>
+            <checksumValue>2fd4e1c67a2d28fced849ee1bb76e7391b93eb12</checksumValue>
+          </Checksum>
+        </checksum>
+        <copyrightText>Copyright 2010, 2011 Source Auditor Inc.</copyrightText>
+        <description>This utility translates and SPDX RDF XML document to a spreadsheet, translates a spreadsheet to an SPDX RDF XML document and translates an SPDX RDFa document to an SPDX RDF XML document.</description>
+        <downloadLocation>http://www.spdx.org/tools</downloadLocation>
+        <licenseComments>The declared license information can be found in the NOTICE file at the root of the archive file</licenseComments>
+        <licenseConcluded>
+          <ConjunctiveLicenseSet>
+            <member rdf:resource="../licenses/Apache-1.0"/>
+            <member rdf:resource="../licenses/Apache-2.0"/>
+            <member rdf:resource="../licenses/MPL-1.1"/>
+            <member rdf:nodeID="LicenseRef-1"/>
+            <member rdf:nodeID="LicenseRef-2"/>
+            <member rdf:nodeID="LicenseRef-3"/>
+            <member rdf:nodeID="LicenseRef-4"/>
+          </ConjunctiveLicenseSet>
+        </licenseConcluded>
+        <licenseDeclared>
+          <DisjunctiveLicenseSet>
+            <member rdf:resource="../licenses/Apache-2.0"/>
+            <member rdf:resource="../licenses/MPL-1.1"/>
+            <member rdf:nodeID="LicenseRef-1"/>
+            <member rdf:nodeID="LicenseRef-2"/>
+            <member rdf:nodeID="LicenseRef-3"/>
+            <member rdf:nodeID="LicenseRef-4"/>
+          </DisjunctiveLicenseSet>
+        </licenseDeclared>
+        <licenseInfoFromFiles rdf:resource="../licenses/Apache-1.0"/>
+        <licenseInfoFromFiles rdf:resource="../licenses/Apache-2.0"/>
+        <licenseInfoFromFiles rdf:resource="../licenses/MPL-1.1"/>
+        <licenseInfoFromFiles rdf:nodeID="LicenseRef-1"/>
+        <licenseInfoFromFiles rdf:nodeID="LicenseRef-2"/>
+        <licenseInfoFromFiles rdf:nodeID="LicenseRef-3"/>
+        <licenseInfoFromFiles rdf:nodeID="LicenseRef-4"/>
+        <name>SPDX Translator</name>
+        <originator>Organization:SPDX</originator>
+        <packageFileName>spdxtranslator-1.0.zip</packageFileName>
+        <packageVerificationCode>
+          <PackageVerificationCode>
+            <packageVerificationCodeExcludedFile>SpdxTranslatorSpdx.rdf</packageVerificationCodeExcludedFile>
+            <packageVerificationCodeExcludedFile>SpdxTranslatorSpdx.txt</packageVerificationCodeExcludedFile>
+            <packageVerificationCodeValue>4e3211c67a2d28fced849ee1bb76e7391b93feba</packageVerificationCodeValue>
+          </PackageVerificationCode>
+        </packageVerificationCode>
+        <sourceInfo>Version 1.0 of the SPDX Translator application</sourceInfo>
+        <summary>SPDX Translator utility</summary>
+        <supplier>Organization:Linux Foundation</supplier>
+        <versionInfo>Version 0.9.2</versionInfo>
+      </Package>
+    </describesPackage>
+    <hasExtractedLicensingInfo rdf:nodeID="LicenseRef-1"/>
+    <hasExtractedLicensingInfo rdf:nodeID="LicenseRef-2"/>
+    <hasExtractedLicensingInfo rdf:nodeID="LicenseRef-3"/>
+    <hasExtractedLicensingInfo rdf:nodeID="LicenseRef-4"/>
+    <referencesFile>
+      <File>
+        <checksum>
+          <Checksum>
+            <algorithm rdf:resource="#checksumAlgorithm_sha1"/>
+            <checksumValue>2fd4e1c67a2d28fced849ee1bb76e7391b93eb12</checksumValue>
+          </Checksum>
+        </checksum>
+        <copyrightText>Copyright 2010, 2011 Source Auditor Inc.</copyrightText>
+        <fileName>src/org/spdx/parser/DOAPProject.java</fileName>
+        <fileType rdf:resource="#SOURCE"/>
+        <licenseConcluded rdf:resource="../licenses/Apache-2.0"/>
+        <licenseInfoInFile rdf:resource="../licenses/Apache-2.0"/>
+      </File>
+    </referencesFile>
+    <referencesFile>
+      <File>
+        <checksum>
+          <Checksum>
+            <algorithm rdf:resource="#checksumAlgorithm_sha1"/>
+            <checksumValue>3ab4e1c67a2d28fced849ee1bb76e7391b93f125</checksumValue>
+          </Checksum>
+        </checksum>
+        <copyrightText>(c) Copyright 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009 Hewlett-Packard Development Company, LP</copyrightText>
+        <fileName>Jenna-2.6.3/jena-2.6.3-sources.jar</fileName>
+        <fileType rdf:resource="#ARCHIVE"/>
+        <licenseComments>This license is used by Jena</licenseComments>
+        <licenseConcluded rdf:nodeID="LicenseRef-1"/>
+        <licenseInfoInFile rdf:nodeID="LicenseRef-1"/>
+        <rdfs:comment>This file belongs to Jena</rdfs:comment>
+      </File>
+    </referencesFile>
+    <reviewed>
+      <Review>
+        <reviewDate>2010-02-10T00:00:00Z</reviewDate>
+        <reviewer>Person: Joe Reviewer</reviewer>
+        <rdfs:comment>This is just an example.  Some of the non-standard licenses look like they are actually BSD 3 clause licenses</rdfs:comment>
+      </Review>
+    </reviewed>
+    <reviewed>
+      <Review>
+        <reviewDate>2011-03-13T00:00:00Z</reviewDate>
+        <reviewer>Person: Suzanne Reviewer</reviewer>
+        <rdfs:comment>Another example reviewer.</rdfs:comment>
+      </Review>
+    </reviewed>
+    <specVersion>SPDX-1.2</specVersion>
+    <rdfs:comment>This is a sample spreadsheet</rdfs:comment>
+  </SpdxDocument>
+</rdf:RDF>
