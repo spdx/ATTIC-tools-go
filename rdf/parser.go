@@ -131,12 +131,9 @@ type builder struct {
 func (b *builder) apply(pred, obj goraptor.Term, meta *spdx.Meta) error {
 	property := shortPrefix(pred)
 	f, ok := b.updaters[property]
-	//	fmt.Println("inside apply - before doing anything")
 	if !ok {
-		//		fmt.Println("inside apply - will throw error")
 		return spdx.NewParseError(fmt.Sprintf(msgPropertyNotSupported, property, b.t), meta)
 	}
-	//	fmt.Println("inside apply - will call function soon")
 	return f(obj, meta)
 }
 
@@ -187,11 +184,9 @@ func (p *Parser) Parse() (*spdx.Document, error) {
 	for statement := range ch {
 		locator := <-locCh
 		meta := spdx.NewMetaL(locator.Line)
-		//		fmt.Println("before processTruple")
 		if err = p.processTruple(statement, meta); err != nil {
 			break
 		}
-		//		fmt.Println("after processTruple")
 	}
 	// Consume input channel in case of error. Otherwise goraptor will keep the goroutine busy.
 	for _ = range ch {
@@ -211,7 +206,6 @@ func (p *Parser) Free() {
 // statements will be applied in fifo order.
 // If the node exists and the types are not compatible, a ParseError is returned.
 func (p *Parser) setType(node, t goraptor.Term, meta *spdx.Meta) (interface{}, error) {
-	//	fmt.Println("set type ", node, " to ", t)
 	nodeStr := termStr(node)
 	bldr, ok := p.index[nodeStr]
 	if ok {
@@ -259,7 +253,6 @@ func (p *Parser) setType(node, t goraptor.Term, meta *spdx.Meta) (interface{}, e
 		case *goraptor.Uri: // licence in spdx licence list
 			bldr = p.licenceReferenceBuilder(node, meta)
 		case *goraptor.Blank: // licence reference or abstract set
-			//			fmt.Printf("%+v z1", t)
 			if strings.HasPrefix(strings.ToLower(termStr(t)), "licenseref") {
 				bldr = p.extractedLicensingInfoMap(&spdx.ExtractedLicence{Meta: meta})
 			} else {
@@ -289,12 +282,10 @@ func (p *Parser) setType(node, t goraptor.Term, meta *spdx.Meta) (interface{}, e
 	// run buffer
 	buf := p.buffer[nodeStr]
 	for _, stm := range buf {
-		//fmt.Printf("Set buffer: Stm %+v\n", stm)
 		if err := bldr.apply(stm.Predicate, stm.Object, stm.Meta); err != nil {
 			return nil, err
 		}
 	}
-	//fmt.Println("done.")
 	delete(p.buffer, nodeStr)
 
 	return bldr.ptr, nil
@@ -494,9 +485,7 @@ func (p *Parser) documentMap(doc *spdx.Document) *builder {
 			return nil
 		},
 		"hasExtractedLicensingInfo": func(obj goraptor.Term, meta *spdx.Meta) error {
-			//			fmt.Println("inside func hasExtractedLicensingInfo")
 			lic, err := p.reqExtractedLicence(obj)
-			//			fmt.Println("got the thing")
 			if err != nil {
 				return err
 			}
