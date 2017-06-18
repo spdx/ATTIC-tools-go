@@ -10,7 +10,7 @@ import (
 // Regular expressions to match licence set separators
 var (
 	orSeparator = regexp.MustCompile("(?i)\\s+or\\s+")  // disjunctive licence set separator
-	andSeprator = regexp.MustCompile("(?i)\\s+and\\s+") // conjunctive licence set separator
+	andSeparator = regexp.MustCompile("(?i)\\s+and\\s+") // conjunctive licence set separator
 )
 
 // A function that takes a *Token and updates some value in a SPDX element
@@ -266,7 +266,7 @@ func conjOrDisjSet(str string) (conj, disj bool) {
 	}
 
 	// test both and and or separators
-	conj = andSeprator.FindStringIndex(str) != nil
+	conj = andSeparator.FindStringIndex(str) != nil
 	disj = orSeparator.FindStringIndex(str) != nil
 
 	return
@@ -330,7 +330,7 @@ func parseLicenceSet(tok *Token) (spdx.AnyLicence, error) {
 	}
 
 	if conj {
-		tokens := licenceSetSplit(andSeprator, val)
+		tokens := licenceSetSplit(andSeparator, val)
 		res := spdx.NewConjunctiveSet(nil)
 		for _, t := range tokens {
 			lic, err := parseLicenceSet(&Token{Type: tok.Type, Meta: tok.Meta, Pair: Pair{Value: t}})
