@@ -1,10 +1,6 @@
 GO SPDX Parser Library
 ======================
 
-> **Note:** This is a work in progress. The above features and usage are just
-> what is planned for the initial release.
-
-
 Parser library for SPDX written in Go (golang). It includes a CLI tool that has
 features such as convert, validate and format (pretty-print).
 
@@ -28,13 +24,9 @@ The following are currently done:
 Downloading and installing
 --------------------------
 
-> Currently, `github.com/vladvelici/spdx-go` is used as the import
-> path for the packages in the code. This will change in the future
-> to the SPDX official repositories.
-
 The easiest way is by using `go get`:
 
-    go get github.com/vladvelici/spdx-go
+    go get github.com/spdx/spdx-go
 
 This downloads and installs the spdx-go tool and library.
 
@@ -52,10 +44,8 @@ Simple as `go build` and `go test`.
 Code
 ----
 
-The code is available in two repositories:
-
-1. Official repository at http://git.spdx.org/spdx-tools-go.git
-2. Mirrored on GitHub at https://github.com/vladvelici/spdx-go
+The origianl code was available at https://github.com/vladvelici/spdx-go 
+and now lives at https://github.com/spdx/tools-go/
 
 [raptor]:http://librdf.org/raptor/
 [goraptor]:http://github.com/deltamobile/goraptor
