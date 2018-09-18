@@ -1,6 +1,6 @@
 package tag
 
-import "github.com/vladvelici/spdx-go/spdx"
+import "github.com/spdx/tools-go/spdx"
 
 import (
 	"io"
