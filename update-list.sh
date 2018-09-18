@@ -9,7 +9,7 @@ git submodule init
 git submodule update --recursive
 
 find ./spdx/license-list -type f |
-grep -e '.txt$' | 
+grep -e '.txt$' |
 grep -vi "Updating the SPDX Licenses" |
 grep -vi "README" |
 sed 's/\.\/spdx\/license-list\///g' |
