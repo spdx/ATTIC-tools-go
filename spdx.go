@@ -125,9 +125,9 @@ which can be found at:
 package main
 
 import (
-	"github.com/vladvelici/spdx-go/rdf"
-	"github.com/vladvelici/spdx-go/spdx"
-	"github.com/vladvelici/spdx-go/tag"
+	"github.com/spdx/tools-go/rdf"
+	"github.com/spdx/tools-go/spdx"
+	"github.com/spdx/tools-go/tag"
 )
 
 import (

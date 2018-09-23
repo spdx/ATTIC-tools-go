@@ -26,7 +26,7 @@ Downloading and installing
 
 The easiest way is by using `go get`:
 
-    go get github.com/spdx/spdx-go
+    go get github.com/spdx/tools-go
 
 This downloads and installs the spdx-go tool and library.
 

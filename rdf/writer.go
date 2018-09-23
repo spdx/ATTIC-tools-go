@@ -2,8 +2,8 @@ package rdf
 
 import (
 	"errors"
-	"github.com/vladvelici/goraptor"
-	"github.com/vladvelici/spdx-go/spdx"
+	"github.com/deltamobile/goraptor"
+	"github.com/spdx/tools-go/spdx"
 	"os"
 	"strconv"
 	"strings"
