@@ -44,7 +44,7 @@ type pair struct {
 	key, val string
 }
 
-// Checks if `fmt` is one of the raptor supported formats (has the value of one
+// FormatOk checks if `fmt` is one of the raptor supported formats (has the value of one
 // of the Fmt_* constants). The special "rdf" value is considered invalid by
 // this function.
 func FormatOk(fmt string) bool {

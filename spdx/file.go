@@ -17,10 +17,10 @@ type File struct {
 	*Meta                           // File metadata.
 }
 
-// Returns the File metadata.
+// M returns the File metadata.
 func (f *File) M() *Meta { return f.Meta }
 
-// Checks if this file is equal to `other`. Ignores metadata. Elements
+// Equal checks if this file is equal to `other`. Ignores metadata. Elements
 // in slices file.Contributor, file.Dependency, file.ArtifactOf and
 // file.LicenceInfoInFile must be in the same order for this method to
 // return true.
@@ -72,10 +72,10 @@ type ArtifactOf struct {
 	*Meta               // Artifact metadata.
 }
 
-// Returns the artifact metadata.
+// M returns the artifact metadata.
 func (artif *ArtifactOf) M() *Meta { return artif.Meta }
 
-// Checks if this ArtifactOf is equal to `o`. Ignores metadata.
+// Equal checks if this ArtifactOf is equal to `o`. Ignores metadata.
 func (a *ArtifactOf) Equal(o *ArtifactOf) bool {
 	return a == o || (a != nil && o != nil &&
 		a.ProjectUri.Val == o.ProjectUri.Val &&

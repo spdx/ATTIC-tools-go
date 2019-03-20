@@ -17,13 +17,13 @@ var (
 // Set the Lexer.IgnoreMeta used by Build() function. Default is false.
 func IgnoreMeta(meta bool) { noMeta = meta }
 
-// Get the current option used by Lexer.IgnoreMeta used by Build().
+// GetIgnoreMeta gets the current option used by Lexer.IgnoreMeta used by Build().
 func GetIgnoreMeta() bool { return noMeta }
 
 // Set the Lexer.CaseSensitive option used by Build() function. Default is false.
 func CaseSensitive(ci bool) { caseSensitive = ci }
 
-// Get the current option for Lexer.IgnoreCase used by Build().
+// GetCaseSensitive gets the current option for Lexer.IgnoreCase used by Build().
 func GetCaseSensitive() bool { return caseSensitive }
 
 // Lex a io.Reader and Parse it to a *spdx.Document. If there is an error, it is

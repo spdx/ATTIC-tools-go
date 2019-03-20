@@ -87,7 +87,7 @@ func (f *Formatter) spaces(now string) {
 	}
 }
 
-// Read all tokens from a lexer and pretty-print them.
+// Lexer reads all tokens from a lexer and pretty-print them.
 func (f *Formatter) Lexer(lex lexer) error {
 	for lex.Lex() {
 		err := f.Token(lex.Token())
@@ -98,7 +98,7 @@ func (f *Formatter) Lexer(lex lexer) error {
 	return lex.Err()
 }
 
-// Write a Token.
+// Token writes a Token.
 func (f *Formatter) Token(tok *Token) error {
 	if tok == nil || (tok.Type == TokenPair && tok.Pair.Value == "") {
 		return nil
@@ -113,7 +113,7 @@ func (f *Formatter) Token(tok *Token) error {
 	}
 }
 
-// Write a comment (# comment).
+// Comment writes a comment (# comment).
 func (f *Formatter) Comment(comment string) error {
 	f.spaces(commentLastWritten)
 
@@ -127,7 +127,7 @@ func (f *Formatter) Comment(comment string) error {
 	return err
 }
 
-// Write a property (tag: value).
+// Property writes a property (tag: value).
 func (f *Formatter) Property(tag, value string) error {
 	if value == "" {
 		return nil
@@ -143,7 +143,7 @@ func (f *Formatter) Property(tag, value string) error {
 	return err
 }
 
-// Write a list of properties.
+// Properties writes a list of properties.
 func (f *Formatter) Properties(props []Pair) error {
 	for _, p := range props {
 		if err := f.Property(p.Key, p.Value); err != nil {
@@ -153,7 +153,7 @@ func (f *Formatter) Properties(props []Pair) error {
 	return nil
 }
 
-// Write a property with multiple values. The same tag is printed for each
+// PropertySlice writes a property with multiple values. The same tag is printed for each
 // non-empty value found in `values`.
 func (f *Formatter) PropertySlice(tag string, values []spdx.ValueStr) error {
 	for _, val := range values {
@@ -164,7 +164,7 @@ func (f *Formatter) PropertySlice(tag string, values []spdx.ValueStr) error {
 	return nil
 }
 
-// Write a ValueCreator slice. The same tag is printed for each non-empty value
+// CreatorSlice writes a ValueCreator slice. The same tag is printed for each non-empty value
 // found in `values`.
 func (f *Formatter) CreatorSlice(tag string, values []spdx.ValueCreator) error {
 	for _, val := range values {
@@ -175,7 +175,7 @@ func (f *Formatter) CreatorSlice(tag string, values []spdx.ValueCreator) error {
 	return nil
 }
 
-// Write a list of licences. The same tag is printed for each non-empty value
+// PropertyLicenceSlice writes a list of licences. The same tag is printed for each non-empty value
 // found in `values`.
 func (f *Formatter) PropertyLicenceSlice(tag string, values []spdx.AnyLicence) error {
 	for _, lic := range values {
@@ -186,7 +186,7 @@ func (f *Formatter) PropertyLicenceSlice(tag string, values []spdx.AnyLicence) e
 	return nil
 }
 
-// Write `doc` incuding all its nested elements.
+// Document writes `doc` incuding all its nested elements.
 func (f *Formatter) Document(doc *spdx.Document) error {
 	if doc == nil {
 		return nil
@@ -231,7 +231,7 @@ func (f *Formatter) Document(doc *spdx.Document) error {
 	return f.ExtractedLicences(doc.ExtractedLicences)
 }
 
-// Write `ci` the creation info part of a document.
+// CreationInfo writes `ci` the creation info part of a document.
 func (f *Formatter) CreationInfo(ci *spdx.CreationInfo) error {
 	if ci == nil {
 		return nil
@@ -248,7 +248,7 @@ func (f *Formatter) CreationInfo(ci *spdx.CreationInfo) error {
 	})
 }
 
-// Write all the Packages in pkgs.
+// Packages writes all the Packages in pkgs.
 func (f *Formatter) Packages(pkgs []*spdx.Package) error {
 	for _, pkg := range pkgs {
 		if err := f.Package(pkg); err != nil {
@@ -258,7 +258,7 @@ func (f *Formatter) Packages(pkgs []*spdx.Package) error {
 	return nil
 }
 
-// Write `pkg` and all its nested elements.
+// Package writes `pkg` and all its nested elements.
 func (f *Formatter) Package(pkg *spdx.Package) error {
 	if pkg == nil {
 		return nil
@@ -302,7 +302,7 @@ func (f *Formatter) Package(pkg *spdx.Package) error {
 	})
 }
 
-// Write all elements in `files`.
+// Files writes all elements in `files`.
 func (f *Formatter) Files(files []*spdx.File) error {
 	for _, file := range files {
 		if err := f.File(file); err != nil {
@@ -312,7 +312,7 @@ func (f *Formatter) Files(files []*spdx.File) error {
 	return nil
 }
 
-// Write `file` and all its nested elements.
+// File writes `file` and all its nested elements.
 func (f *Formatter) File(file *spdx.File) error {
 	if file == nil {
 		return nil
@@ -360,7 +360,7 @@ func (f *Formatter) File(file *spdx.File) error {
 	return nil
 }
 
-// Write all the reviews in `reviews`.
+// Reviews writes all the reviews in `reviews`.
 func (f *Formatter) Reviews(reviews []*spdx.Review) error {
 	for _, review := range reviews {
 		if err := f.Review(review); err != nil {
@@ -370,7 +370,7 @@ func (f *Formatter) Reviews(reviews []*spdx.Review) error {
 	return nil
 }
 
-// Write the *spdx.Review `rev`.
+// Review writes the *spdx.Review `rev`.
 func (f *Formatter) Review(review *spdx.Review) error {
 	if review == nil {
 		return nil
@@ -383,7 +383,7 @@ func (f *Formatter) Review(review *spdx.Review) error {
 	})
 }
 
-// Write all licences in `lics`.
+// ExtractedLicences writes all licences in `lics`.
 func (f *Formatter) ExtractedLicences(lics []*spdx.ExtractedLicence) error {
 	for _, lic := range lics {
 		if err := f.ExtractedLicence(lic); err != nil {
@@ -393,7 +393,7 @@ func (f *Formatter) ExtractedLicences(lics []*spdx.ExtractedLicence) error {
 	return nil
 }
 
-// Write the ExtractedLicence `lic`.
+// ExtractedLicence writes the ExtractedLicence `lic`.
 func (f *Formatter) ExtractedLicence(lic *spdx.ExtractedLicence) error {
 	if lic == nil {
 		return nil

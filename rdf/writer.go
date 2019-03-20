@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// Writes the input to the specified RDF format. Does not parse the RDF file into a
+// WriteRdf writes the input to the specified RDF format. Does not parse the RDF file into a
 // spdx.Document struct and only converts between RDF formats using goraptor.
 func WriteRdf(input *os.File, output *os.File, formatIn, formatOut string) error {
 	if formatIn == "rdf" {
@@ -34,7 +34,7 @@ func WriteRdf(input *os.File, output *os.File, formatIn, formatOut string) error
 	return serializer.AddN(statements)
 }
 
-// Writes a SPDX Document to rdf/xml abbreviated format.
+// Write writes a SPDX Document to rdf/xml abbreviated format.
 func Write(output *os.File, doc *spdx.Document) error {
 	f := NewFormatter(output, Fmt_rdfxmlAbbrev)
 	_, err := f.Document(doc)
@@ -42,7 +42,7 @@ func Write(output *os.File, doc *spdx.Document) error {
 	return err
 }
 
-// Writes a SPDX Document to raptor format. format must be one of the format
+// WriteFormat writes a SPDX Document to raptor format. format must be one of the format
 // constants (Fmt_*)
 func WriteFormat(output *os.File, doc *spdx.Document, format string) error {
 	if format == "rdf" {
@@ -127,7 +127,7 @@ func (f *Formatter) addLiteral(to goraptor.Term, key, value string) error {
 	return f.add(to, prefix(key), &goraptor.Literal{Value: value})
 }
 
-// Write a document.
+// Document writes a document.
 func (f *Formatter) Document(doc *spdx.Document) (docId goraptor.Term, err error) {
 	if doc == nil {
 		return nil, errors.New("Cannot print nil document.")
@@ -180,7 +180,7 @@ func (f *Formatter) Document(doc *spdx.Document) (docId goraptor.Term, err error
 	return docId, nil
 }
 
-// Write creation info.
+// CreationInfo writes creation info.
 func (f *Formatter) CreationInfo(cr *spdx.CreationInfo) (id goraptor.Term, err error) {
 	id = f.newId("cri")
 
@@ -207,7 +207,7 @@ func (f *Formatter) CreationInfo(cr *spdx.CreationInfo) (id goraptor.Term, err e
 	return id, nil
 }
 
-// Write a slice of reviews.
+// Reviews writes a slice of reviews.
 func (f *Formatter) Reviews(parent goraptor.Term, element string, rs []*spdx.Review) error {
 	if len(rs) == 0 {
 		return nil
@@ -227,7 +227,7 @@ func (f *Formatter) Reviews(parent goraptor.Term, element string, rs []*spdx.Rev
 	return nil
 }
 
-// Write a review.
+// Review writes a review.
 func (f *Formatter) Review(r *spdx.Review) (id goraptor.Term, err error) {
 	id = f.newId("rev")
 
@@ -244,7 +244,7 @@ func (f *Formatter) Review(r *spdx.Review) (id goraptor.Term, err error) {
 	return id, err
 }
 
-// Write a slice of packages.
+// Packages writes a slice of packages.
 func (f *Formatter) Packages(parent goraptor.Term, element string, pkgs []*spdx.Package) error {
 	if len(pkgs) == 0 {
 		return nil
@@ -261,7 +261,7 @@ func (f *Formatter) Packages(parent goraptor.Term, element string, pkgs []*spdx.
 	return nil
 }
 
-// Write a package.
+// Package writes a package.
 func (f *Formatter) Package(pkg *spdx.Package) (id goraptor.Term, err error) {
 	id = f.newId("pkg")
 
@@ -331,7 +331,7 @@ func (f *Formatter) Package(pkg *spdx.Package) (id goraptor.Term, err error) {
 	return
 }
 
-// Write a VerificationCode
+// VerificationCode writes a VerificationCode
 func (f *Formatter) VerificationCode(vc *spdx.VerificationCode) (id goraptor.Term, err error) {
 	id = f.newId("vc")
 
@@ -354,7 +354,7 @@ func (f *Formatter) VerificationCode(vc *spdx.VerificationCode) (id goraptor.Ter
 	return id, nil
 }
 
-// Write a Checksum
+// Checksum writes a Checksum
 func (f *Formatter) Checksum(cksum *spdx.Checksum) (id goraptor.Term, err error) {
 	id = f.newId("cksum")
 
@@ -377,7 +377,7 @@ func (f *Formatter) Checksum(cksum *spdx.Checksum) (id goraptor.Term, err error)
 	return id, err
 }
 
-// Write a slice of AnyLicence
+// Licences writes a slice of AnyLicence
 func (f *Formatter) Licences(parent goraptor.Term, element string, lics []spdx.AnyLicence) error {
 	if len(lics) == 0 {
 		return nil
@@ -397,7 +397,7 @@ func (f *Formatter) Licences(parent goraptor.Term, element string, lics []spdx.A
 	return nil
 }
 
-// Write AnyLicence
+// Licence writes AnyLicence
 func (f *Formatter) Licence(licence spdx.AnyLicence) (id goraptor.Term, err error) {
 	switch lic := licence.(type) {
 	case spdx.Licence:
@@ -442,7 +442,7 @@ func (f *Formatter) Licence(licence spdx.AnyLicence) (id goraptor.Term, err erro
 	return nil, errors.New("Licence type not processed. Please report this error along with the SPDX file you were processing.")
 }
 
-// Write a slice of ExtractedLicence
+// ExtrLicInfos writes a slice of ExtractedLicence
 func (f *Formatter) ExtrLicInfos(parent goraptor.Term, element string, lics []*spdx.ExtractedLicence) error {
 	if len(lics) == 0 {
 		return nil
@@ -459,7 +459,7 @@ func (f *Formatter) ExtrLicInfos(parent goraptor.Term, element string, lics []*s
 	return nil
 }
 
-// Write an ExtractedLicence
+// ExtrLicInfo writes an ExtractedLicence
 func (f *Formatter) ExtrLicInfo(lic *spdx.ExtractedLicence) (id goraptor.Term, err error) {
 	id = blank(lic.LicenceId())
 	if lic.LicenceId() == "" {
@@ -495,7 +495,7 @@ func (f *Formatter) ExtrLicInfo(lic *spdx.ExtractedLicence) (id goraptor.Term, e
 	return
 }
 
-// Write a slice of files.
+// Files writes a slice of files.
 func (f *Formatter) Files(parent goraptor.Term, element string, files []*spdx.File) error {
 	if len(files) == 0 {
 		return nil
@@ -515,7 +515,7 @@ func (f *Formatter) Files(parent goraptor.Term, element string, files []*spdx.Fi
 	return nil
 }
 
-// Write a file.
+// File writes a file.
 func (f *Formatter) File(file *spdx.File) (id goraptor.Term, err error) {
 	id, ok := f.fileIds[file.Name.Val]
 	if ok {

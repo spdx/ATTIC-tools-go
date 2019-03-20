@@ -23,10 +23,10 @@ type Package struct {
 	*Meta                                  // Package metadata.
 }
 
-// Returns the package metadata.
+// M returns the package metadata.
 func (pkg *Package) M() *Meta { return pkg.Meta }
 
-// Checks if this package is equal to `other`. Ignores metadata. Elements
+// Equal checks if this package is equal to `other`. Ignores metadata. Elements
 // in slices pkg.Files and pkg.LicenceInfoFromFiles must be in the same
 // order for this method to return true.
 func (pkg *Package) Equal(other *Package) bool {
@@ -82,7 +82,7 @@ type VerificationCode struct {
 // Package metadata.
 func (vc *VerificationCode) M() *Meta { return vc.Meta }
 
-// Checks if two VerificationCodes are equal. Ignores metadata. elements
+// Equal checks if two VerificationCodes are equal. Ignores metadata. elements
 // in the slice ExcludedFiles must be in the same order for this method to
 // return true.
 func (vc *VerificationCode) Equal(other *VerificationCode) bool {
@@ -109,10 +109,10 @@ type Checksum struct {
 	*Meta
 }
 
-// Compares two checksums, ignoring their metadatas.
+// Equal compares two checksums, ignoring their metadatas.
 func (c *Checksum) Equal(d *Checksum) bool {
 	return c == d || (c != nil && d != nil && c.Algo.Val == d.Algo.Val && c.Value.Val == d.Value.Val)
 }
 
-// Returns the checksum metadata.
+// M returns the checksum metadata.
 func (c *Checksum) M() *Meta { return c.Meta }

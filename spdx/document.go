@@ -18,10 +18,10 @@ type Document struct {
 	*Meta                                 // Document metadata
 }
 
-// Return the document metadata.
+// M returns the document metadata.
 func (doc *Document) M() *Meta { return doc.Meta }
 
-// Checks if this document is equal to `other`. Ignores metadata. Slices
+// Equal checks if this document is equal to `other`. Ignores metadata. Slices
 // elements (ExtractedLicences, Packages, Files and Reviews) must appear
 // in the same order for this method to return true.
 func (doc *Document) Equal(other *Document) bool {
@@ -77,10 +77,10 @@ type CreationInfo struct {
 	*Meta                             // Creation Info meta
 }
 
-// Returns the creation info metadata.
+// M returns the creation info metadata.
 func (ci *CreationInfo) M() *Meta { return ci.Meta }
 
-// Checks if this CreationInfo is equal to `other`. Ignores metadata.
+// Equal checks if this CreationInfo is equal to `other`. Ignores metadata.
 func (ci *CreationInfo) Equal(other *CreationInfo) bool {
 	if ci == other {
 		return true

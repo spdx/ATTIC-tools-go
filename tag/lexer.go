@@ -121,7 +121,7 @@ func NewLexer(r io.Reader) *Lexer {
 	return lexer
 }
 
-// Get the current token (must be called after Lex()).
+// Token gets the current token (must be called after Lex()).
 // The returned *Token will be changed at the next call to Lex(). See Lex() for more.
 func (l *Lexer) Token() *Token {
 	return l.token
@@ -183,13 +183,13 @@ func (l *Lexer) Lex() bool {
 	return true
 }
 
-// Get the last error. If there is an error, it is either an I/O error returned initially by the associated io.Reader
+// Err gets the last error. If there is an error, it is either an I/O error returned initially by the associated io.Reader
 // or an error of type *ParseError.
 func (l *Lexer) Err() error {
 	return l.err
 }
 
-// Return the line of last token (end line). This property is available even when IgnoreMeta is set to true.
+// Line returns the line of last token (end line). This property is available even when IgnoreMeta is set to true.
 // Use Token.Meta properties Token.LineStart and Token.LineEnd when those are available.
 func (l *Lexer) Line() int {
 	return l.line

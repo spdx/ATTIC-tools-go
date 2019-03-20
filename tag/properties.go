@@ -71,14 +71,14 @@ func initProperties() {
 	}
 }
 
-// Checks whether the property is valid, case sensitive
+// IsValidProperty checks whether the property is valid, case sensitive
 func IsValidProperty(prop string) bool {
 	initProperties()
 	_, ok := properties[prop]
 	return ok
 }
 
-// Returns whether the given property is valid in a case-insensitive manner
+// IsValidPropertyInsensitive returns whether the given property is valid in a case-insensitive manner
 // along with the Correct Case for that property.
 func IsValidPropertyInsensitive(prop string) (bool, string) {
 	initProperties()

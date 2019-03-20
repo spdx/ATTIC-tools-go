@@ -8,10 +8,10 @@ type Review struct {
 	*Meta
 }
 
-// Returns the SPDX Review.
+// M returns the SPDX Review.
 func (r *Review) M() *Meta { return r.Meta }
 
-// Compares two Review pointers, ignoring any metadata.
+// Equal compares two Review pointers, ignoring any metadata.
 func (a *Review) Equal(b *Review) bool {
 	return a == b || (a != nil && b != nil &&
 		a.Reviewer.V() == b.Reviewer.V() && a.Date.V() == b.Date.V() && a.Comment.Val == b.Comment.Val)

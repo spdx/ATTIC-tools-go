@@ -41,7 +41,7 @@ func InitLicenceList() error {
 	return scanner.Err()
 }
 
-// Checks whether the licence ID `lic` is in the SPDX Licence List.
+// CheckLicence checks whether the licence ID `lic` is in the SPDX Licence List.
 // Calls InitLicenceList() if has not been called before and, if it returns an
 // error, it panics with that error.
 func CheckLicence(lic string) bool {

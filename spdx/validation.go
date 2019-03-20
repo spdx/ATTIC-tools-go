@@ -97,7 +97,7 @@ func NewValidator() *Validator {
 	}
 }
 
-// Return all the errors and warnings that this validator has.
+// Errors returns all the errors and warnings that this validator has.
 func (v *Validator) Errors() []*ValidationError { return v.errs }
 
 // Add a new error to this validator.
@@ -110,13 +110,13 @@ func (v *Validator) addWarn(msg string, m *Meta, args ...interface{}) {
 	v.add(NewVWarning(fmt.Sprintf(msg, args...), m))
 }
 
-// Return whether there are no errors and no warnings.
+// Ok returns whether there are no errors and no warnings.
 func (v *Validator) Ok() bool { return len(v.errs) == 0 }
 
-// Returns true if there are no warnings in this validator, false otherwise.
+// HasWarnings returns true if there are no warnings in this validator, false otherwise.
 func (v *Validator) HasWarnings() bool { return v.hasErrType(ValidWarning) }
 
-// Returns true if there are no errors in this validator, false otherwise.
+// HasErrors returns true if there are no errors in this validator, false otherwise.
 func (v *Validator) HasErrors() bool { return v.hasErrType(ValidError) }
 
 // Internal usage. Returns true if there are errors of type t (ValidationError.Type==t) in this validator, false otherwise.
@@ -141,7 +141,7 @@ func (v *Validator) add(err ...*ValidationError) {
 	v.errs = append(v.errs, err...)
 }
 
-// Adds an error to this validator if `val.V()` has more than one lines of text.
+// SingleLineErr adds an error to this validator if `val.V()` has more than one lines of text.
 func (v *Validator) SingleLineErr(val Value, property string) bool {
 	if strings.Index(val.V(), "\n") >= 0 {
 		v.addErr("%s must be a single line.", val.M(), property)
@@ -150,7 +150,7 @@ func (v *Validator) SingleLineErr(val Value, property string) bool {
 	return true
 }
 
-// Adds a warning to this validator if `val.V()` has more than one lines of text.
+// SingleLineWarn adds a warning to this validator if `val.V()` has more than one lines of text.
 // Returns `false` if there was a warning added, `true` otherwise.
 func (v *Validator) SingleLineWarn(val Value, property string) bool {
 	if strings.Index(val.V(), "\n") >= 0 {
@@ -160,7 +160,7 @@ func (v *Validator) SingleLineWarn(val Value, property string) bool {
 	return true
 }
 
-// Adds an error if `val.V()` is empty.
+// MandatoryText adds an error if `val.V()` is empty.
 //
 // NOASSERTION and NONE values are considered invalid if `noassert` and `none`, respectively are set to false.
 // These values are treated as valid (do not generate errors) if the arguments are set to true.
@@ -182,7 +182,7 @@ func (v *Validator) MandatoryText(val Value, noassert, none bool, property strin
 	return true
 }
 
-// Validates `*ValueDate` values. If `val.Time() == nil` this generates an error and returns `false`.
+// Date validates `*ValueDate` values. If `val.Time() == nil` this generates an error and returns `false`.
 // It returns `true` otherwise.
 func (v *Validator) Date(val *ValueDate) bool {
 	if val.Time() == nil {
@@ -192,7 +192,7 @@ func (v *Validator) Date(val *ValueDate) bool {
 	return true
 }
 
-// Validate URLs. URLs must have a scheme to be valid.
+// Url validates URLs. URLs must have a scheme to be valid.
 func (v *Validator) Url(val *ValueStr, noassert, none bool, property string) bool {
 	if (noassert && val.V() == NOASSERTION) || (none && val.V() == NONE) {
 		return true
@@ -210,7 +210,7 @@ func (v *Validator) Url(val *ValueStr, noassert, none bool, property string) boo
 	return true
 }
 
-// Validate a *Document. After validating doc, it checks whether all licence
+// Document validates a *Document. After validating doc, it checks whether all licence
 // references are in place (all "LicenceRef-" type licences used inside the
 // document and its nested elements are defined in doc.ExtractedLicences).
 //
@@ -290,7 +290,7 @@ func (v *Validator) Document(doc *Document) bool {
 	return v.HasErrors()
 }
 
-// Checks if all the licences referenced in the SPDX Document (and indexed by
+// LicReferences checks if all the licences referenced in the SPDX Document (and indexed by
 // the Validator) are used and defined.
 //
 // Licence References used but not defined generate errors.
@@ -315,7 +315,7 @@ func (v *Validator) LicReferences() bool {
 	return r
 }
 
-// Validate SpecVersion. Updates v.Major and v.Minor.
+// SpecVersion validates SpecVersion. Updates v.Major and v.Minor.
 //
 // Valid option: SPDX-M.m (M major version, m minor version)
 // Warning on: (any case "SPDX"): spdx-M.m, SPDXM.m, M.m
@@ -336,7 +336,7 @@ func (v *Validator) SpecVersion(val *ValueStr) bool {
 	return false
 }
 
-// Check if the SPDX version this validator has is currently supported by this
+// VersionSupported checks if the SPDX version this validator has is currently supported by this
 // library and adds an error if it is not.
 // Please keep SpecVersions updated in spdx/base.go.
 func (v *Validator) VersionSupported(m *Meta) bool {
@@ -350,7 +350,7 @@ func (v *Validator) VersionSupported(m *Meta) bool {
 	return false
 }
 
-// Validate Data Licence. The only valid value is "CC0-1.0".
+// DataLicence validates Data Licence. The only valid value is "CC0-1.0".
 // A warning is generated for non-uppercase "CC".
 func (v *Validator) DataLicence(val *ValueStr) bool {
 	if val.Val == "CC0-1.0" {
@@ -364,12 +364,12 @@ func (v *Validator) DataLicence(val *ValueStr) bool {
 	return false
 }
 
-// Validate DocumentCreator. It returns whether the checked value is valid or not.
+// DocumentCreator validates DocumentCreator. It returns whether the checked value is valid or not.
 func (v *Validator) DocumentCreator(val *ValueCreator) bool {
 	return v.Creator(val, false, false, "Document Creator", []string{"Tool", "Organization", "Person"}, 0)
 }
 
-// Validate *ValueCreator types.
+// Creator validates *ValueCreator types.
 //
 // The ValueCreator Syntax is: "What: Who (email)" where the "(email)" is optional.
 //
@@ -417,7 +417,7 @@ func (v *Validator) Creator(val *ValueCreator, noassert, none bool, property str
 	return true
 }
 
-// Validate a Review
+// Review validates a Review
 func (v *Validator) Review(rev *Review) bool {
 	if rev.Reviewer.val == "" && rev.Date.val == "" {
 		return true
@@ -426,7 +426,7 @@ func (v *Validator) Review(rev *Review) bool {
 	return v.Date(&rev.Date) && r
 }
 
-// Validate a Package.
+// Package validates a Package.
 //
 // Adds the following errors, if found:
 // - Package name is empty or on multiple lines.
@@ -495,7 +495,7 @@ func (v *Validator) Package(pkg *Package) bool {
 	return r
 }
 
-// Validate File.
+// File validates File.
 //
 // Adds the following errors, if found:
 // - Empty file name
@@ -601,7 +601,7 @@ func (v *Validator) File(f *File) bool {
 	return r
 }
 
-// Validate ArtifactOf.
+// ArtifactOf validates ArtifactOf.
 //
 // Adds an error if:
 // - The artifact is empty (nil pointer or empty values)
@@ -723,7 +723,7 @@ func (v *Validator) useLicence(id string, m *Meta) {
 	v.licUsed[id] = m
 }
 
-// Validates an AnyLicence object, treating NONE and NOASSERTION.
+// AnyLicenceOptionals validates an AnyLicence object, treating NONE and NOASSERTION.
 func (v *Validator) AnyLicenceOptionals(lic AnyLicence, allowSets, none, noassert bool, property string) bool {
 	t, ok := lic.(Licence)
 	if ok && ((none && t.V() == NONE) || (noassert && t.V() == NOASSERTION)) {
@@ -805,7 +805,7 @@ func (v *Validator) LicenceRefId(id string, meta *Meta, property string) bool {
 	return false
 }
 
-// Validate ExtractedLicence object
+// ExtractedLicence validates ExtractedLicence object
 //
 // Adds errors if:
 // - ID is not a valid Licence Reference format ("LicenseRef-...")

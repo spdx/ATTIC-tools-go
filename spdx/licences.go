@@ -13,19 +13,19 @@ type AnyLicence interface {
 // one of the NONE or NOASSERTION constants.
 type Licence struct{ ValueStr }
 
-// Get the licence ID.
+// LicenceId gets the licence ID.
 func (l Licence) LicenceId() string { return l.V() }
 
-// Compare two licences ignoring their metadata.
+// Equal compares two licences ignoring their metadata.
 func (l Licence) Equal(b Licence) bool { return l.ValueStr.Equal(b.ValueStr) }
 
-// Returns whether the licence is a reference or a is supposed to be in the SPDX Licence List.
+// IsReference returns whether the licence is a reference or a is supposed to be in the SPDX Licence List.
 // Does not check if the licence actually is in the licence list (use InList() for that).
 func (l Licence) IsReference() bool {
 	return isLicIdRef(l.V())
 }
 
-// Checks whether the licence is in the SPDX Licence List.
+// InList checks whether the licence is in the SPDX Licence List.
 // It always looks up the SPDX Licence List index.
 func (l Licence) InList() bool {
 	return CheckLicence(l.V())
@@ -46,12 +46,12 @@ type ExtractedLicence struct {
 	*Meta
 }
 
-// Returns the licence ID.
+// LicenceId returns the licence ID.
 func (l *ExtractedLicence) LicenceId() string { return l.Id.V() }
 func (l *ExtractedLicence) V() string         { return l.LicenceId() }
 func (l *ExtractedLicence) M() *Meta          { return l.Meta }
 
-// Checks if this ExtractedLicence is equal to `other`. Ignores metadata.
+// Equal checks if this ExtractedLicence is equal to `other`. Ignores metadata.
 // Slice elements must be in the same order for this function to return true.
 func (l *ExtractedLicence) Equal(other *ExtractedLicence) bool {
 	if l == other {
@@ -140,7 +140,7 @@ func isLicIdRef(id string) bool {
 	return strings.HasPrefix(strings.ToLower(id), "licenseref")
 }
 
-// Compares two licences. Returns `true` if `a` and `b` are the same,
+// SameLicence compares two licences. Returns `true` if `a` and `b` are the same,
 // returns `false` otherwise. In case of licence sets, it recursively
 // applies this function on each element. The licences in sets must be
 // in the same order for this function to return true. Ignores metadata.

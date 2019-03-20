@@ -76,19 +76,19 @@ type ValueCreator struct {
 	*Meta
 }
 
-// Get the original value of this ValueCreator
+// V gets the original value of this ValueCreator
 func (c ValueCreator) V() string { return c.val }
 
-// Get the metadata associated with this ValueCreator
+// M gets the metadata associated with this ValueCreator
 func (c ValueCreator) M() *Meta { return c.Meta }
 
-// Get the `what` part from the format `what: name (email)`.
+// What gets the `what` part from the format `what: name (email)`.
 func (c ValueCreator) What() string { return c.what }
 
-// Get the `name` part from the format `what: name (email)`
+// Name gets the `name` part from the format `what: name (email)`
 func (c ValueCreator) Name() string { return c.name }
 
-// Get the `email` part from the format `what: name (email)`
+// Email gets the `email` part from the format `what: name (email)`
 func (c ValueCreator) Email() string { return c.email }
 
 // Set the value of this ValueCreator. It parses the format `what: name (email)`
@@ -119,13 +119,13 @@ type ValueDate struct {
 	*Meta
 }
 
-// Get the original value of this ValueDate.
+// V gets the original value of this ValueDate.
 func (d ValueDate) V() string { return d.val }
 
-// Get the metadata of this ValueDate.
+// M gets the metadata of this ValueDate.
 func (d ValueDate) M() *Meta { return d.Meta }
 
-// Get the *time.Time pointer parsed form the value.
+// Time gets the *time.Time pointer parsed form the value.
 func (d ValueDate) Time() *time.Time { return d.time }
 
 // Set the value of this ValueDate and parse the date format.
@@ -188,7 +188,7 @@ type ParseError struct {
 	*Meta
 }
 
-// Return the error message.
+// Error returns the error message.
 func (e *ParseError) Error() string {
 	return e.msg
 }
