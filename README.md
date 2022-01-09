@@ -1,3 +1,7 @@
+Archive Status
+==============
+This repository has been moved to archive status as of 9 January 2022
+
 GO SPDX Parser Library
 ======================
 
